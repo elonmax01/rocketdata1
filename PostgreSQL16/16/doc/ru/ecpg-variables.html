@@ -1,0 +1,357 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>36.4. Использование переменных среды</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="ecpg-commands.html" title="36.3. Запуск команд SQL" /><link rel="next" href="ecpg-dynamic.html" title="36.5. Динамический SQL" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">36.4. Использование переменных среды</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="ecpg-commands.html" title="36.3. Запуск команд SQL">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="ecpg.html" title="Глава 36. ECPG — Встраиваемый SQL в C">Наверх</a></td><th width="60%" align="center">Глава 36. <span class="application">ECPG</span> — Встраиваемый <acronym class="acronym">SQL</acronym> в C</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="ecpg-dynamic.html" title="36.5. Динамический SQL">След.</a></td></tr></table><hr /></div><div class="sect1" id="ECPG-VARIABLES"><div class="titlepage"><div><div><h2 class="title" style="clear: both">36.4. Использование переменных среды <a href="#ECPG-VARIABLES" class="id_link">#</a></h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="ecpg-variables.html#ECPG-VARIABLES-OVERVIEW">36.4.1. Обзор</a></span></dt><dt><span class="sect2"><a href="ecpg-variables.html#ECPG-DECLARE-SECTIONS">36.4.2. Секции объявлений</a></span></dt><dt><span class="sect2"><a href="ecpg-variables.html#ECPG-RETRIEVING">36.4.3. Получение результатов запроса</a></span></dt><dt><span class="sect2"><a href="ecpg-variables.html#ECPG-VARIABLES-TYPE-MAPPING">36.4.4. Сопоставление типов</a></span></dt><dt><span class="sect2"><a href="ecpg-variables.html#ECPG-VARIABLES-NONPRIMITIVE-SQL">36.4.5. Обработка непримитивных типов данных SQL</a></span></dt><dt><span class="sect2"><a href="ecpg-variables.html#ECPG-INDICATORS">36.4.6. Индикаторы</a></span></dt></dl></div><p>В <a class="xref" href="ecpg-commands.html" title="36.3. Запуск команд SQL">Разделе 36.3</a> вы увидели, как можно выполнять SQL-операторы в программе со встраиваемым SQL. Некоторые из этих операторов использовали только фиксированные значения и не давали возможности вставлять в операторы произвольные значения или обрабатывать значения, возвращённые запросом. Операторы такого вида не очень полезны в реальных приложениях. В этом разделе подробно описывается, как можно передавать данные между программой на C и встраиваемыми операторами SQL, используя простой механизм, так называемые <em class="firstterm">переменные среды</em>. В программе со встраиваемым SQL мы считаем SQL-операторы <em class="firstterm">внедрёнными</em> в код программы на C, <em class="firstterm">языке среды</em>. Таким образом, переменные программы на C называются <em class="firstterm">переменными среды</em>.</p><p>Ещё один способ передать значения данных между сервером PostgreSQL и приложениями ECPG заключается в использовании дескрипторов SQL, как описано в <a class="xref" href="ecpg-descriptors.html" title="36.7. Использование областей дескрипторов">Разделе 36.7</a>.</p><div class="sect2" id="ECPG-VARIABLES-OVERVIEW"><div class="titlepage"><div><div><h3 class="title">36.4.1. Обзор <a href="#ECPG-VARIABLES-OVERVIEW" class="id_link">#</a></h3></div></div></div><p>Передавать данные между программой C и SQL-операторами во встраиваемом SQL очень просто. Вместо того, чтобы вставлять данные в оператор, что влечёт дополнительные усложнения, в частности нужно правильно заключать значения в кавычки, можно просто записать имя переменной C в SQL-операторе, предварив его двоеточием. Например: </p><pre class="programlisting">EXEC SQL INSERT INTO sometable VALUES (:v1, 'foo', :v2);</pre><p> Этот оператор обращается к двум переменным C с именами <code class="varname">v1</code> и <code class="varname">v2</code> и также использует обычную строковую константу SQL, показывая тем самым, что можно свободно сочетать разные виды данных.</p><p>Этот метод включения переменных C в SQL-операторы работает везде, где SQL-оператор принимает выражение значения.</p></div><div class="sect2" id="ECPG-DECLARE-SECTIONS"><div class="titlepage"><div><div><h3 class="title">36.4.2. Секции объявлений <a href="#ECPG-DECLARE-SECTIONS" class="id_link">#</a></h3></div></div></div><p>Чтобы передать данные из программы в базу данных, например, в виде параметров запроса, либо получить данные из базы данных в программе, переменные C, которые должны содержать эти данные, нужно объявить в специально помеченных секциях, чтобы препроцессор встраиваемого SQL знал о них.</p><p>Секция начинается с: </p><pre class="programlisting">EXEC SQL BEGIN DECLARE SECTION;</pre><p> и заканчивается командой: </p><pre class="programlisting">EXEC SQL END DECLARE SECTION;</pre><p> Между этими строками должны располагаться обычные объявления переменных C, например: </p><pre class="programlisting">int   x = 4;
+char  foo[16], bar[16];</pre><p> Как здесь показано, переменной можно присвоить начальное значение. Область видимости переменной определяется расположением секции, в которой она объявляется в программе. Вы также можете объявить переменную следующим образом (при этом неявно создаётся секция объявлений): </p><pre class="programlisting">EXEC SQL int i = 4;</pre><p> Вы можете включать в программу столько секций объявлений, сколько захотите.</p><p>Эти объявления выводятся в результирующий файл как объявления обычных переменных C, так что эти переменные не нужно объявлять снова. Переменные, которые не предназначены для использования в командах SQL, можно объявить как обычно вне этих специальных секций.</p><p>Определение структуры или объединения тоже должно размещаться в секции <code class="literal">DECLARE</code>. В противном случае препроцессор не сможет воспринять эти типы, так как не будет знать их определения.</p></div><div class="sect2" id="ECPG-RETRIEVING"><div class="titlepage"><div><div><h3 class="title">36.4.3. Получение результатов запроса <a href="#ECPG-RETRIEVING" class="id_link">#</a></h3></div></div></div><p>Теперь вы умеете передавать данные, подготовленные вашей программой, в команду SQL. Но как получить результаты запроса? Для этой цели во встраиваемом SQL есть особые вариации обычных команд <code class="command">SELECT</code> и <code class="command">FETCH</code>. У этих команд есть специальное предложение <code class="literal">INTO</code>, определяющее, в какие переменные среды будут помещены получаемые значения. <code class="command">SELECT</code> используется для запросов, возвращающих только одну строку, а <code class="command">FETCH</code> применяется с курсором для запросов, возвращающих несколько строк.</p><p>Пример: </p><pre class="programlisting">/*
+ * предполагается существование такой таблицы:
+ * CREATE TABLE test1 (a int, b varchar(50));
+ */
+
+EXEC SQL BEGIN DECLARE SECTION;
+int v1;
+VARCHAR v2;
+EXEC SQL END DECLARE SECTION;
+
+ ...
+
+EXEC SQL SELECT a, b INTO :v1, :v2 FROM test;</pre><p> Предложение <code class="literal">INTO</code> размещается между списком выборки и предложением <code class="literal">FROM</code>. Число элементов в списке выборки должно равняться числу элементов в списке после <code class="literal">INTO</code> (также называемом целевым списком).</p><p>Следующий пример демонстрирует использование команды <code class="command">FETCH</code>: </p><pre class="programlisting">EXEC SQL BEGIN DECLARE SECTION;
+int v1;
+VARCHAR v2;
+EXEC SQL END DECLARE SECTION;
+
+ ...
+
+EXEC SQL DECLARE foo CURSOR FOR SELECT a, b FROM test;
+
+ ...
+
+do
+{
+    ...
+    EXEC SQL FETCH NEXT FROM foo INTO :v1, :v2;
+    ...
+} while (...);</pre><p> Здесь предложение <code class="literal">INTO</code> размещается после всех остальных обычных предложений.</p></div><div class="sect2" id="ECPG-VARIABLES-TYPE-MAPPING"><div class="titlepage"><div><div><h3 class="title">36.4.4. Сопоставление типов <a href="#ECPG-VARIABLES-TYPE-MAPPING" class="id_link">#</a></h3></div></div></div><p>Когда приложения ECPG передают данные между сервером PostgreSQL и программой на C, например, получая результаты запроса с сервера или выполняя операторы SQL с входными параметрам, эти данные должны преобразовываться из типов PostgreSQL в типы переменных языка среды (а именно типы языка C) и наоборот. Одно из главных качеств ECPG состоит в том, что в большинстве случаев он делает это автоматически.</p><p>В этом отношении можно выделить два вида типов данных. К первому относятся простые типы данных PostgreSQL, такие как <code class="type">integer</code> и <code class="type">text</code>, которые приложение может непосредственно читать и писать. С другими типами данных, такими как <code class="type">timestamp</code> и <code class="type">numeric</code>, можно работать только через специальные функции; см. <a class="xref" href="ecpg-variables.html#ECPG-SPECIAL-TYPES" title="36.4.4.2. Обработка специальных типов данных">Подраздел 36.4.4.2</a>.</p><p>В <a class="xref" href="ecpg-variables.html#ECPG-DATATYPE-HOSTVARS-TABLE" title="Таблица 36.1. Соответствие между типами данных PostgreSQL и типами переменных C">Таблице 36.1</a> показано, как типы данных PostgreSQL соответствуют типам данных C. Когда нужно передать или получить значение определённого типа данных PostgreSQL, вы должны объявить переменную C соответствующего типа C в секции объявлений.</p><div class="table" id="ECPG-DATATYPE-HOSTVARS-TABLE"><p class="title"><strong>Таблица 36.1. Соответствие между типами данных PostgreSQL и типами переменных C</strong></p><div class="table-contents"><table class="table" summary="Соответствие между типами данных PostgreSQL и типами переменных C" border="1"><colgroup><col /><col /></colgroup><thead><tr><th>Тип данных PostgreSQL</th><th>Тип переменной среды С</th></tr></thead><tbody><tr><td><code class="type">smallint</code></td><td><code class="type">short</code></td></tr><tr><td><code class="type">integer</code></td><td><code class="type">int</code></td></tr><tr><td><code class="type">bigint</code></td><td><code class="type">long long int</code></td></tr><tr><td><code class="type">decimal</code></td><td><code class="type">decimal</code><a href="#ftn.ECPG-DATATYPE-TABLE-FN" class="footnote"><sup class="footnote" id="ECPG-DATATYPE-TABLE-FN">[a]</sup></a></td></tr><tr><td><code class="type">numeric</code></td><td><code class="type">numeric</code><a href="ecpg-variables.html#ftn.ECPG-DATATYPE-TABLE-FN" class="footnoteref"><sup class="footnoteref">[a]</sup></a></td></tr><tr><td><code class="type">real</code></td><td><code class="type">float</code></td></tr><tr><td><code class="type">double precision</code></td><td><code class="type">double</code></td></tr><tr><td><code class="type">smallserial</code></td><td><code class="type">short</code></td></tr><tr><td><code class="type">serial</code></td><td><code class="type">int</code></td></tr><tr><td><code class="type">bigserial</code></td><td><code class="type">long long int</code></td></tr><tr><td><code class="type">oid</code></td><td><code class="type">unsigned int</code></td></tr><tr><td><code class="type">character(<em class="replaceable"><code>n</code></em>)</code>, <code class="type">varchar(<em class="replaceable"><code>n</code></em>)</code>, <code class="type">text</code></td><td><code class="type">char[<em class="replaceable"><code>n</code></em>+1]</code>, <code class="type">VARCHAR[<em class="replaceable"><code>n</code></em>+1]</code></td></tr><tr><td><code class="type">name</code></td><td><code class="type">char[NAMEDATALEN]</code></td></tr><tr><td><code class="type">timestamp</code></td><td><code class="type">timestamp</code><a href="ecpg-variables.html#ftn.ECPG-DATATYPE-TABLE-FN" class="footnoteref"><sup class="footnoteref">[a]</sup></a></td></tr><tr><td><code class="type">interval</code></td><td><code class="type">interval</code><a href="ecpg-variables.html#ftn.ECPG-DATATYPE-TABLE-FN" class="footnoteref"><sup class="footnoteref">[a]</sup></a></td></tr><tr><td><code class="type">date</code></td><td><code class="type">date</code><a href="ecpg-variables.html#ftn.ECPG-DATATYPE-TABLE-FN" class="footnoteref"><sup class="footnoteref">[a]</sup></a></td></tr><tr><td><code class="type">boolean</code></td><td><code class="type">bool</code><a href="#ftn.id-1.7.5.10.7.5.2.2.17.2.2" class="footnote"><sup class="footnote" id="id-1.7.5.10.7.5.2.2.17.2.2">[b]</sup></a></td></tr><tr><td><code class="type">bytea</code></td><td><code class="type">char *</code>, <code class="type">bytea[<em class="replaceable"><code>n</code></em>]</code></td></tr></tbody><tbody class="footnotes"><tr><td colspan="2"><div id="ftn.ECPG-DATATYPE-TABLE-FN" class="footnote"><p><a href="#ECPG-DATATYPE-TABLE-FN" class="para"><sup class="para">[a] </sup></a>С этим типом можно работать только через специальные функции; см. <a class="xref" href="ecpg-variables.html#ECPG-SPECIAL-TYPES" title="36.4.4.2. Обработка специальных типов данных">Подраздел 36.4.4.2</a>.</p></div><div id="ftn.id-1.7.5.10.7.5.2.2.17.2.2" class="footnote"><p><a href="#id-1.7.5.10.7.5.2.2.17.2.2" class="para"><sup class="para">[b] </sup></a>объявляется в <code class="filename">ecpglib.h</code> при отсутствии стандартного объявления</p></div></td></tr></tbody></table></div></div><br class="table-break" /><div class="sect3" id="ECPG-CHAR"><div class="titlepage"><div><div><h4 class="title">36.4.4.1. Работа с символьными строками <a href="#ECPG-CHAR" class="id_link">#</a></h4></div></div></div><p>Для обработки типов символьных строк SQL, таких как <code class="type">varchar</code> и <code class="type">text</code>, предлагаются два варианта объявления переменных среды.</p><p>Первый способ заключается в использовании <code class="type">char[]</code>, массива <code class="type">char</code>, как чаще всего и представляются символьные данные в C. </p><pre class="programlisting">EXEC SQL BEGIN DECLARE SECTION;
+    char str[50];
+EXEC SQL END DECLARE SECTION;</pre><p> Заметьте, что о длине этого массива вы должны подумать сами. Если вы укажете данную переменную среды С в качестве целевой переменной запроса, возвращающего строку длиннее 49 символов, произойдёт переполнение буфера.</p><p>В качестве другого подхода можно использовать специальный тип <code class="type">VARCHAR</code>, представленный в ECPG. Определение массива типа <code class="type">VARCHAR</code> преобразуется в структуру (<code class="type">struct</code>) с собственным именем для каждой переменной. Объявление вида: </p><pre class="programlisting">VARCHAR var[180];</pre><p> преобразуется в: </p><pre class="programlisting">struct varchar_var { int len; char arr[180]; } var;</pre><p> Член структуры <code class="structfield">arr</code> содержит строку, включающую завершающий нулевой байт. Таким образом, чтобы сохранить строку в переменной типа <code class="type">VARCHAR</code>, эта переменная должна быть объявлена с длиной, учитывающей завершающий нулевой байт. Член структуры <code class="structfield">len</code> содержит длину строки, сохранённой в <code class="structfield">arr</code>, без завершающего нулевого байта. Когда на вход запросу подаётся переменная среды C, у которой <code class="literal">strlen(arr)</code> отличается от <code class="structfield">len</code>, применяется наименьшее значение.</p><p><code class="type">VARCHAR</code> можно записать в верхнем или нижнем регистре, но не в смешанном.</p><p>Переменные <code class="type">char</code> и <code class="type">VARCHAR</code> также могут содержать значения других типов SQL в их строковом представлении.</p></div><div class="sect3" id="ECPG-SPECIAL-TYPES"><div class="titlepage"><div><div><h4 class="title">36.4.4.2. Обработка специальных типов данных <a href="#ECPG-SPECIAL-TYPES" class="id_link">#</a></h4></div></div></div><p>ECPG представляет некоторые особые типы, которые должны помочь вам легко оперировать некоторыми специальными типами данных PostgreSQL. В частности, в нём реализована поддержка типов <code class="type">numeric</code>, <code class="type">decimal</code>, <code class="type">date</code>, <code class="type">timestamp</code> и <code class="type">interval</code>. Для этих типов нельзя подобрать полезное соответствие с примитивными типами среды (например, <code class="type">int</code>, <code class="type">long long int</code> или <code class="type">char[]</code>), так как они имеют сложную внутреннюю структуру. Приложения, работающие с этими типами, должны объявлять переменные особых типов и работать с ними, применяя функции из библиотеки pgtypes. Эта библиотека, подробно описанная в <a class="xref" href="ecpg-pgtypes.html" title="36.6. Библиотека pgtypes">Разделе 36.6</a> содержит базовые функции для оперирования этими типами, чтобы вам не требовалось, например, передавать запрос SQL-серверу, когда нужно просто добавить интервал к значению времени.</p><p>Эти особые типы данных описаны в следующих подразделах. Чтобы подробнее узнать о функциях в библиотеке pgtypes, обратитесь к <a class="xref" href="ecpg-pgtypes.html" title="36.6. Библиотека pgtypes">Разделу 36.6</a>.</p><div class="sect4" id="ECPG-SPECIAL-TYPES-TIMESTAMP-DATE"><div class="titlepage"><div><div><h5 class="title">36.4.4.2.1. timestamp, date <a href="#ECPG-SPECIAL-TYPES-TIMESTAMP-DATE" class="id_link">#</a></h5></div></div></div><p>Для работы с переменными <code class="type">timestamp</code> в приложении ECPG применяется следующая схема.</p><p>Сначала в программу нужно включить заголовочный файл, чтобы получить определение типа <code class="type">timestamp</code>: </p><pre class="programlisting">#include &lt;pgtypes_timestamp.h&gt;</pre><p>Затем объявите в секции объявлений переменную типа <code class="type">timestamp</code>: </p><pre class="programlisting">EXEC SQL BEGIN DECLARE SECTION;
+timestamp ts;
+EXEC SQL END DECLARE SECTION;</pre><p>Прочитав значение в эту переменную, выполняйте действия с ним, используя функции в библиотеке pgtypes. В следующем примере значение <code class="type">timestamp</code> преобразуется в текстовый вид (ASCII) с помощью функции <code class="function">PGTYPEStimestamp_to_asc()</code>: </p><pre class="programlisting">EXEC SQL SELECT now()::timestamp INTO :ts;
+
+printf("ts = %s\n", PGTYPEStimestamp_to_asc(ts));</pre><p> Этот пример выведет такой результат: </p><pre class="screen">
+ts = 2010-06-27 18:03:56.949343
+</pre><p>Таким же образом можно работать и с типом DATE. В программу нужно включить <code class="filename">pgtypes_date.h</code>, объявить переменную типа date, и затем можно будет преобразовать значение DATE в текстовый вид, используя функцию <code class="function">PGTYPESdate_to_asc()</code>. Чтобы подробнее узнать о функциях в библиотеке pgtypes, обратитесь к <a class="xref" href="ecpg-pgtypes.html" title="36.6. Библиотека pgtypes">Разделу 36.6</a>.</p></div><div class="sect4" id="ECPG-TYPE-INTERVAL"><div class="titlepage"><div><div><h5 class="title">36.4.4.2.2. interval <a href="#ECPG-TYPE-INTERVAL" class="id_link">#</a></h5></div></div></div><p>Принцип работы с типом <code class="type">interval</code> тот же, что и с типами <code class="type">timestamp</code> и <code class="type">date</code>, однако для значения типа <code class="type">interval</code> нужно явно выделить память. Другими словами, блок памяти для этой переменной должен размещаться в области кучи, а не в стеке.</p><p>Пример программы: </p><pre class="programlisting">#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;pgtypes_interval.h&gt;
+
+int
+main(void)
+{
+EXEC SQL BEGIN DECLARE SECTION;
+    interval *in;
+EXEC SQL END DECLARE SECTION;
+
+    EXEC SQL CONNECT TO testdb;
+    EXEC SQL SELECT pg_catalog.set_config('search_path', '', false); EXEC SQL COMMIT;
+
+    in = PGTYPESinterval_new();
+    EXEC SQL SELECT '1 min'::interval INTO :in;
+    printf("interval = %s\n", PGTYPESinterval_to_asc(in));
+    PGTYPESinterval_free(in);
+
+    EXEC SQL COMMIT;
+    EXEC SQL DISCONNECT ALL;
+    return 0;
+}</pre></div><div class="sect4" id="ECPG-TYPE-NUMERIC-DECIMAL"><div class="titlepage"><div><div><h5 class="title">36.4.4.2.3. numeric, decimal <a href="#ECPG-TYPE-NUMERIC-DECIMAL" class="id_link">#</a></h5></div></div></div><p>Типы <code class="type">numeric</code> и <code class="type">decimal</code> обрабатываются так же, как и тип <code class="type">interval</code>: вы должны определить указатель, выделить некоторое пространство памяти в куче и обращаться к переменной, используя функции в библиотеке pgtypes. Чтобы подробнее узнать о функциях в библиотеке pgtypes, обратитесь к <a class="xref" href="ecpg-pgtypes.html" title="36.6. Библиотека pgtypes">Разделу 36.6</a>.</p><p>Для типа <code class="type">decimal</code> никакие специальные функции не реализованы. Для дальнейшей обработки приложение должно преобразовать его в переменную <code class="type">numeric</code>, применив функцию из библиотеки pgtypes.</p><p>Следующий пример демонстрирует работу с переменными типов <code class="type">numeric</code> и <code class="type">decimal</code>. </p><pre class="programlisting">#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;pgtypes_numeric.h&gt;
+
+EXEC SQL WHENEVER SQLERROR STOP;
+
+int
+main(void)
+{
+EXEC SQL BEGIN DECLARE SECTION;
+    numeric *num;
+    numeric *num2;
+    decimal *dec;
+EXEC SQL END DECLARE SECTION;
+
+    EXEC SQL CONNECT TO testdb;
+    EXEC SQL SELECT pg_catalog.set_config('search_path', '', false); EXEC SQL COMMIT;
+
+    num = PGTYPESnumeric_new();
+    dec = PGTYPESdecimal_new();
+
+    EXEC SQL SELECT 12.345::numeric(4,2), 23.456::decimal(4,2) INTO :num, :dec;
+
+    printf("numeric = %s\n", PGTYPESnumeric_to_asc(num, 0));
+    printf("numeric = %s\n", PGTYPESnumeric_to_asc(num, 1));
+    printf("numeric = %s\n", PGTYPESnumeric_to_asc(num, 2));
+
+    /* Преобразовать decimal в numeric, чтобы вывести десятичное значение. */
+    num2 = PGTYPESnumeric_new();
+    PGTYPESnumeric_from_decimal(dec, num2);
+
+    printf("decimal = %s\n", PGTYPESnumeric_to_asc(num2, 0));
+    printf("decimal = %s\n", PGTYPESnumeric_to_asc(num2, 1));
+    printf("decimal = %s\n", PGTYPESnumeric_to_asc(num2, 2));
+
+    PGTYPESnumeric_free(num2);
+    PGTYPESdecimal_free(dec);
+    PGTYPESnumeric_free(num);
+
+    EXEC SQL COMMIT;
+    EXEC SQL DISCONNECT ALL;
+    return 0;
+}</pre></div><div class="sect4" id="ECPG-SPECIAL-TYPES-BYTEA"><div class="titlepage"><div><div><h5 class="title">36.4.4.2.4. bytea <a href="#ECPG-SPECIAL-TYPES-BYTEA" class="id_link">#</a></h5></div></div></div><p>Работа с типом <code class="type">bytea</code> организуется так же, как и с <code class="type">VARCHAR</code>. Определение каждой переменной-массива типа <code class="type">bytea</code> преобразуется в именованную структуру. Например, объявление: </p><pre class="programlisting">bytea var[180];</pre><p> преобразуется в: </p><pre class="programlisting">struct bytea_var { int len; char arr[180]; } var;</pre><p> Двоичные данные формата помещаются в поле <code class="structfield">arr</code>. В отличие от типа <code class="type">VARCHAR</code>, в данных <code class="type">bytea</code> могут быть восприняты значения <code class="literal">'\0'</code>. Эти данные записываются/считываются и переводятся из шестнадцатеричного формата и обратно средствами ecpglib.</p><div class="note"><h3 class="title">Примечание</h3><p>Переменные <code class="type">bytea</code> можно использовать, только когда параметр <a class="xref" href="runtime-config-client.html#GUC-BYTEA-OUTPUT">bytea_output</a> равен <code class="literal">hex</code>.</p></div></div></div><div class="sect3" id="ECPG-VARIABLES-NONPRIMITIVE-C"><div class="titlepage"><div><div><h4 class="title">36.4.4.3. Переменные среды для непримитивных типов <a href="#ECPG-VARIABLES-NONPRIMITIVE-C" class="id_link">#</a></h4></div></div></div><p>В качестве переменных среды также можно использовать массивы, определения типов, структуры и указатели.</p><div class="sect4" id="ECPG-VARIABLES-ARRAYS"><div class="titlepage"><div><div><h5 class="title">36.4.4.3.1. Массивы <a href="#ECPG-VARIABLES-ARRAYS" class="id_link">#</a></h5></div></div></div><p>Для применения массивов в качестве переменных среды есть два варианта использования. Во-первых, в массиве <code class="type">char[]</code> или <code class="type">VARCHAR[]</code> можно сохранить текстовую строку, как рассказывалось в <a class="xref" href="ecpg-variables.html#ECPG-CHAR" title="36.4.4.1. Работа с символьными строками">Подразделе 36.4.4.1</a>. Во-вторых, в массив можно получить несколько строк из результата запроса, не используя курсор. Чтобы не применяя массивы, обработать результат запроса, состоящий из нескольких строк, нужно использовать курсор и команду <code class="command">FETCH</code>. Но с переменными-массивами несколько строк можно получить сразу. Длина определяемого массива должна быть достаточной для размещения всех строк, иначе скорее всего произойдёт переполнение буфера.</p><p>Следующий пример сканирует системную таблицу <code class="literal">pg_database</code> и показывает все OID и имена доступных баз данных: </p><pre class="programlisting">int
+main(void)
+{
+EXEC SQL BEGIN DECLARE SECTION;
+    int dbid[8];
+    char dbname[8][16];
+    int i;
+EXEC SQL END DECLARE SECTION;
+
+    memset(dbname, 0, sizeof(char)* 16 * 8);
+    memset(dbid, 0, sizeof(int) * 8);
+
+    EXEC SQL CONNECT TO testdb;
+    EXEC SQL SELECT pg_catalog.set_config('search_path', '', false); EXEC SQL COMMIT;
+
+    /* Получить в массивы сразу несколько строк. */
+    EXEC SQL SELECT oid,datname INTO :dbid, :dbname FROM pg_database;
+
+    for (i = 0; i &lt; 8; i++)
+        printf("oid=%d, dbname=%s\n", dbid[i], dbname[i]);
+
+    EXEC SQL COMMIT;
+    EXEC SQL DISCONNECT ALL;
+    return 0;
+}</pre><p> Этот пример выводит следующий результат. (Точные значения зависят от локальных обстоятельств.) </p><pre class="screen">
+oid=1, dbname=template1
+oid=11510, dbname=template0
+oid=11511, dbname=postgres
+oid=313780, dbname=testdb
+oid=0, dbname=
+oid=0, dbname=
+oid=0, dbname=
+</pre></div><div class="sect4" id="ECPG-VARIABLES-STRUCT"><div class="titlepage"><div><div><h5 class="title">36.4.4.3.2. Структуры <a href="#ECPG-VARIABLES-STRUCT" class="id_link">#</a></h5></div></div></div><p>Для получения значений сразу нескольких столбцов можно применить структуру, имена членов которой совпадают с именами столбцов результата запроса. Структура позволяет обрабатывать значения нескольких столбцов в одной переменной среды С.</p><p>Следующий пример получает значения OID, имена и размеры имеющихся баз данных из системной таблицы <code class="literal">pg_database</code>, используя при этом функцию <code class="function">pg_database_size()</code>. В этом примере переменная типа структуры <code class="varname">dbinfo_t</code> с членами, имена которых соответствуют именам всех столбцов результата <code class="literal">SELECT</code>, применяется для получения одной строки результата без вовлечения в оператор <code class="literal">FETCH</code> нескольких переменных среды. </p><pre class="programlisting">EXEC SQL BEGIN DECLARE SECTION;
+    typedef struct
+    {
+       int oid;
+       char datname[65];
+       long long int size;
+    } dbinfo_t;
+
+    dbinfo_t dbval;
+EXEC SQL END DECLARE SECTION;
+
+    memset(&amp;dbval, 0, sizeof(dbinfo_t));
+
+    EXEC SQL DECLARE cur1 CURSOR FOR SELECT oid, datname, pg_database_size(oid) AS size FROM pg_database;
+    EXEC SQL OPEN cur1;
+
+    /* по достижении конца набора результатов прервать цикл while */
+    EXEC SQL WHENEVER NOT FOUND DO BREAK;
+
+    while (1)
+    {
+        /* Выбрать несколько столбцов в одну структуру. */
+        EXEC SQL FETCH FROM cur1 INTO :dbval;
+
+        /* Напечатать члены структуры. */
+        printf("oid=%d, datname=%s, size=%lld\n", dbval.oid, dbval.datname, dbval.size);
+    }
+
+    EXEC SQL CLOSE cur1;</pre><p>Этот пример показывает следующий результат. (Точные значения зависят от локальных обстоятельств.) </p><pre class="screen">
+oid=1, datname=template1, size=4324580
+oid=11510, datname=template0, size=4243460
+oid=11511, datname=postgres, size=4324580
+oid=313780, datname=testdb, size=8183012
+</pre><p>Переменные среды типа структуры <span class="quote">«<span class="quote">вбирают в себя</span>»</span> столько столбцов, сколько полей содержит структура. Значения дополнительных столбцов можно присвоить другим переменным среды. Например, приведённую выше программу можно видоизменить следующим образом, разместив переменную <code class="varname">size</code> вне структуры: </p><pre class="programlisting">EXEC SQL BEGIN DECLARE SECTION;
+    typedef struct
+    {
+       int oid;
+       char datname[65];
+    } dbinfo_t;
+
+    dbinfo_t dbval;
+    long long int size;
+EXEC SQL END DECLARE SECTION;
+
+    memset(&amp;dbval, 0, sizeof(dbinfo_t));
+
+    EXEC SQL DECLARE cur1 CURSOR FOR SELECT oid, datname, pg_database_size(oid) AS size FROM pg_database;
+    EXEC SQL OPEN cur1;
+
+    /* по достижении конца набора результатов прервать цикл while */
+    EXEC SQL WHENEVER NOT FOUND DO BREAK;
+
+    while (1)
+    {
+        /* Выбрать несколько столбцов в одну структуру. */
+        EXEC SQL FETCH FROM cur1 INTO :dbval, :size;
+
+        /* Напечатать члены структуры. */
+        printf("oid=%d, datname=%s, size=%lld\n", dbval.oid, dbval.datname, size);
+    }
+
+    EXEC SQL CLOSE cur1;</pre></div><div class="sect4" id="ECPG-VARIABLES-NONPRIMITIVE-C-TYPEDEFS"><div class="titlepage"><div><div><h5 class="title">36.4.4.3.3. Определения типов <a href="#ECPG-VARIABLES-NONPRIMITIVE-C-TYPEDEFS" class="id_link">#</a></h5></div></div></div><a id="id-1.7.5.10.7.8.5.2" class="indexterm"></a><p>Чтобы сопоставить новые типы с уже существующими, используйте ключевое слово <code class="literal">typedef</code>. </p><pre class="programlisting">EXEC SQL BEGIN DECLARE SECTION;
+    typedef char mychartype[40];
+    typedef long serial_t;
+EXEC SQL END DECLARE SECTION;</pre><p> Заметьте, что вы также можете написать: </p><pre class="programlisting">EXEC SQL TYPE serial_t IS long;</pre><p> Это объявление не обязательно должно находиться в секции объявлений, то есть также можно писать определения типов как обычные операторы C.</p><p>Любое слово, которое объявляется как typedef (определение типа), не может быть использовано в качестве ключевого слова SQL в командах <code class="literal">EXEC SQL</code> позже в той же программе. Например, это не сработает: </p><pre class="programlisting">EXEC SQL BEGIN DECLARE SECTION;
+    typedef int start;
+EXEC SQL END DECLARE SECTION;
+...
+EXEC SQL START TRANSACTION;</pre><p> ECPG сообщит о синтаксической ошибке для <code class="literal">START TRANSACTION</code>, так как больше не распознаёт <code class="literal">START</code> как ключевое слово SQL, только как определение типа. (Если у вас есть такой конфликт и переименование определения типа кажется нецелесообразным, можно написать команду SQL, используя <a class="link" href="ecpg-dynamic.html" title="36.5. Динамический SQL">динамический SQL</a>.)</p><div class="note"><h3 class="title">Примечание</h3><p>В выпусках <span class="productname">PostgreSQL</span> до 16 версии использование ключевых слов SQL в качестве имён определений типов скорее приводило к синтаксическим ошибкам, связанным с использованием самого определения типа, а не с использованием имени в качестве ключевого слова SQL. Новое поведение с меньшей вероятностью вызовет проблемы при перекомпиляции существующего приложения ECPG в новом выпуске <span class="productname">PostgreSQL</span> с новыми ключевыми словами.</p></div></div><div class="sect4" id="ECPG-VARIABLES-NONPRIMITIVE-C-POINTERS"><div class="titlepage"><div><div><h5 class="title">36.4.4.3.4. Указатели <a href="#ECPG-VARIABLES-NONPRIMITIVE-C-POINTERS" class="id_link">#</a></h5></div></div></div><p>Вы можете объявлять указатели на самые распространённые типы. Учтите, однако, что указатели нельзя использовать в качестве целевых переменных запросов без автовыделения. За дополнительными сведениями об автовыделении обратитесь к <a class="xref" href="ecpg-descriptors.html" title="36.7. Использование областей дескрипторов">Разделу 36.7</a>.</p><p>
+</p><pre class="programlisting">EXEC SQL BEGIN DECLARE SECTION;
+    int   *intp;
+    char **charp;
+EXEC SQL END DECLARE SECTION;</pre><p>
+     </p></div></div></div><div class="sect2" id="ECPG-VARIABLES-NONPRIMITIVE-SQL"><div class="titlepage"><div><div><h3 class="title">36.4.5. Обработка непримитивных типов данных SQL <a href="#ECPG-VARIABLES-NONPRIMITIVE-SQL" class="id_link">#</a></h3></div></div></div><p>В этом разделе описывается как работать с нескалярными и пользовательскими типами уровня SQL в приложениях ECPG. Заметьте, что этот подход отличается от использования переменных непримитивных типов, описанного в предыдущем разделе.</p><div class="sect3" id="ECPG-VARIABLES-NONPRIMITIVE-SQL-ARRAYS"><div class="titlepage"><div><div><h4 class="title">36.4.5.1. Массивы <a href="#ECPG-VARIABLES-NONPRIMITIVE-SQL-ARRAYS" class="id_link">#</a></h4></div></div></div><p>Многомерные массивы уровня SQL в ECPG напрямую не поддерживаются, но одномерные массивы уровня SQL могут быть сопоставлены с переменными-массивами среды C и наоборот. Однако учтите, что когда создаётся оператор, ecpg не знает типов столбцов, поэтому не может проверить, вводится ли массив C в соответствующий массив уровня SQL. Обрабатывая результат SQL-оператора, ecpg имеет необходимую информацию и таким образом может убедиться, что с обеих сторон массивы.</p><p>Если запрос обращается к отдельным <span class="emphasis"><em>элементам</em></span> массива, это избавляет от необходимости применять массивы в ECPG. В этом случае следует использовать переменную среды С, имеющую тип, который можно сопоставить типу элемента. Например, если типом столбца является массив <code class="type">integer</code>, можно использовать переменную среды типа <code class="type">int</code>. Аналогично, если тип элемента — <code class="type">varchar</code> или <code class="type">text</code>, можно использовать переменную типа <code class="type">char[]</code> или <code class="type">VARCHAR[]</code>.</p><p>Предположим, что у нас есть таблица: </p><pre class="programlisting">CREATE TABLE t3 (
+    ii integer[]
+);
+
+testdb=&gt; SELECT * FROM t3;
+     ii
+-------------
+ {1,2,3,4,5}
+(1 row)</pre><p> Следующая программа получает 4-ый элемент массива и сохраняет его в переменной среды С, имеющей тип <code class="type">int</code>: </p><pre class="programlisting">EXEC SQL BEGIN DECLARE SECTION;
+int ii;
+EXEC SQL END DECLARE SECTION;
+
+EXEC SQL DECLARE cur1 CURSOR FOR SELECT ii[4] FROM t3;
+EXEC SQL OPEN cur1;
+
+EXEC SQL WHENEVER NOT FOUND DO BREAK;
+
+while (1)
+{
+    EXEC SQL FETCH FROM cur1 INTO :ii ;
+    printf("ii=%d\n", ii);
+}
+
+EXEC SQL CLOSE cur1;</pre><p> Этот пример выводит следующий результат: </p><pre class="screen">
+ii=4
+</pre><p>Чтобы сопоставить несколько элементов массива с несколькими элементами переменной-массивом среды, каждый элемент массива SQL нужно по отдельности связать с каждым элементом массива среды, например: </p><pre class="programlisting">EXEC SQL BEGIN DECLARE SECTION;
+int ii_a[8];
+EXEC SQL END DECLARE SECTION;
+
+EXEC SQL DECLARE cur1 CURSOR FOR SELECT ii[1], ii[2], ii[3], ii[4] FROM t3;
+EXEC SQL OPEN cur1;
+
+EXEC SQL WHENEVER NOT FOUND DO BREAK;
+
+while (1)
+{
+    EXEC SQL FETCH FROM cur1 INTO :ii_a[0], :ii_a[1], :ii_a[2], :ii_a[3];
+    ...
+}</pre><p>Ещё раз обратите внимание, что в этом случае вариант </p><pre class="programlisting">EXEC SQL BEGIN DECLARE SECTION;
+int ii_a[8];
+EXEC SQL END DECLARE SECTION;
+
+EXEC SQL DECLARE cur1 CURSOR FOR SELECT ii FROM t3;
+EXEC SQL OPEN cur1;
+
+EXEC SQL WHENEVER NOT FOUND DO BREAK;
+
+while (1)
+{
+    /* НЕПРАВИЛЬНО */
+    EXEC SQL FETCH FROM cur1 INTO :ii_a;
+    ...
+}</pre><p> не будет работать корректно, так как столбец с типом массива нельзя напрямую сопоставить с переменной-массивом среды.</p><p>Можно также применить обходное решение — хранить массивы в их внешнем строковом представлении в переменных среды типа <code class="type">char[]</code> или <code class="type">VARCHAR[]</code>. Более подробно это представление описывается в <a class="xref" href="arrays.html#ARRAYS-INPUT" title="8.15.2. Ввод значения массива">Подразделе 8.15.2</a>. Заметьте, это означает, что с таким массивом в программе нельзя будет работать естественным образом (без дополнительного разбора текстового представления).</p></div><div class="sect3" id="ECPG-VARIABLES-NONPRIMITIVE-SQL-COMPOSITE"><div class="titlepage"><div><div><h4 class="title">36.4.5.2. Составные типы <a href="#ECPG-VARIABLES-NONPRIMITIVE-SQL-COMPOSITE" class="id_link">#</a></h4></div></div></div><p>Составные типы в ECPG напрямую не поддерживаются, но есть простое обходное решение. Для решения этой проблемы можно применить те же подходы, что были описаны выше для массивов: обращаться к каждому атрибуту по отдельности или использовать внешнее строковое представление.</p><p>Для следующих примеров предполагается, что существует такой тип и таблица: </p><pre class="programlisting">CREATE TYPE comp_t AS (intval integer, textval varchar(32));
+CREATE TABLE t4 (compval comp_t);
+INSERT INTO t4 VALUES ( (256, 'PostgreSQL') );</pre><p> Самое очевидное решение заключается в обращении к каждому атрибуту по отдельности. Следующая программа получает данные из тестовой таблицы, выбирая атрибуты типа <code class="type">comp_t</code> по одному: </p><pre class="programlisting">EXEC SQL BEGIN DECLARE SECTION;
+int intval;
+varchar textval[33];
+EXEC SQL END DECLARE SECTION;
+
+/* Указать каждый элемент столбца составного типа в списке SELECT. */
+EXEC SQL DECLARE cur1 CURSOR FOR SELECT (compval).intval, (compval).textval FROM t4;
+EXEC SQL OPEN cur1;
+
+EXEC SQL WHENEVER NOT FOUND DO BREAK;
+
+while (1)
+{
+    /* Выбрать каждый элемент столбца составного типа в переменную среды С. */
+    EXEC SQL FETCH FROM cur1 INTO :intval, :textval;
+
+    printf("intval=%d, textval=%s\n", intval, textval.arr);
+}
+
+EXEC SQL CLOSE cur1;</pre><p>В развитие этого примера, переменные среды, в которые помещаются результаты команды <code class="command">FETCH</code>, можно собрать в одну структуру. Подробнее переменные среды в форме структуры описываются в <a class="xref" href="ecpg-variables.html#ECPG-VARIABLES-STRUCT" title="36.4.4.3.2. Структуры">Подразделе 36.4.4.3.2</a>. Чтобы перейти к структуре, пример можно изменить как показано ниже. Переменные среды, <code class="varname">intval</code> и <code class="varname">textval</code>, становятся членами структуры <code class="structname">comp_t</code>, и эта структура указывается в команде <code class="command">FETCH</code>. </p><pre class="programlisting">EXEC SQL BEGIN DECLARE SECTION;
+typedef struct
+{
+    int intval;
+    varchar textval[33];
+} comp_t;
+
+comp_t compval;
+EXEC SQL END DECLARE SECTION;
+
+/* Поместить каждый элемент составного типа в список SELECT. */
+EXEC SQL DECLARE cur1 CURSOR FOR SELECT (compval).intval, (compval).textval FROM t4;
+EXEC SQL OPEN cur1;
+
+EXEC SQL WHENEVER NOT FOUND DO BREAK;
+
+while (1)
+{
+    /* Поместить все значения списка SELECT в одну структуру. */
+    EXEC SQL FETCH FROM cur1 INTO :compval;
+
+    printf("intval=%d, textval=%s\n", compval.intval, compval.textval.arr);
+}
+
+EXEC SQL CLOSE cur1;</pre><p> Хотя в команде <code class="command">FETCH</code> используется структура, имена атрибутов в предложении <code class="command">SELECT</code> задаются по одному. Это можно дополнительно улучшить, написав <code class="literal">*</code>, что будет обозначать все атрибуты значения составного типа. </p><pre class="programlisting">...
+EXEC SQL DECLARE cur1 CURSOR FOR SELECT (compval).* FROM t4;
+EXEC SQL OPEN cur1;
+
+EXEC SQL WHENEVER NOT FOUND DO BREAK;
+
+while (1)
+{
+    /* Выбрать все значения в списке SELECT в одну структуру. */
+    EXEC SQL FETCH FROM cur1 INTO :compval;
+
+    printf("intval=%d, textval=%s\n", compval.intval, compval.textval.arr);
+}
+...</pre><p> Таким образом составные типы можно сопоставить со структурами практически прозрачно, хотя ECPG и не понимает составные типы.</p><p>Наконец, также можно сохранить значения составного типа в их внешнем строковом представлении в переменных среды типа <code class="type">char[]</code> или <code class="type">VARCHAR[]</code>. Однако при таком подходе нет простой возможности обращаться из программы к полям значения.</p></div><div class="sect3" id="ECPG-VARIABLES-NONPRIMITIVE-SQL-USER-DEFINED-BASE-TYPES"><div class="titlepage"><div><div><h4 class="title">36.4.5.3. Пользовательские базовые типы <a href="#ECPG-VARIABLES-NONPRIMITIVE-SQL-USER-DEFINED-BASE-TYPES" class="id_link">#</a></h4></div></div></div><p>Определяемые пользователем базовые типы не поддерживаются ECPG напрямую. Для них можно использовать внешнее строковое представление и переменные среды типа <code class="type">char[]</code> или <code class="type">VARCHAR[]</code>, и это решение действительно будет подходящим и достаточным для большинства типов.</p><p>Следующий фрагмент кода демонстрирует использование типа данных <code class="type">complex</code> из примера в <a class="xref" href="xtypes.html" title="38.13. Пользовательские типы">Разделе 38.13</a>. Внешнее строковое представление этого типа имеет форму <code class="literal">(%f,%f)</code> и определено в функциях <code class="function">complex_in()</code> и <code class="function">complex_out()</code> в <a class="xref" href="xtypes.html" title="38.13. Пользовательские типы">Разделе 38.13</a>. Следующий пример вставляет значения комплексного типа <code class="literal">(1,1)</code> и <code class="literal">(3,3)</code> в столбцы <code class="literal">a</code> и <code class="literal">b</code>, а затем выбирает их из таблицы. </p><pre class="programlisting">EXEC SQL BEGIN DECLARE SECTION;
+    varchar a[64];
+    varchar b[64];
+EXEC SQL END DECLARE SECTION;
+
+    EXEC SQL INSERT INTO test_complex VALUES ('(1,1)', '(3,3)');
+
+    EXEC SQL DECLARE cur1 CURSOR FOR SELECT a, b FROM test_complex;
+    EXEC SQL OPEN cur1;
+
+    EXEC SQL WHENEVER NOT FOUND DO BREAK;
+
+    while (1)
+    {
+        EXEC SQL FETCH FROM cur1 INTO :a, :b;
+        printf("a=%s, b=%s\n", a.arr, b.arr);
+    }
+
+    EXEC SQL CLOSE cur1;</pre><p> Этот пример выводит следующий результат: </p><pre class="screen">
+a=(1,1), b=(3,3)
+</pre><p>Другое обходное решение состоит в том, чтобы избегать прямого использования пользовательских типов в ECPG, а вместо этого создать функцию или приведение, выполняющее преобразование между пользовательским типом и примитивным типом, который может обработать ECPG. Заметьте, однако, что приведения типов, особенно неявные, нужно добавлять в систему типов очень осторожно.</p><p>Например: </p><pre class="programlisting">CREATE FUNCTION create_complex(r double, i double) RETURNS complex
+LANGUAGE SQL
+IMMUTABLE
+AS $$ SELECT $1 * complex '(1,0')' + $2 * complex '(0,1)' $$;</pre><p> После такого определения следующий код </p><pre class="programlisting">EXEC SQL BEGIN DECLARE SECTION;
+double a, b, c, d;
+EXEC SQL END DECLARE SECTION;
+
+a = 1;
+b = 2;
+c = 3;
+d = 4;
+
+EXEC SQL INSERT INTO test_complex VALUES (create_complex(:a, :b), create_complex(:c, :d));</pre><p> будет работать так же, как </p><pre class="programlisting">EXEC SQL INSERT INTO test_complex VALUES ('(1,2)', '(3,4)');</pre></div></div><div class="sect2" id="ECPG-INDICATORS"><div class="titlepage"><div><div><h3 class="title">36.4.6. Индикаторы <a href="#ECPG-INDICATORS" class="id_link">#</a></h3></div></div></div><p>Приведённые выше примеры никак не обрабатывали значения NULL. На самом деле, в примерах с извлечением данных возникнет ошибка, если они выберут из базы данных значение NULL. Чтобы можно было передавать значения NULL в базу данных или получать их из базы данных, вы должны добавить объявление второй переменной среды C для каждой переменной C, содержащей данные. Эта вторая переменная среды C называется <em class="firstterm">индикатором</em> и содержит флаг, показывающий, что в данных передаётся NULL, и при этом значение основной переменной среды C игнорируется. Следующий пример демонстрирует правильную обработку значений NULL: </p><pre class="programlisting">EXEC SQL BEGIN DECLARE SECTION;
+VARCHAR val;
+int val_ind;
+EXEC SQL END DECLARE SECTION:
+
+ ...
+
+EXEC SQL SELECT b INTO :val :val_ind FROM test1;</pre><p> Переменная индикатора <code class="varname">val_ind</code> будет равна нулю, если значение не NULL, или отрицательному числу, если NULL. (Особенности, связанные с режимом совместимости с Oracle, описаны в <a class="xref" href="ecpg-oracle-compat.html" title="36.16. Режим совместимости с Oracle">Разделе 36.16</a>.)</p><p>Индикатор выполняет ещё одну функцию: если он содержит положительное число, это означает, что значение не NULL, но оно было обрезано, когда сохранялось в переменной среды С.</p><p>Если препроцессору <code class="command">ecpg</code> передаётся аргумент <code class="literal">-r no_indicator</code>, он работает в режиме <span class="quote">«<span class="quote">без индикатора</span>»</span>. В этом режиме, если переменная индикатора не определена, значения NULL обозначаются (при вводе и выводе) для символьных строк пустой строкой, а для целочисленных типов наименьшим возможным значением этого типа (например, <code class="symbol">INT_MIN</code> для <code class="type">int</code>).</p></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ecpg-commands.html" title="36.3. Запуск команд SQL">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="ecpg.html" title="Глава 36. ECPG — Встраиваемый SQL в C">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="ecpg-dynamic.html" title="36.5. Динамический SQL">След.</a></td></tr><tr><td width="40%" align="left" valign="top">36.3. Запуск команд SQL </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 36.5. Динамический SQL</td></tr></table></div></body></html>

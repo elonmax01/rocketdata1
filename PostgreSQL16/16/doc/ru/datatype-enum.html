@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>8.7. Типы перечислений</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="datatype-boolean.html" title="8.6. Логический тип" /><link rel="next" href="datatype-geometric.html" title="8.8. Геометрические типы" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">8.7. Типы перечислений</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="datatype-boolean.html" title="8.6. Логический тип">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="datatype.html" title="Глава 8. Типы данных">Наверх</a></td><th width="60%" align="center">Глава 8. Типы данных</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="datatype-geometric.html" title="8.8. Геометрические типы">След.</a></td></tr></table><hr /></div><div class="sect1" id="DATATYPE-ENUM"><div class="titlepage"><div><div><h2 class="title" style="clear: both">8.7. Типы перечислений <a href="#DATATYPE-ENUM" class="id_link">#</a></h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="datatype-enum.html#DATATYPE-ENUM-DECLARATION">8.7.1. Объявление перечислений</a></span></dt><dt><span class="sect2"><a href="datatype-enum.html#DATATYPE-ENUM-ORDERING">8.7.2. Порядок</a></span></dt><dt><span class="sect2"><a href="datatype-enum.html#DATATYPE-ENUM-TYPE-SAFETY">8.7.3. Безопасность типа</a></span></dt><dt><span class="sect2"><a href="datatype-enum.html#DATATYPE-ENUM-IMPLEMENTATION-DETAILS">8.7.4. Тонкости реализации</a></span></dt></dl></div><a id="id-1.5.7.15.2" class="indexterm"></a><a id="id-1.5.7.15.3" class="indexterm"></a><p>Типы перечислений (enum) определяют статический упорядоченный набор значений, так же как и типы <code class="type">enum</code>, существующие в ряде языков программирования. В качестве перечисления можно привести дни недели или набор состояний.</p><div class="sect2" id="DATATYPE-ENUM-DECLARATION"><div class="titlepage"><div><div><h3 class="title">8.7.1. Объявление перечислений <a href="#DATATYPE-ENUM-DECLARATION" class="id_link">#</a></h3></div></div></div><p>Тип перечислений создаются с помощью команды <a class="xref" href="sql-createtype.html" title="CREATE TYPE"><span class="refentrytitle">CREATE TYPE</span></a>, например так: </p><pre class="programlisting">CREATE TYPE mood AS ENUM ('sad', 'ok', 'happy');</pre><p> Созданные типы enum можно использовать в определениях таблиц и функций, как и любые другие: </p><pre class="programlisting">CREATE TYPE mood AS ENUM ('sad', 'ok', 'happy');
+CREATE TABLE person (
+    name text,
+    current_mood mood
+);
+INSERT INTO person VALUES ('Moe', 'happy');
+SELECT * FROM person WHERE current_mood = 'happy';
+ name | current_mood
+------+--------------
+ Moe  | happy
+(1 row)</pre></div><div class="sect2" id="DATATYPE-ENUM-ORDERING"><div class="titlepage"><div><div><h3 class="title">8.7.2. Порядок <a href="#DATATYPE-ENUM-ORDERING" class="id_link">#</a></h3></div></div></div><p>Порядок значений в перечислении определяется последовательностью, в которой были указаны значения при создании типа. Перечисления поддерживаются всеми стандартными операторами сравнения и связанными агрегатными функциями. Например: </p><pre class="programlisting">INSERT INTO person VALUES ('Larry', 'sad');
+INSERT INTO person VALUES ('Curly', 'ok');
+SELECT * FROM person WHERE current_mood &gt; 'sad';
+ name  | current_mood
+-------+--------------
+ Moe   | happy
+ Curly | ok
+(2 rows)
+
+SELECT * FROM person WHERE current_mood &gt; 'sad' ORDER BY current_mood;
+ name  | current_mood 
+-------+--------------
+ Curly | ok
+ Moe   | happy
+(2 rows)
+
+SELECT name
+FROM person
+WHERE current_mood = (SELECT MIN(current_mood) FROM person);
+ name  
+-------
+ Larry
+(1 row)</pre></div><div class="sect2" id="DATATYPE-ENUM-TYPE-SAFETY"><div class="titlepage"><div><div><h3 class="title">8.7.3. Безопасность типа <a href="#DATATYPE-ENUM-TYPE-SAFETY" class="id_link">#</a></h3></div></div></div><p>Все типы перечислений считаются уникальными и поэтому значения разных типов нельзя сравнивать. Взгляните на этот пример: </p><pre class="programlisting">CREATE TYPE happiness AS ENUM ('happy', 'very happy', 'ecstatic');
+CREATE TABLE holidays (
+    num_weeks integer,
+    happiness happiness
+);
+INSERT INTO holidays(num_weeks,happiness) VALUES (4, 'happy');
+INSERT INTO holidays(num_weeks,happiness) VALUES (6, 'very happy');
+INSERT INTO holidays(num_weeks,happiness) VALUES (8, 'ecstatic');
+INSERT INTO holidays(num_weeks,happiness) VALUES (2, 'sad');
+ОШИБКА:  неверное значение для перечисления happiness: "sad"
+SELECT person.name, holidays.num_weeks FROM person, holidays
+  WHERE person.current_mood = holidays.happiness;
+ОШИБКА:  оператор не существует: mood = happiness</pre><p>Если вам действительно нужно сделать что-то подобное, вы можете либо реализовать собственный оператор, либо явно преобразовать типы в запросе: </p><pre class="programlisting">SELECT person.name, holidays.num_weeks FROM person, holidays
+  WHERE person.current_mood::text = holidays.happiness::text;
+ name | num_weeks
+------+-----------
+ Moe  |         4
+(1 row)</pre></div><div class="sect2" id="DATATYPE-ENUM-IMPLEMENTATION-DETAILS"><div class="titlepage"><div><div><h3 class="title">8.7.4. Тонкости реализации <a href="#DATATYPE-ENUM-IMPLEMENTATION-DETAILS" class="id_link">#</a></h3></div></div></div><p>В метках значений регистр имеет значение, т. е. <code class="type">'happy'</code> и <code class="type">'HAPPY'</code> — не одно и то же. Также в метках имеют значение пробелы.</p><p>Хотя типы-перечисления предназначены прежде всего для статических наборов значений, имеется возможность добавлять новые значения в существующий тип-перечисление и переименовывать значения (см. <a class="xref" href="sql-altertype.html" title="ALTER TYPE"><span class="refentrytitle">ALTER TYPE</span></a>). Однако удалять существующие значения из перечисления, а также изменять их порядок, нельзя — для получения нужного результата придётся удалить и воссоздать это перечисление.</p><p>Значение enum занимает на диске 4 байта. Длина текстовой метки значения ограничена параметром компиляции <code class="symbol">NAMEDATALEN</code>; в стандартных сборках <span class="productname">PostgreSQL</span> он ограничивает длину 63 байтами.</p><p>Сопоставления внутренних значений enum с текстовыми метками хранятся в системном каталоге <a class="link" href="catalog-pg-enum.html" title="53.20. pg_enum"><code class="structname">pg_enum</code></a>. Он может быть полезен в ряде случаев.</p></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="datatype-boolean.html" title="8.6. Логический тип">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="datatype.html" title="Глава 8. Типы данных">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="datatype-geometric.html" title="8.8. Геометрические типы">След.</a></td></tr><tr><td width="40%" align="left" valign="top">8.6. Логический тип </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 8.8. Геометрические типы</td></tr></table></div></body></html>

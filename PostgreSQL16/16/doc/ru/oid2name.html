@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>oid2name</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="contrib-prog-client.html" title="G.1. Клиентские приложения" /><link rel="next" href="vacuumlo.html" title="vacuumlo" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">oid2name</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="contrib-prog-client.html" title="G.1. Клиентские приложения">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="contrib-prog-client.html" title="G.1. Клиентские приложения">Наверх</a></td><th width="60%" align="center">G.1. Клиентские приложения</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="vacuumlo.html" title="vacuumlo">След.</a></td></tr></table><hr /></div><div class="refentry" id="OID2NAME"><div class="titlepage"></div><a id="id-1.11.8.4.3.1" class="indexterm"></a><div class="refnamediv"><h2><span class="refentrytitle">oid2name</span></h2><p>oid2name — преобразовать в имена OID и номера файловых узлов в каталоге данных <span class="productname">PostgreSQL</span></p></div><div class="refsynopsisdiv"><h2>Синтаксис</h2><div class="cmdsynopsis"><p id="id-1.11.8.4.3.4.1"><code class="command">oid2name</code> [<em class="replaceable"><code>параметр</code></em>...]</p></div></div><div class="refsect1" id="id-1.11.8.4.3.5"><h2>Описание</h2><p><span class="application">oid2name</span> — вспомогательная программа, помогающая администраторам исследовать структуру файлов PostgreSQL. Чтобы использовать её, необходимо понимать структуру базы данных на уровне файлов, описанную в <a class="xref" href="storage.html" title="Глава 73. Физическое хранение базы данных">Главе 73</a>.</p><div class="note"><h3 class="title">Примечание</h3><p>Имя <span class="quote">«<span class="quote">oid2name</span>»</span> сложилось исторически и на самом деле вводит в заблуждение, так как чаще всего, используя её, вы будете иметь дело с номерами файловых узлов таблиц (эти номера образуют имена файлов в каталоге баз данных). Необходимо понимать, что OID таблиц отличаются от номеров файловых узлов!</p></div><p>Программа <span class="application">oid2name</span> подключается к целевой базе данных и извлекает информацию об OID, файловых узлах и/или именах таблиц. С её помощью можно также просмотреть OID базы данных или табличного пространства.</p></div><div class="refsect1" id="id-1.11.8.4.3.6"><h2>Параметры</h2><p><span class="application">oid2name</span> принимает следующие аргументы командной строки: </p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="option">-f <em class="replaceable"><code>файловый_узел</code></em></code><br /></span><span class="term"><code class="option">--filenode=<em class="replaceable"><code>файловый_узел</code></em></code></span></dt><dd><p>показать информацию о таблице, к которой относится <em class="replaceable"><code>файловый_узел</code></em>.</p></dd><dt><span class="term"><code class="option">-i</code><br /></span><span class="term"><code class="option">--indexes</code></span></dt><dd><p>включить в вывод индексы и последовательности.</p></dd><dt><span class="term"><code class="option">-o <em class="replaceable"><code>oid</code></em></code><br /></span><span class="term"><code class="option">--oid=<em class="replaceable"><code>oid</code></em></code></span></dt><dd><p>показать информацию о таблице с OID, равным <em class="replaceable"><code>oid</code></em>.</p></dd><dt><span class="term"><code class="option">-q</code><br /></span><span class="term"><code class="option">--quiet</code></span></dt><dd><p>не выводить заголовки (полезно для скриптов).</p></dd><dt><span class="term"><code class="option">-s</code><br /></span><span class="term"><code class="option">--tablespaces</code></span></dt><dd><p>показать OID табличных пространств.</p></dd><dt><span class="term"><code class="option">-S</code><br /></span><span class="term"><code class="option">--system-objects</code></span></dt><dd><p>включить в вывод системные объекты (те, что находятся в схемах <code class="option">information_schema</code>, <code class="option">pg_toast</code> и <code class="option">pg_catalog</code>).</p></dd><dt><span class="term"><code class="option">-t <em class="replaceable"><code>шаблон_имён_таблиц</code></em></code><br /></span><span class="term"><code class="option">--table=<em class="replaceable"><code>шаблон_имён_таблиц</code></em></code></span></dt><dd><p>показать информацию о таблицах, подпадающих под <em class="replaceable"><code>шаблон_имён_таблиц</code></em>.</p></dd><dt><span class="term"><code class="option">-V</code><br /></span><span class="term"><code class="option">--version</code></span></dt><dd><p>вывести версию <span class="application">oid2name</span> и завершиться.</p></dd><dt><span class="term"><code class="option">-x</code><br /></span><span class="term"><code class="option">--extended</code></span></dt><dd><p>вывести дополнительные сведения о каждом показываемом объекте: имя табличного пространства, имя схемы и OID.</p></dd><dt><span class="term"><code class="option">-?</code><br /></span><span class="term"><code class="option">--help</code></span></dt><dd><p>вывести справку об аргументах командной строки <span class="application">oid2name</span> и завершиться.</p></dd></dl></div><p><span class="application">oid2name</span> также принимает в командной строке следующие аргументы, задающие параметры подключения: </p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="option">-d <em class="replaceable"><code>база_данных</code></em></code><br /></span><span class="term"><code class="option">--dbname=<em class="replaceable"><code>база_данных</code></em></code></span></dt><dd><p>целевая база данных.</p></dd><dt><span class="term"><code class="option">-h <em class="replaceable"><code>сервер</code></em></code><br /></span><span class="term"><code class="option">--host=<em class="replaceable"><code>сервер</code></em></code></span></dt><dd><p>адрес сервера баз данных.</p></dd><dt><span class="term"><code class="option">-H <em class="replaceable"><code>сервер</code></em></code></span></dt><dd><p>адрес сервера баз данных. Этот параметр считается <span class="emphasis"><em>устаревшим</em></span> с 12 версии <span class="productname">PostgreSQL</span>.</p></dd><dt><span class="term"><code class="option">-p <em class="replaceable"><code>порт</code></em></code><br /></span><span class="term"><code class="option">--port=<em class="replaceable"><code>порт</code></em></code></span></dt><dd><p>порт сервера баз данных.</p></dd><dt><span class="term"><code class="option">-U <em class="replaceable"><code>имя_пользователя</code></em></code><br /></span><span class="term"><code class="option">--username=<em class="replaceable"><code>имя_пользователя</code></em></code></span></dt><dd><p>имя пользователя для подключения.</p></dd></dl></div><p>Чтобы получить информацию об определённых таблицах, выберите их с аргументом <code class="option">-o</code>, <code class="option">-f</code> и/или <code class="option">-t</code>. Параметр <code class="option">-o</code> принимает OID, <code class="option">-f</code> — файловый узел, а <code class="option">-t</code> — имя таблицы (на самом деле он принимает шаблон <code class="literal">LIKE</code>, так что в нём можно задать что-то вроде <code class="literal">foo%</code>). Вы можете использовать эти аргументы в любом количестве; в вывод будут включены все объекты, соответствующие любым из этих указаний. Но заметьте, что эти аргументы будут выбирать только объекты в базе данных, заданной ключом <code class="option">-d</code>.</p><p>Если аргументы <code class="option">-o</code>, <code class="option">-f</code> и <code class="option">-t</code> отсутствуют, но передаётся <code class="option">-d</code>, будут выведены все таблицы в базе данных с именем, заданным в <code class="option">-d</code>. В этом режиме набором выводимых данных управляют параметры <code class="option">-S</code> и <code class="option">-i</code>.</p><p>Если отсутствует и аргумент <code class="option">-d</code>, выводится список OID баз данных. Также можно получить список табличных пространств, передав аргумент <code class="option">-s</code>.</p></div><div class="refsect1" id="id-1.11.8.4.3.7"><h2>Переменные окружения</h2><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="envar">PGHOST</code><br /></span><span class="term"><code class="envar">PGPORT</code><br /></span><span class="term"><code class="envar">PGUSER</code></span></dt><dd><p>Параметры подключения по умолчанию.</p></dd></dl></div><p>Эта утилита, как и большинство других утилит <span class="productname">PostgreSQL</span>, также использует переменные среды, поддерживаемые <span class="application">libpq</span> (см. <a class="xref" href="libpq-envars.html" title="34.15. Переменные окружения">Раздел 34.15</a>).</p><p>Переменная окружения <code class="envar">PG_COLOR</code> выбирает вариант использования цвета в диагностических сообщениях. Возможные значения: <code class="literal">always</code> (всегда), <code class="literal">auto</code> (автоматически) и <code class="literal">never</code> (никогда).</p></div><div class="refsect1" id="id-1.11.8.4.3.8"><h2>Замечания</h2><p>Программе <span class="application">oid2name</span> требуется работающий сервер баз данных с исправными системными каталогами. Таким образом, в ситуациях с катастрофическими повреждениями базы данных её использование ограничено.</p></div><div class="refsect1" id="id-1.11.8.4.3.9"><h2>Примеры</h2><pre class="screen">$ # Что вообще есть на этом сервере базы данных?
+$ oid2name
+All databases:
+    Oid  Database Name  Tablespace
+----------------------------------
+  17228       alvherre  pg_default
+  17255     regression  pg_default
+  17227      template0  pg_default
+      1      template1  pg_default
+
+$ oid2name -s
+All tablespaces:
+     Oid  Tablespace Name
+-------------------------
+    1663       pg_default
+    1664        pg_global
+  155151         fastdisk
+  155152          bigdisk
+
+$ # Хорошо, давайте взглянем на базу alvherre
+$ cd $PGDATA/base/17228
+
+$ # Получим первые 10 объектов базы (отсортированных по размеру) в табличном пространстве по умолчанию
+$ ls -lS * | head -10
+-rw-------  1 alvherre alvherre 136536064 sep 14 09:51 155173
+-rw-------  1 alvherre alvherre  17965056 sep 14 09:51 1155291
+-rw-------  1 alvherre alvherre   1204224 sep 14 09:51 16717
+-rw-------  1 alvherre alvherre    581632 sep  6 17:51 1255
+-rw-------  1 alvherre alvherre    237568 sep 14 09:50 16674
+-rw-------  1 alvherre alvherre    212992 sep 14 09:51 1249
+-rw-------  1 alvherre alvherre    204800 sep 14 09:51 16684
+-rw-------  1 alvherre alvherre    196608 sep 14 09:50 16700
+-rw-------  1 alvherre alvherre    163840 sep 14 09:50 16699
+-rw-------  1 alvherre alvherre    122880 sep  6 17:51 16751
+
+$ # Поинтересуемся, что за файл 155173...
+$ oid2name -d alvherre -f 155173
+From database "alvherre":
+  Filenode  Table Name
+----------------------
+    155173    accounts
+
+$ # Можно узнать сразу о нескольких объектах
+$ oid2name -d alvherre -f 155173 -f 1155291
+From database "alvherre":
+  Filenode     Table Name
+-------------------------
+    155173       accounts
+   1155291  accounts_pkey
+
+$ # Можно добавить другие параметры и получить дополнительные подробности с -x
+$ oid2name -d alvherre -t accounts -f 1155291 -x
+From database "alvherre":
+  Filenode     Table Name      Oid  Schema  Tablespace
+------------------------------------------------------
+    155173       accounts   155173  public  pg_default
+   1155291  accounts_pkey  1155291  public  pg_default
+
+$ # Вычислить объём, который занимает на диске каждый объект БД
+$ du [0-9]* |
+&gt; while read SIZE FILENODE
+&gt; do
+&gt;   echo "$SIZE       `oid2name -q -d alvherre -i -f $FILENODE`"
+&gt; done
+16            1155287  branches_pkey
+16            1155289  tellers_pkey
+17561            1155291  accounts_pkey
+...
+
+$ # То же самое, но с сортировкой по размеру
+$ du [0-9]* | sort -rn | while read SIZE FN
+&gt; do
+&gt;   echo "$SIZE   `oid2name -q -d alvherre -f $FN`"
+&gt; done
+133466             155173    accounts
+17561            1155291  accounts_pkey
+1177              16717  pg_proc_proname_args_nsp_index
+...
+
+$ # Просмотреть содержимое табличных пространств можно в каталоге pg_tblspc
+$ cd $PGDATA/pg_tblspc
+$ oid2name -s
+All tablespaces:
+     Oid  Tablespace Name
+-------------------------
+    1663       pg_default
+    1664        pg_global
+  155151         fastdisk
+  155152          bigdisk
+
+$ # Объекты каких баз данных находятся в табличном пространстве "fastdisk"?
+$ ls -d 155151/*
+155151/17228/  155151/PG_VERSION
+
+$ # И что это за база данных 17228?
+$ oid2name
+All databases:
+    Oid  Database Name  Tablespace
+----------------------------------
+  17228       alvherre  pg_default
+  17255     regression  pg_default
+  17227      template0  pg_default
+      1      template1  pg_default
+
+$ # Давайте посмотрим, какие объекты этой базы содержатся в данном табличном пространстве.
+$ cd 155151/17228
+$ ls -l
+total 0
+-rw-------  1 postgres postgres 0 sep 13 23:20 155156
+
+$ # Мда, таблица невелика... и что это за таблица?
+$ oid2name -d alvherre -f 155156
+From database "alvherre":
+  Filenode  Table Name
+----------------------
+    155156         foo</pre></div><div class="refsect1" id="id-1.11.8.4.3.10"><h2>Автор</h2><p>Б. Палмер <code class="email">&lt;<a class="email" href="mailto:bpalmer@crimelabs.net">bpalmer@crimelabs.net</a>&gt;</code></p></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="contrib-prog-client.html" title="G.1. Клиентские приложения">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="contrib-prog-client.html" title="G.1. Клиентские приложения">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="vacuumlo.html" title="vacuumlo">След.</a></td></tr><tr><td width="40%" align="left" valign="top">G.1. Клиентские приложения </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> <span class="application">vacuumlo</span></td></tr></table></div></body></html>

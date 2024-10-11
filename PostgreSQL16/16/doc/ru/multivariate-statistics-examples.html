@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>76.2. Примеры многовариантной статистики</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="row-estimation-examples.html" title="76.1. Примеры оценки количества строк" /><link rel="next" href="planner-stats-security.html" title="76.3. Статистика планировщика и безопасность" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">76.2. Примеры многовариантной статистики</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="row-estimation-examples.html" title="76.1. Примеры оценки количества строк">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="planner-stats-details.html" title="Глава 76. Как планировщик использует статистику">Наверх</a></td><th width="60%" align="center">Глава 76. Как планировщик использует статистику</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="planner-stats-security.html" title="76.3. Статистика планировщика и безопасность">След.</a></td></tr></table><hr /></div><div class="sect1" id="MULTIVARIATE-STATISTICS-EXAMPLES"><div class="titlepage"><div><div><h2 class="title" style="clear: both">76.2. Примеры многовариантной статистики <a href="#MULTIVARIATE-STATISTICS-EXAMPLES" class="id_link">#</a></h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="multivariate-statistics-examples.html#FUNCTIONAL-DEPENDENCIES">76.2.1. Функциональные зависимости</a></span></dt><dt><span class="sect2"><a href="multivariate-statistics-examples.html#MULTIVARIATE-NDISTINCT-COUNTS">76.2.2. Многовариантное число различных значений</a></span></dt><dt><span class="sect2"><a href="multivariate-statistics-examples.html#MCV-LISTS">76.2.3. Списки MCV</a></span></dt></dl></div><a id="id-1.10.27.5.2" class="indexterm"></a><div class="sect2" id="FUNCTIONAL-DEPENDENCIES"><div class="titlepage"><div><div><h3 class="title">76.2.1. Функциональные зависимости <a href="#FUNCTIONAL-DEPENDENCIES" class="id_link">#</a></h3></div></div></div><p>Многовариантную корреляцию можно продемонстрировать на очень простом наборе данных — таблице с двумя столбцами, содержащими одинаковые значения: </p><pre class="programlisting">CREATE TABLE t (a INT, b INT);
+INSERT INTO t SELECT i % 100, i % 100 FROM generate_series(1, 10000) s(i);
+ANALYZE t;</pre><p> Как рассказывается в <a class="xref" href="planner-stats.html" title="14.2. Статистика, используемая планировщиком">Разделе 14.2</a>, планировщик может определить мощность <code class="structname">t</code>, исходя из числа страниц и строк, полученного из <code class="structname">pg_class</code>: </p><pre class="programlisting">SELECT relpages, reltuples FROM pg_class WHERE relname = 't';
+
+ relpages | reltuples
+----------+-----------
+       45 |     10000</pre><p> Распределение данных очень простое: в каждом столбце содержится всего 100 различных значений, равномерно распределённых.</p><p>Следующий пример показывает результат оценивания условия <code class="literal">WHERE</code> по столбцу <code class="structfield">a</code>: </p><pre class="programlisting">EXPLAIN (ANALYZE, TIMING OFF) SELECT * FROM t WHERE a = 1;
+                                 QUERY PLAN
+-------------------------------------------------------------------​------------
+ Seq Scan on t  (cost=0.00..170.00 rows=100 width=8) (actual rows=100 loops=1)
+   Filter: (a = 1)
+   Rows Removed by Filter: 9900</pre><p> Планировщик рассматривает условие и определяет, что его избирательность равна 1%. Сравнивая эту оценку и фактическое число строк, мы видим, что оценка очень точна (на самом деле абсолютна точна, так как таблица очень маленькая). Если изменить условие <code class="literal">WHERE</code>, чтобы использовался столбец <code class="structfield">b</code>, будет получен такой же план. Но посмотрите, что получится, если мы применим одинаковое условие к двум столбцам, объединив их оператором <code class="literal">AND</code>: </p><pre class="programlisting">EXPLAIN (ANALYZE, TIMING OFF) SELECT * FROM t WHERE a = 1 AND b = 1;
+                                 QUERY PLAN
+-------------------------------------------------------------------​----------
+ Seq Scan on t  (cost=0.00..195.00 rows=1 width=8) (actual rows=100 loops=1)
+   Filter: ((a = 1) AND (b = 1))
+   Rows Removed by Filter: 9900</pre><p> Планировщик оценивает избирательность каждого условия индивидуально, и получает ту же оценку в 1%, что и выше. Затем он предполагает, что условия независимы, так что он перемножает избирательности и выдаёт окончательную оценку избирательности, равную всего 0.01%. Это значительная недооценка, так как фактическое число строк, соответствующих условию, (100) на два порядка больше.</p><p>Эту проблему можно решить, создав объект статистики, который укажет команде <code class="command">ANALYZE</code> вычислить многовариантную статистику функциональной зависимости по двум столбцам: </p><pre class="programlisting">CREATE STATISTICS stts (dependencies) ON a, b FROM t;
+ANALYZE t;
+EXPLAIN (ANALYZE, TIMING OFF) SELECT * FROM t WHERE a = 1 AND b = 1;
+                                  QUERY PLAN
+-------------------------------------------------------------------​------------
+ Seq Scan on t  (cost=0.00..195.00 rows=100 width=8) (actual rows=100 loops=1)
+   Filter: ((a = 1) AND (b = 1))
+   Rows Removed by Filter: 9900</pre></div><div class="sect2" id="MULTIVARIATE-NDISTINCT-COUNTS"><div class="titlepage"><div><div><h3 class="title">76.2.2. Многовариантное число различных значений <a href="#MULTIVARIATE-NDISTINCT-COUNTS" class="id_link">#</a></h3></div></div></div><p>Подобная проблема возникает с оценкой мощности наборов с несколькими столбцами, например, с оценкой числа групп, которые могут быть выданы предложением <code class="command">GROUP BY</code>. Когда в <code class="command">GROUP BY</code> указан один столбец, оценка числа различных значений (которую можно увидеть как ожидаемое число строк, выдаваемое узлом HashAggregate) очень точная: </p><pre class="programlisting">EXPLAIN (ANALYZE, TIMING OFF) SELECT COUNT(*) FROM t GROUP BY a;
+                                       QUERY PLAN
+-------------------------------------------------------------------​----------------------
+ HashAggregate  (cost=195.00..196.00 rows=100 width=12) (actual rows=100 loops=1)
+   Group Key: a
+   -&gt;  Seq Scan on t  (cost=0.00..145.00 rows=10000 width=4) (actual rows=10000 loops=1)</pre><p> Но оценка числа групп в запросе с двумя столбцами в <code class="command">GROUP BY</code> без многовариантной статистики, как и в предыдущем примере, отличается от правильной на порядок: </p><pre class="programlisting">EXPLAIN (ANALYZE, TIMING OFF) SELECT COUNT(*) FROM t GROUP BY a, b;
+                                       QUERY PLAN
+-------------------------------------------------------------------​-------------------------
+ HashAggregate  (cost=220.00..230.00 rows=1000 width=16) (actual rows=100 loops=1)
+   Group Key: a, b
+   -&gt;  Seq Scan on t  (cost=0.00..145.00 rows=10000 width=8) (actual rows=10000 loops=1)</pre><p> Если переопределить объект статистики, чтобы он включал подсчёт числа различных значений для двух столбцов, оценка станет гораздо лучше: </p><pre class="programlisting">DROP STATISTICS stts;
+CREATE STATISTICS stts (dependencies, ndistinct) ON a, b FROM t;
+ANALYZE t;
+EXPLAIN (ANALYZE, TIMING OFF) SELECT COUNT(*) FROM t GROUP BY a, b;
+                                       QUERY PLAN
+-------------------------------------------------------------------​-------------------------
+ HashAggregate  (cost=220.00..221.00 rows=100 width=16) (actual rows=100 loops=1)
+   Group Key: a, b
+   -&gt;  Seq Scan on t  (cost=0.00..145.00 rows=10000 width=8) (actual rows=10000 loops=1)</pre></div><div class="sect2" id="MCV-LISTS"><div class="titlepage"><div><div><h3 class="title">76.2.3. Списки MCV <a href="#MCV-LISTS" class="id_link">#</a></h3></div></div></div><p>Как рассказывалось в <a class="xref" href="multivariate-statistics-examples.html#FUNCTIONAL-DEPENDENCIES" title="76.2.1. Функциональные зависимости">Подразделе 76.2.1</a>, статистика функциональных зависимостей очень недорога и эффективна, но имеет серьёзное ограничение, связанное с её природой (отслеживаются только зависимости на уровне столбцов, но не между отдельными значениями столбцов).</p><p>В этом разделе описываются многовариантные списки <acronym class="acronym">MCV</acronym> (Most-Common Values, Самые частые значения), естественное расширение статистики по столбцам, описанной в <a class="xref" href="row-estimation-examples.html" title="76.1. Примеры оценки количества строк">Разделе 76.1</a>. Списки <acronym class="acronym">MCV</acronym> устраняют упомянутое ограничение, храня отдельные значения, что, разумеется, усложняет построение статистики в ходе <code class="command">ANALYZE</code>, а также снижает скорость планирования и эффективность хранения.</p><p>Взгляните ещё раз на запрос, фигурировавший в <a class="xref" href="multivariate-statistics-examples.html#FUNCTIONAL-DEPENDENCIES" title="76.2.1. Функциональные зависимости">Подразделе 76.2.1</a>, но на этот раз со списком <acronym class="acronym">MCV</acronym>, созданным по тем же столбцам (функциональные зависимости нужно удалить, чтобы планировщик мог использовать только новую статистику). </p><pre class="programlisting">DROP STATISTICS stts;
+CREATE STATISTICS stts2 (mcv) ON a, b FROM t;
+ANALYZE t;
+EXPLAIN (ANALYZE, TIMING OFF) SELECT * FROM t WHERE a = 1 AND b = 1;
+                                   QUERY PLAN
+-------------------------------------------------------------------​------------
+ Seq Scan on t  (cost=0.00..195.00 rows=100 width=8) (actual rows=100 loops=1)
+   Filter: ((a = 1) AND (b = 1))
+   Rows Removed by Filter: 9900</pre><p> Оценка оказывается такой же точной, как и с функциональными зависимостями, во многом благодаря тому, что таблица достаточно мала и характеризуется простым распределением с небольшим количеством уникальных значений. Прежде чем перейти ко второму запросу, в котором функциональные зависимости показали себя не очень хорошо, давайте просмотрим список <acronym class="acronym">MCV</acronym>.</p><p>Просмотреть список <acronym class="acronym">MCV</acronym> можно с помощью возвращающей множество функции <code class="function">pg_mcv_list_items</code>. </p><pre class="programlisting">SELECT m.* FROM pg_statistic_ext join pg_statistic_ext_data on (oid = stxoid),
+                pg_mcv_list_items(stxdmcv) m WHERE stxname = 'stts2';
+ index |  values  | nulls | frequency | base_frequency
+-------+----------+-------+-----------+----------------
+     0 | {0, 0}   | {f,f} |      0.01 |         0.0001
+     1 | {1, 1}   | {f,f} |      0.01 |         0.0001
+   ...
+    49 | {49, 49} | {f,f} |      0.01 |         0.0001
+    50 | {50, 50} | {f,f} |      0.01 |         0.0001
+   ...
+    97 | {97, 97} | {f,f} |      0.01 |         0.0001
+    98 | {98, 98} | {f,f} |      0.01 |         0.0001
+    99 | {99, 99} | {f,f} |      0.01 |         0.0001
+(100 rows)</pre><p> Полученная информация подтверждает, что два столбца содержат 100 уникальных комбинаций значений и что эти столбцы скорее всего равны (частота каждой комбинации — 1%). Базовая частота вычисляется, исходя из частот значений отдельных столбцов, без учёта наличия статистики по нескольким столбцам. Если бы в одном из столбцов оказались значения NULL, это было бы отражено в столбце <code class="structfield">nulls</code>.</p><p>Оценивая избирательность, планировщик применяет все условия к элементам списка <acronym class="acronym">MCV</acronym> и суммирует частоты тех, которые этим условиям удовлетворяют. За подробностями обратитесь к описанию функции <code class="function">mcv_clauselist_selectivity</code> в <code class="filename">src/backend/statistics/mcv.c</code>.</p><p>В сравнении с функциональными зависимостями списки <acronym class="acronym">MCV</acronym> имеют два важных преимущества. Во-первых, в этих списках хранятся фактические значения, что позволяет определить, какие комбинации являются совместимыми. </p><pre class="programlisting">EXPLAIN (ANALYZE, TIMING OFF) SELECT * FROM t WHERE a = 1 AND b = 10;
+                                 QUERY PLAN
+-------------------------------------------------------------------​--------
+ Seq Scan on t  (cost=0.00..195.00 rows=1 width=8) (actual rows=0 loops=1)
+   Filter: ((a = 1) AND (b = 10))
+   Rows Removed by Filter: 10000</pre><p> Во-вторых, списки <acronym class="acronym">MCV</acronym> подходят для более широкого ассортимента условий, а не только для сравнений, как функциональные зависимости. Например, взгляните на запрос с диапазоном значений, выполняемый с той же таблицей: </p><pre class="programlisting">EXPLAIN (ANALYZE, TIMING OFF) SELECT * FROM t WHERE a &lt;= 49 AND b &gt; 49;
+                                QUERY PLAN
+-------------------------------------------------------------------​--------
+ Seq Scan on t  (cost=0.00..195.00 rows=1 width=8) (actual rows=0 loops=1)
+   Filter: ((a &lt;= 49) AND (b &gt; 49))
+   Rows Removed by Filter: 10000</pre></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="row-estimation-examples.html" title="76.1. Примеры оценки количества строк">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="planner-stats-details.html" title="Глава 76. Как планировщик использует статистику">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="planner-stats-security.html" title="76.3. Статистика планировщика и безопасность">След.</a></td></tr><tr><td width="40%" align="left" valign="top">76.1. Примеры оценки количества строк </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 76.3. Статистика планировщика и безопасность</td></tr></table></div></body></html>

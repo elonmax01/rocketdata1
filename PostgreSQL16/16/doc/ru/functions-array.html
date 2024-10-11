@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>9.19. Функции и операторы для работы с массивами</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="functions-conditional.html" title="9.18. Условные выражения" /><link rel="next" href="functions-range.html" title="9.20. Диапазонные/мультидиапазонные функции и операторы" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">9.19. Функции и операторы для работы с массивами</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="functions-conditional.html" title="9.18. Условные выражения">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="functions.html" title="Глава 9. Функции и операторы">Наверх</a></td><th width="60%" align="center">Глава 9. Функции и операторы</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="functions-range.html" title="9.20. Диапазонные/мультидиапазонные функции и операторы">След.</a></td></tr></table><hr /></div><div class="sect1" id="FUNCTIONS-ARRAY"><div class="titlepage"><div><div><h2 class="title" style="clear: both">9.19. Функции и операторы для работы с массивами <a href="#FUNCTIONS-ARRAY" class="id_link">#</a></h2></div></div></div><p>В <a class="xref" href="functions-array.html#ARRAY-OPERATORS-TABLE" title="Таблица 9.53. Операторы для работы с массивами">Таблице 9.53</a> показаны имеющиеся специальные операторы для типов-массивов. Кроме них для массивов определены обычные операторы сравнения, показанные в <a class="xref" href="functions-comparison.html#FUNCTIONS-COMPARISON-OP-TABLE" title="Таблица 9.1. Операторы сравнения">Таблице 9.1</a>. Эти операторы сравнения сопоставляют содержимое массивов по элементам, используя при этом функцию сравнения для B-дерева, определённую для типа данного элемента по умолчанию, и упорядочивают их по первому различию. В многомерных массивах элементы просматриваются по строкам (индекс последней размерности меняется в первую очередь). Если содержимое двух массивов совпадает, а размерности отличаются, результат их сравнения будет определяться первым отличием в размерностях.</p><div class="table" id="ARRAY-OPERATORS-TABLE"><p class="title"><strong>Таблица 9.53. Операторы для работы с массивами</strong></p><div class="table-contents"><table class="table" summary="Операторы для работы с массивами" border="1"><colgroup><col /></colgroup><thead><tr><th class="func_table_entry"><p class="func_signature">Оператор</p>
+       <p>Описание</p>
+       <p>Пример(ы)</p></th></tr></thead><tbody><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anyarray</code> <code class="literal">@&gt;</code> <code class="type">anyarray</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Первый массив содержит второй (имеется ли для каждого элемента второго массива равный ему в первом)? (Повторяющиеся элементы рассматриваются на общих основаниях, поэтому массивы <code class="literal">ARRAY[1]</code> и <code class="literal">ARRAY[1,1]</code> считаются содержащими друг друга.)</p>
+       <p>
+        <code class="literal">ARRAY[1,4,3] @&gt; ARRAY[3,1,3]</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anyarray</code> <code class="literal">&lt;@</code> <code class="type">anyarray</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Первый массив содержится во втором?</p>
+       <p>
+        <code class="literal">ARRAY[2,2,7] &lt;@ ARRAY[1,7,4,2,6]</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anyarray</code> <code class="literal">&amp;&amp;</code> <code class="type">anyarray</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Массивы пересекаются (у них есть общие элементы)?</p>
+       <p>
+        <code class="literal">ARRAY[1,4,3] &amp;&amp; ARRAY[2,1]</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anycompatiblearray</code> <code class="literal">||</code> <code class="type">anycompatiblearray</code>
+        → <code class="returnvalue">anycompatiblearray</code>
+       </p>
+       <p>Соединяет два массива. Если один из операндов — NULL или пустой массив, оператор никак не действует; в противном случае число размерностей массивов должно быть одинаковым (этот случай показан в первом примере) или могут отличаться на один (это иллюстрирует второй пример). Если это массивы не одинаковых типов элементов, они будут приведены к общему типу (см. <a class="xref" href="typeconv-union-case.html" title="10.5. UNION, CASE и связанные конструкции">Раздел 10.5</a>).</p>
+       <p>
+        <code class="literal">ARRAY[1,2,3] || ARRAY[4,5,6,7]</code>
+        → <code class="returnvalue">{1,2,3,4,5,6,7}</code>
+       </p>
+       <p>
+        <code class="literal">ARRAY[1,2,3] || ARRAY[[4,5,6],[7,8,9.9]]</code>
+        → <code class="returnvalue">{{1,2,3},{4,5,6},{7,8,9.9}}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anycompatible</code> <code class="literal">||</code> <code class="type">anycompatiblearray</code>
+        → <code class="returnvalue">anycompatiblearray</code>
+       </p>
+       <p>Вставляет элемент в начало массива (массив должен быть пустым или одномерным).</p>
+       <p>
+        <code class="literal">3 || ARRAY[4,5,6]</code>
+        → <code class="returnvalue">{3,4,5,6}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anycompatiblearray</code> <code class="literal">||</code> <code class="type">anycompatible</code>
+        → <code class="returnvalue">anycompatiblearray</code>
+       </p>
+       <p>Вставляет элемент в конец массива (массив должен быть пустым или одномерным).</p>
+       <p>
+        <code class="literal">ARRAY[4,5,6] || 7</code>
+        → <code class="returnvalue">{4,5,6,7}</code>
+       </p></td></tr></tbody></table></div></div><br class="table-break" /><p>Подробнее поведение операторов с массивами описано в <a class="xref" href="arrays.html" title="8.15. Массивы">Разделе 8.15</a>. За дополнительными сведениями об операторах, поддерживающих индексы, обратитесь к <a class="xref" href="indexes-types.html" title="11.2. Типы индексов">Разделу 11.2</a>.</p><p>В <a class="xref" href="functions-array.html#ARRAY-FUNCTIONS-TABLE" title="Таблица 9.54. Функции для работы с массивами">Таблице 9.54</a> перечислены функции, предназначенные для работы с массивами. Дополнительная информация о них и примеры использования приведены в <a class="xref" href="arrays.html" title="8.15. Массивы">Разделе 8.15</a>.</p><div class="table" id="ARRAY-FUNCTIONS-TABLE"><p class="title"><strong>Таблица 9.54. Функции для работы с массивами</strong></p><div class="table-contents"><table class="table" summary="Функции для работы с массивами" border="1"><colgroup><col /></colgroup><thead><tr><th class="func_table_entry"><p class="func_signature">Функция</p>
+       <p>Описание</p>
+       <p>Пример(ы)</p></th></tr></thead><tbody><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.25.6.2.2.1.1.1.1" class="indexterm"></a> <code class="function">array_append</code> ( <code class="type">anycompatiblearray</code>, <code class="type">anycompatible</code> ) → <code class="returnvalue">anycompatiblearray</code></p>
+       <p>Добавляет элемент в конец массива (так же, как оператор <code class="type">anycompatiblearray</code> <code class="literal">||</code> <code class="type">anycompatible</code>).</p>
+       <p>
+        <code class="literal">array_append(ARRAY[1,2], 3)</code>
+        → <code class="returnvalue">{1,2,3}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.25.6.2.2.2.1.1.1" class="indexterm"></a> <code class="function">array_cat</code> ( <code class="type">anycompatiblearray</code>, <code class="type">anycompatiblearray</code> ) → <code class="returnvalue">anycompatiblearray</code></p>
+       <p>Соединяет два массива (так же, как оператор <code class="type">anycompatiblearray</code> <code class="literal">||</code> <code class="type">anycompatiblearray</code>).</p>
+       <p>
+        <code class="literal">array_cat(ARRAY[1,2,3], ARRAY[4,5])</code>
+        → <code class="returnvalue">{1,2,3,4,5}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.25.6.2.2.3.1.1.1" class="indexterm"></a> <code class="function">array_dims</code> ( <code class="type">anyarray</code> ) → <code class="returnvalue">text</code></p>
+       <p>Возвращает текстовое представление размерностей массива.</p>
+       <p>
+        <code class="literal">array_dims(ARRAY[[1,2,3], [4,5,6]])</code>
+        → <code class="returnvalue">[1:2][1:3]</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.25.6.2.2.4.1.1.1" class="indexterm"></a> <code class="function">array_fill</code> ( <code class="type">anyelement</code>, <code class="type">integer[]</code> [<span class="optional">, <code class="type">integer[]</code></span>] ) → <code class="returnvalue">anyarray</code></p>
+       <p>Возвращает массив, заполненный заданным значением и имеющий размерности, указанные во втором аргументе. В необязательном третьем аргументе могут быть заданы нижние границы для каждой размерности (по умолчанию <code class="literal">1</code>).</p>
+       <p>
+        <code class="literal">array_fill(11, ARRAY[2,3])</code>
+        → <code class="returnvalue">{{11,11,11},{11,11,11}}</code>
+       </p>
+       <p>
+        <code class="literal">array_fill(7, ARRAY[3], ARRAY[2])</code>
+        → <code class="returnvalue">[2:4]={7,7,7}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.25.6.2.2.5.1.1.1" class="indexterm"></a> <code class="function">array_length</code> ( <code class="type">anyarray</code>, <code class="type">integer</code> ) → <code class="returnvalue">integer</code></p>
+       <p>Возвращает длину указанной размерности массива. (Для пустых или несуществующих размерностей массива выдаёт не 0, а NULL.)</p>
+       <p>
+        <code class="literal">array_length(array[1,2,3], 1)</code>
+        → <code class="returnvalue">3</code>
+       </p>
+       <p>
+        <code class="literal">array_length(array[]::int[], 1)</code>
+        → <code class="returnvalue">NULL</code>
+       </p>
+       <p>
+        <code class="literal">array_length(array['text'], 2)</code>
+        → <code class="returnvalue">NULL</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.25.6.2.2.6.1.1.1" class="indexterm"></a> <code class="function">array_lower</code> ( <code class="type">anyarray</code>, <code class="type">integer</code> ) → <code class="returnvalue">integer</code></p>
+       <p>Возвращает нижнюю границу указанной размерности массива.</p>
+       <p>
+        <code class="literal">array_lower('[0:2]={1,2,3}'::integer[], 1)</code>
+        → <code class="returnvalue">0</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.25.6.2.2.7.1.1.1" class="indexterm"></a> <code class="function">array_ndims</code> ( <code class="type">anyarray</code> ) → <code class="returnvalue">integer</code></p>
+       <p>Возвращает число размерностей массива.</p>
+       <p>
+        <code class="literal">array_ndims(ARRAY[[1,2,3], [4,5,6]])</code>
+        → <code class="returnvalue">2</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.25.6.2.2.8.1.1.1" class="indexterm"></a> <code class="function">array_position</code> ( <code class="type">anycompatiblearray</code>, <code class="type">anycompatible</code> [<span class="optional">, <code class="type">integer</code></span>] ) → <code class="returnvalue">integer</code></p>
+       <p>Возвращает позицию первого вхождения второго аргумента в массиве либо <code class="literal">NULL</code> в случае отсутствия соответствующего элемента. Если задан третий аргумент, поиск начинается с заданной позиции. Массив должен быть одномерным. Эта функция определяет равенство как <code class="literal">IS NOT DISTINCT FROM</code>, что позволяет искать и значения <code class="literal">NULL</code>.</p>
+       <p>
+        <code class="literal">array_position(ARRAY['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'], 'mon')</code>
+        → <code class="returnvalue">2</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.25.6.2.2.9.1.1.1" class="indexterm"></a> <code class="function">array_positions</code> ( <code class="type">anycompatiblearray</code>, <code class="type">anycompatible</code> ) → <code class="returnvalue">integer[]</code></p>
+       <p>Возвращает массив позиций всех вхождений второго аргумента в одномерном массиве, заданном первым аргументом. Эта функция определяет равенство как <code class="literal">IS NOT DISTINCT FROM</code>, что позволяет искать и значения <code class="literal">NULL</code>. Результат <code class="literal">NULL</code> возвращается, только если в качестве массива передаётся <code class="literal">NULL</code>; в случае же отсутствия искомого значения в заданном массиве возвращается пустой массив.</p>
+       <p>
+        <code class="literal">array_positions(ARRAY['A','A','B','A'], 'A')</code>
+        → <code class="returnvalue">{1,2,4}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.25.6.2.2.10.1.1.1" class="indexterm"></a> <code class="function">array_prepend</code> ( <code class="type">anycompatible</code>, <code class="type">anycompatiblearray</code> ) → <code class="returnvalue">anycompatiblearray</code></p>
+       <p>Вставляет элемент в начало массива (так же, как оператор <code class="type">anycompatibleelement</code> <code class="literal">||</code> <code class="type">anycompatiblearray</code>).</p>
+       <p>
+        <code class="literal">array_prepend(1, ARRAY[2,3])</code>
+        → <code class="returnvalue">{1,2,3}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.25.6.2.2.11.1.1.1" class="indexterm"></a> <code class="function">array_remove</code> ( <code class="type">anycompatiblearray</code>, <code class="type">anycompatible</code> ) → <code class="returnvalue">anycompatiblearray</code></p>
+       <p>Удаляет из массива все элементы, равные заданному значению. Массив должен быть одномерным. Эта функция определяет равенство как <code class="literal">IS NOT DISTINCT FROM</code>, что позволяет удалять и элементы <code class="literal">NULL</code>.</p>
+       <p>
+        <code class="literal">array_remove(ARRAY[1,2,3,2], 2)</code>
+        → <code class="returnvalue">{1,3}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.25.6.2.2.12.1.1.1" class="indexterm"></a> <code class="function">array_replace</code> ( <code class="type">anycompatiblearray</code>, <code class="type">anycompatible</code>, <code class="type">anycompatible</code> ) → <code class="returnvalue">anycompatiblearray</code></p>
+       <p>Заменяет каждый элемент массива, равный второму аргументу, значением третьего аргумента.</p>
+       <p>
+        <code class="literal">array_replace(ARRAY[1,2,5,4], 5, 3)</code>
+        → <code class="returnvalue">{1,2,3,4}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.25.6.2.2.13.1.1.1" class="indexterm"></a> <code class="function">array_sample</code> ( <em class="parameter"><code>array</code></em> <code class="type">anyarray</code>, <em class="parameter"><code>n</code></em> <code class="type">integer</code> ) → <code class="returnvalue">anyarray</code></p>
+       <p>Возвращает массив из <em class="parameter"><code>n</code></em> элементов, случайно выбранных из <em class="parameter"><code>array</code></em>. Значение <em class="parameter"><code>n</code></em> не может превышать длину первого измерения <em class="parameter"><code>array</code></em>. Если в <em class="parameter"><code>array</code></em> передаётся многомерный массив, берутся <span class="quote">«<span class="quote">элементы</span>»</span> первой размерности.</p>
+       <p>
+        <code class="literal">array_sample(ARRAY[1,2,3,4,5,6], 3)</code>
+        → <code class="returnvalue">{2,6,1}</code>
+       </p>
+       <p>
+        <code class="literal">array_sample(ARRAY[[1,2],[3,4],[5,6]], 2)</code>
+        → <code class="returnvalue">{{5,6},{1,2}}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.25.6.2.2.14.1.1.1" class="indexterm"></a> <code class="function">array_shuffle</code> ( <code class="type">anyarray</code> ) → <code class="returnvalue">anyarray</code></p>
+       <p>Случайным образом перемешивает элементы первой размерности массива.</p>
+       <p>
+        <code class="literal">array_shuffle(ARRAY[[1,2],[3,4],[5,6]])</code>
+        → <code class="returnvalue">{{5,6},{1,2},{3,4}}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="FUNCTION-ARRAY-TO-STRING" class="indexterm"></a> <code class="function">array_to_string</code> ( <em class="parameter"><code>array</code></em> <code class="type">anyarray</code>, <em class="parameter"><code>delimiter</code></em> <code class="type">text</code> [<span class="optional">, <em class="parameter"><code>null_string</code></em> <code class="type">text</code></span>] ) → <code class="returnvalue">text</code></p>
+       <p>Представляет все элементы массива в виде текстовых строк и объединяет эти строки через разделитель, заданный параметром <em class="parameter"><code>delimiter</code></em>. Если в параметре <em class="parameter"><code>null_string</code></em> передана отличная от <code class="literal">NULL</code> строка, эта строка будет представлять содержащиеся в массиве элементы <code class="literal">NULL</code>, в противном случае такие элементы опускаются. См. также <a class="link" href="functions-string.html#FUNCTION-STRING-TO-ARRAY"><code class="function">string_to_array</code></a>.</p>
+       <p>
+        <code class="literal">array_to_string(ARRAY[1, 2, 3, NULL, 5], ',', '*')</code>
+        → <code class="returnvalue">1,2,3,*,5</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.25.6.2.2.16.1.1.1" class="indexterm"></a> <code class="function">array_upper</code> ( <code class="type">anyarray</code>, <code class="type">integer</code> ) → <code class="returnvalue">integer</code></p>
+       <p>Возвращает верхнюю границу указанной размерности массива.</p>
+       <p>
+        <code class="literal">array_upper(ARRAY[1,8,3,7], 1)</code>
+        → <code class="returnvalue">4</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.25.6.2.2.17.1.1.1" class="indexterm"></a> <code class="function">cardinality</code> ( <code class="type">anyarray</code> ) → <code class="returnvalue">integer</code></p>
+       <p>Возвращает общее число элементов в массиве (0, если массив пуст).</p>
+       <p>
+        <code class="literal">cardinality(ARRAY[[1,2],[3,4]])</code>
+        → <code class="returnvalue">4</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.25.6.2.2.18.1.1.1" class="indexterm"></a> <code class="function">trim_array</code> ( <em class="parameter"><code>array</code></em> <code class="type">anyarray</code>, <em class="parameter"><code>n</code></em> <code class="type">integer</code> ) → <code class="returnvalue">anyarray</code></p>
+       <p>Сокращает массив, удаляя последние <em class="parameter"><code>n</code></em> элементов. Если массив многомерный, сокращается только первая размерность.</p>
+       <p>
+        <code class="literal">trim_array(ARRAY[1,2,3,4,5,6], 2)</code>
+        → <code class="returnvalue">{1,2,3,4}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.25.6.2.2.19.1.1.1" class="indexterm"></a> <code class="function">unnest</code> ( <code class="type">anyarray</code> ) → <code class="returnvalue">setof anyelement</code></p>
+       <p>Разворачивает массив в набор строк. Элементы массива прочитываются в порядке хранения.</p>
+       <p>
+        <code class="literal">unnest(ARRAY[1,2])</code>
+        → <code class="returnvalue"></code>
+</p><pre class="programlisting"> 1
+ 2</pre><p>
+       </p>
+       <p>
+        <code class="literal">unnest(ARRAY[['foo','bar'],['baz','quux']])</code>
+        → <code class="returnvalue"></code>
+</p><pre class="programlisting"> foo
+ bar
+ baz
+ quux</pre><p>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">unnest</code> ( <code class="type">anyarray</code>, <code class="type">anyarray</code> [<span class="optional">, ... </span>] ) → <code class="returnvalue">setof anyelement, anyelement [, ... ]</code></p>
+       <p>Разворачивает массивы (возможно разных типов) в набор кортежей. Если массивы имеют разную длину, кортежи дополняются до большей длины значениями <code class="literal">NULL</code>. Эта форма допускается только в предложении FROM; см. <a class="xref" href="queries-table-expressions.html#QUERIES-TABLEFUNCTIONS" title="7.2.1.4. Табличные функции">Подраздел 7.2.1.4</a>.</p>
+       <p>
+        <code class="literal">select * from unnest(ARRAY[1,2], ARRAY['foo','bar','baz']) as x(a,b)</code>
+        → <code class="returnvalue"></code>
+</p><pre class="programlisting"> a |  b
+---+-----
+ 1 | foo
+ 2 | bar
+   | baz</pre><p>
+       </p></td></tr></tbody></table></div></div><br class="table-break" /><p>Вы также можете узнать об агрегатной функции, работающей с массивами, <code class="function">array_agg</code> в <a class="xref" href="functions-aggregate.html" title="9.21. Агрегатные функции">Разделе 9.21</a>.</p></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="functions-conditional.html" title="9.18. Условные выражения">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="functions.html" title="Глава 9. Функции и операторы">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="functions-range.html" title="9.20. Диапазонные/мультидиапазонные функции и операторы">След.</a></td></tr><tr><td width="40%" align="left" valign="top">9.18. Условные выражения </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 9.20. Диапазонные/мультидиапазонные функции и операторы</td></tr></table></div></body></html>

@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>38.13. Пользовательские типы</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="xaggr.html" title="38.12. Пользовательские агрегатные функции" /><link rel="next" href="xoper.html" title="38.14. Пользовательские операторы" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">38.13. Пользовательские типы</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="xaggr.html" title="38.12. Пользовательские агрегатные функции">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="extend.html" title="Глава 38. Расширение SQL">Наверх</a></td><th width="60%" align="center">Глава 38. Расширение <acronym class="acronym">SQL</acronym></th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="xoper.html" title="38.14. Пользовательские операторы">След.</a></td></tr></table><hr /></div><div class="sect1" id="XTYPES"><div class="titlepage"><div><div><h2 class="title" style="clear: both">38.13. Пользовательские типы <a href="#XTYPES" class="id_link">#</a></h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="xtypes.html#XTYPES-TOAST">38.13.1. Особенности TOAST</a></span></dt></dl></div><a id="id-1.8.3.16.2" class="indexterm"></a><p>Как описывалось в <a class="xref" href="extend-type-system.html" title="38.2. Система типов PostgreSQL">Разделе 38.2</a>, <span class="productname">PostgreSQL</span> может расширяться и поддерживать новые типы данных. В этом разделе описывается, как определить новые базовые типы, то есть типы данных, описанные ниже уровня языка <acronym class="acronym">SQL</acronym>. Для создания нового базового типа необходимо реализовать функции, работающие с этим типом, на языке низкого уровня, обычно C.</p><p>Примеры, рассматриваемые в этой главе, можно найти в <code class="filename">complex.sql</code> и в <code class="filename">complex.c</code> в каталоге <code class="filename">src/tutorial</code> пакета с исходным кодом. Инструкции по запуску этих примеров можно найти в файле <code class="filename">README</code> в том же каталоге.</p><p><a id="id-1.8.3.16.5.1" class="indexterm"></a> <a id="id-1.8.3.16.5.2" class="indexterm"></a> Пользовательский тип должен всегда иметь функции ввода и вывода. Эти функции определяют, как тип будет выглядеть в строковом виде (при вводе и выводе для пользователя) и как этот тип размещается в памяти. Функция ввода принимает в качестве аргумента строку символов, заканчивающуюся нулём, и возвращает внутреннее представление типа (в памяти). Функция вывода принимает в качестве аргумента внутреннее представление типа и возвращает строку символов, заканчивающуюся нулём. Если мы хотим не просто сохранить тип, но делать с ним нечто большее, мы должны предоставить дополнительные функции, реализующие все операции, которые мы хотели бы иметь для этого типа.</p><p>Предположим, что нам нужен тип <code class="type">complex</code>, представляющий комплексные числа. Естественным образом комплексное число можно представить в памяти в виде следующей структуры C: </p><pre class="programlisting">typedef struct Complex {
+    double      x;
+    double      y;
+} Complex;</pre><p> Нам нужно будет передавать этот тип по ссылке, так как он слишком велик, чтобы уместиться в одном значении <code class="type">Datum</code>.</p><p>В качестве внешнего строкового представления типа мы выберем строку вида <code class="literal">(x,y)</code>.</p><p>Функции ввода и вывода обычно несложно написать, особенно функцию вывода. Но определяя внешнее строковое представление типа, помните, что в конце концов вам придётся реализовать законченный и надёжный метод разбора этого представления в функции ввода. Например, так: </p><pre class="programlisting">
+PG_FUNCTION_INFO_V1(complex_in);
+
+Datum
+complex_in(PG_FUNCTION_ARGS)
+{
+    char       *str = PG_GETARG_CSTRING(0);
+    double      x,
+                y;
+    Complex    *result;
+
+    if (sscanf(str, " ( %lf , %lf )", &amp;x, &amp;y) != 2)
+        ereport(ERROR,
+                (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
+                 errmsg("invalid input syntax for type %s: \"%s\"",
+                        "complex", str)));
+
+    result = (Complex *) palloc(sizeof(Complex));
+    result-&gt;x = x;
+    result-&gt;y = y;
+    PG_RETURN_POINTER(result);
+}
+
+</pre><p> Функция вывода может быть простой: </p><pre class="programlisting">
+PG_FUNCTION_INFO_V1(complex_out);
+
+Datum
+complex_out(PG_FUNCTION_ARGS)
+{
+    Complex    *complex = (Complex *) PG_GETARG_POINTER(0);
+    char       *result;
+
+    result = psprintf("(%g,%g)", complex-&gt;x, complex-&gt;y);
+    PG_RETURN_CSTRING(result);
+}
+
+</pre><p>Вам нужно позаботиться о том, чтобы функции ввода и вывода были обратными друг к другу. В противном случае вы столкнётесь с проблемами, когда вам потребуется выгрузить данные в файл, а затем прочитать их. Это особенно распространённая проблема, когда дело касается чисел с плавающей точкой.</p><p>Дополнительно пользовательский тип может предоставлять функции для ввода и вывода в двоичном виде. Двоичный ввод/вывод обычно работает быстрее, но хуже портируется, чем текстовый. Как и с текстовым представлением, выбор, каким будет двоичное представление, остаётся за вами. Многие встроенные типы данных стараются обеспечить двоичное представление, независимое от машинной архитектуры. Для типа <code class="type">complex</code> мы воспользуемся функциями двоичного ввода/вывода типа <code class="type">float8</code>: </p><pre class="programlisting">
+PG_FUNCTION_INFO_V1(complex_recv);
+
+Datum
+complex_recv(PG_FUNCTION_ARGS)
+{
+    StringInfo  buf = (StringInfo) PG_GETARG_POINTER(0);
+    Complex    *result;
+
+    result = (Complex *) palloc(sizeof(Complex));
+    result-&gt;x = pq_getmsgfloat8(buf);
+    result-&gt;y = pq_getmsgfloat8(buf);
+    PG_RETURN_POINTER(result);
+}
+
+PG_FUNCTION_INFO_V1(complex_send);
+
+Datum
+complex_send(PG_FUNCTION_ARGS)
+{
+    Complex    *complex = (Complex *) PG_GETARG_POINTER(0);
+    StringInfoData buf;
+
+    pq_begintypsend(&amp;buf);
+    pq_sendfloat8(&amp;buf, complex-&gt;x);
+    pq_sendfloat8(&amp;buf, complex-&gt;y);
+    PG_RETURN_BYTEA_P(pq_endtypsend(&amp;buf));
+}
+
+</pre><p>Написав функции ввода/вывода и скомпилировав их в разделяемую библиотеку, мы можем определить тип <code class="type">complex</code> в SQL. Сначала мы объявим его как тип-пустышку: </p><pre class="programlisting">CREATE TYPE complex;</pre><p> Это позволит нам ссылаться на этот тип, определяя для него функции ввода/вывода. Теперь мы определим функции ввода/вывода: </p><pre class="programlisting">CREATE FUNCTION complex_in(cstring)
+    RETURNS complex
+    AS '<em class="replaceable"><code>имя_файла</code></em>'
+    LANGUAGE C IMMUTABLE STRICT;
+
+CREATE FUNCTION complex_out(complex)
+    RETURNS cstring
+    AS '<em class="replaceable"><code>имя_файла</code></em>'
+    LANGUAGE C IMMUTABLE STRICT;
+
+CREATE FUNCTION complex_recv(internal)
+   RETURNS complex
+   AS '<em class="replaceable"><code>имя_файла</code></em>'
+   LANGUAGE C IMMUTABLE STRICT;
+
+CREATE FUNCTION complex_send(complex)
+   RETURNS bytea
+   AS '<em class="replaceable"><code>имя_файла</code></em>'
+   LANGUAGE C IMMUTABLE STRICT;</pre><p>Наконец, мы можем предоставить полное определение типа данных: </p><pre class="programlisting">CREATE TYPE complex (
+   internallength = 16,
+   input = complex_in,
+   output = complex_out,
+   receive = complex_recv,
+   send = complex_send,
+   alignment = double
+);</pre><p><a id="id-1.8.3.16.13.1" class="indexterm"></a> Когда определяется новый базовый тип, <span class="productname">PostgreSQL</span> автоматически обеспечивает поддержку массивов с элементами такого типа. Тип массива обычно получает имя по имени базового типа с добавленным спереди символом подчёркивания (<code class="literal">_</code>).</p><p>Когда тип данных определён, мы можем объявить дополнительные функции для выполнения полезных операций с этим типом. Затем поверх этих функций могут быть определены операторы, а если потребуется, и классы операторов, для поддержки индексации этого типа. Эти дополнительные уровни обсуждаются в следующих разделах.</p><p>Если внутреннее представление типа данных имеет переменную длину, оно должно соответствовать стандартной схеме данных переменной длины: первые четыре байта должно занимать поле <code class="type">char[4]</code>, к которому никогда не следует обращаться напрямую (по обыкновению названное <code class="structfield">vl_len_</code>). Чтобы сохранить в этом поле размер элемента (включая длину самого поля), вы должны использовать макрос <code class="function">SET_VARSIZE()</code>, а чтобы получить его — макрос <code class="function">VARSIZE()</code>. (Эти макросы нужны, потому что поле длины может кодироваться по-разному на разных платформах.)</p><p>За дополнительными подробностями обратитесь к команде <a class="xref" href="sql-createtype.html" title="CREATE TYPE"><span class="refentrytitle">CREATE TYPE</span></a>.</p><div class="sect2" id="XTYPES-TOAST"><div class="titlepage"><div><div><h3 class="title">38.13.1. Особенности TOAST <a href="#XTYPES-TOAST" class="id_link">#</a></h3></div></div></div><a id="id-1.8.3.16.17.2" class="indexterm"></a><p>Если значения вашего типа данных могут быть разного размера (во внутренней форме), обычно для такого типа желательно реализовать поддержку <acronym class="acronym">TOAST</acronym> (см. <a class="xref" href="storage-toast.html" title="73.2. TOAST">Раздел 73.2</a>). Это следует делать, даже если значения слишком малы для сжатия или внешнего хранения, так как <acronym class="acronym">TOAST</acronym> позволяет сэкономить пространство и с данными маленького размера, сокращая издержки в заголовке.</p><p>Для поддержки хранения <acronym class="acronym">TOAST</acronym> функции на C, работающие с таким типом данных, должны позаботиться о распаковке поступивших им данных, используя макрос <code class="function">PG_DETOAST_DATUM</code>. (Эту внутреннюю особенность обычно скрывает дополнительный, определяемый для типа макрос <code class="function">GETARG_DATATYPE_P</code>.) Затем, выполняя команду <code class="command">CREATE TYPE</code>, укажите в качестве внутренней длины <code class="literal">variable</code> и выберите подходящий вариант хранения (не <code class="literal">plain</code>).</p><p>Если выравнивание данных не имеет значения (либо только для некоторой функции, либо потому что для типа данных в любом случае применяется выравнивание по байтам), некоторых издержек, связанных с макросом <code class="function">PG_DETOAST_DATUM</code>, можно избежать. Вместо него можно использовать <code class="function">PG_DETOAST_DATUM_PACKED</code> (его обычно скрывает определяемый для типа макрос <code class="function">GETARG_DATATYPE_PP</code>) и воспользоваться макросами <code class="function">VARSIZE_ANY_EXHDR</code> и <code class="function">VARDATA_ANY</code> для обращения к потенциально сжатым данным. Стоит ещё раз отметить, что данные, возвращаемые этими макросами, не выравниваются, даже если выравнивание задано в определении типа. Если выравнивание важно, вы должны задействовать обычный интерфейс <code class="function">PG_DETOAST_DATUM</code>.</p><div class="note"><h3 class="title">Примечание</h3><p>В старом коде поле <code class="structfield">vl_len_</code> часто объявлялось как <code class="type">int32</code>, а не <code class="type">char[4]</code>. Это ничем не чревато до той поры, пока в определении структуры имеются другие поля с выравниванием как минимум <code class="type">int32</code>. Но с потенциально невыровненными данными такое определение структуры опасно; компилятор может воспринять его как право полагать, что данные выровнены, что может привести к аварийным сбоям в архитектурах, строгих к выравниванию.</p></div><p>Поддержка <acronym class="acronym">TOAST</acronym> даёт также возможность иметь <em class="firstterm">развёрнутое</em> представление данных в памяти, работать с которым будет удобнее, чем с форматом хранения на диске. Обычный или <span class="quote">«<span class="quote">плоский</span>»</span> формат хранения varlena в конце концов представляет собой просто набор байт; он не может содержать указатели, так как эти байты могут быть скопированы в другие адреса. Для сложных типов данных работать с плоским форматом данных может быть довольно дорого, так что <span class="productname">PostgreSQL</span> даёт возможность <span class="quote">«<span class="quote">развернуть</span>»</span> плоский формат в представление, более подходящее для вычислений, и затем передавать эту структуру в памяти функциям, работающим с этим типом.</p><p>Для использования развёрнутого хранения тип данных должен определять развёрнутый формат по правилам, описанным в <code class="filename">src/include/utils/expandeddatum.h</code>, и предоставлять функции для <span class="quote">«<span class="quote">разворачивания</span>»</span> плоского значения в этот формат, а также для <span class="quote">«<span class="quote">заворачивания</span>»</span> этого формата опять в обычное представление varlena. Затем надо добиться, чтобы все функции на C могли принимать любое представление, возможно выполняя преобразование одного в другое непосредственно при получении. Для этого не требуется исправлять сразу все существующие функции для этого типа данных, так как имеющийся стандартный макрос <code class="function">PG_DETOAST_DATUM</code> способен преобразовывать развёрнутые входные данные в обычный плоский формат. Таким образом, все существующие функции, работающие с плоским форматом varlena продолжат работать, хотя и не очень эффективно, с развёрнутыми входными данными; их необязательно переделывать, пока не потребуется оптимизировать производительность.</p><p>Функции на C, умеющие работать с развёрнутым представлением, обычно делятся на две категории: те, что могут работать с развёрнутым форматом, и те, что могут принимать и развёрнутые, и плоские данные varlena. Первые проще написать, но они могут быть менее эффективными в целом, так как преобразование плоского значения в развёрнутую форму для использования только одной функцией может стоить больше, чем сэкономится при обработке данных в развёрнутом формате. Когда нужно работать только с развёрнутым форматом, преобразование плоских значений в развёрнутую форму можно скрыть в макросе, извлекающем аргументы, чтобы функция была не сложнее, чем работающая с традиционными входными данными varlena. Чтобы принимать оба варианта входных значений, напишите функцию извлечения аргументов, которая будет распаковывать значения с сокращённым заголовком, а также внешние и сжатые, но не развёрнутые данные. Такую функцию можно определить как возвращающую указатель на объединение плоского формата varlena и развёрнутого формата. Какой формат получен фактически, вызывающий код может определить, вызвав макрос <code class="function">VARATT_IS_EXPANDED_HEADER()</code>.</p><p>Инфраструктура <acronym class="acronym">TOAST</acronym> позволяет не только отличить обычные значения varlena от развёрнутых значений, но и различить указатели <span class="quote">«<span class="quote">для чтения/записи</span>»</span> и <span class="quote">«<span class="quote">только для чтения</span>»</span> на развёрнутые значения. Функции на C, которым нужно читать развёрнутое значение, или которые будут менять его безопасным и невидимым извне образом, могут не обращать внимания на тип полученного указателя. Если же функции на C выдают изменённую версию входного значения, они могут изменять развёрнутые входные данные на месте, только когда получают указатель для чтения/записи, но не когда получен указатель только для чтения. В последнем случае они должны сначала скопировать значение и получить новое значение, допускающее изменение. Функция на C, создающая новое развёрнутое значение, должна всегда возвращать указатель на него для чтения/записи. Кроме того, функция, изменяющая развёрнутое значение непосредственно по указателю для чтения/записи должна позаботиться о том, чтобы это значение осталось в приемлемом состоянии, если она отработает не полностью.</p><p>Примеры работы с развёрнутыми значениями можно найти в стандартной инфраструктуре массивов, в частности в <code class="filename">src/backend/utils/adt/array_expanded.c</code>.</p></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="xaggr.html" title="38.12. Пользовательские агрегатные функции">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="extend.html" title="Глава 38. Расширение SQL">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="xoper.html" title="38.14. Пользовательские операторы">След.</a></td></tr><tr><td width="40%" align="left" valign="top">38.12. Пользовательские агрегатные функции </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 38.14. Пользовательские операторы</td></tr></table></div></body></html>

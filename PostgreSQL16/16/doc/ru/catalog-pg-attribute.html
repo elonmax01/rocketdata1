@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>53.7. pg_attribute</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="catalog-pg-attrdef.html" title="53.6. pg_attrdef" /><link rel="next" href="catalog-pg-authid.html" title="53.8. pg_authid" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">53.7. <code class="structname">pg_attribute</code></th></tr><tr><td width="10%" align="left"><a accesskey="p" href="catalog-pg-attrdef.html" title="53.6. pg_attrdef">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="catalogs.html" title="Глава 53. Системные каталоги">Наверх</a></td><th width="60%" align="center">Глава 53. Системные каталоги</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="catalog-pg-authid.html" title="53.8. pg_authid">След.</a></td></tr></table><hr /></div><div class="sect1" id="CATALOG-PG-ATTRIBUTE"><div class="titlepage"><div><div><h2 class="title" style="clear: both">53.7. <code class="structname">pg_attribute</code> <a href="#CATALOG-PG-ATTRIBUTE" class="id_link">#</a></h2></div></div></div><a id="id-1.10.4.9.2" class="indexterm"></a><p>В каталоге <code class="structname">pg_attribute</code> хранится информация о столбцах таблицы. Для каждого столбца каждой таблицы в <code class="structname">pg_attribute</code> существует ровно одна строка. (Также в этом каталоге будут записи для индексов и на самом деле для всех объектов, присутствующих в <a class="link" href="catalog-pg-class.html" title="53.11. pg_class"><code class="structname">pg_class</code></a>.)</p><p>Термин «атрибут» равнозначен «столбцу» и употребляется по историческим причинам.</p><div class="table" id="id-1.10.4.9.5"><p class="title"><strong>Таблица 53.7. Столбцы <code class="structname">pg_attribute</code></strong></p><div class="table-contents"><table class="table" summary="Столбцы pg_attribute" border="1"><colgroup><col /></colgroup><thead><tr><th class="catalog_table_entry"><p class="column_definition">Тип столбца</p>
+      <p>Описание</p></th></tr></thead><tbody><tr><td class="catalog_table_entry"><p class="column_definition"><code class="structfield">attrelid</code> <code class="type">oid</code> (ссылается на <a class="link" href="catalog-pg-class.html" title="53.11. pg_class"><code class="structname">pg_class</code></a>.<code class="structfield">oid</code>)</p>
+      <p>Таблица, к которой принадлежит столбец</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">attname</code> <code class="type">name</code>
+      </p>
+      <p>Имя столбца</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition"><code class="structfield">atttypid</code> <code class="type">oid</code> (ссылается на <a class="link" href="catalog-pg-type.html" title="53.64. pg_type"><code class="structname">pg_type</code></a>.<code class="structfield">oid</code>)</p>
+      <p>Тип данных этого столбца (ноль для удалённого столбца)</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">attlen</code> <code class="type">int2</code>
+      </p>
+      <p>Копия <code class="literal">pg_type.typlen</code> из записи типа столбца</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">attnum</code> <code class="type">int2</code>
+      </p>
+      <p>Порядковый номер столбца. Обычные столбцы нумеруются по возрастанию, начиная с 1. Системные столбцы, такие как <code class="structfield">ctid</code>, имеют (обычно) отрицательные номера.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">attcacheoff</code> <code class="type">int4</code>
+      </p>
+      <p>Всегда -1 в постоянном хранилище, но когда запись загружается в память, в этом поле может кешироваться смещение атрибута в строке</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">atttypmod</code> <code class="type">int4</code>
+      </p>
+      <p>В поле <code class="structfield">atttypmod</code> записывается дополнительное число, связанное с определённым типом данных, указываемое при создании таблицы (например, максимальный размер столбца <code class="type">varchar</code>). Это значение передаётся функциям ввода и преобразования длины конкретного типа. Для типов, которым не нужен <code class="structfield">atttypmod</code>, это обычно -1.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">attndims</code> <code class="type">int2</code>
+      </p>
+      <p>Число размерностей, если столбец имеет тип массива; ноль в противном случае. (В настоящее время число размерностей массива не контролируется, поэтому любое ненулевое значение по сути означает <span class="quote">«<span class="quote">это массив</span>»</span>.)</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">attbyval</code> <code class="type">bool</code>
+      </p>
+      <p>Копия <code class="literal">pg_type.typbyval</code> из записи типа столбца</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">attalign</code> <code class="type">char</code>
+      </p>
+      <p>Копия <code class="literal">pg_type.typalign</code> из записи типа столбца</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">attstorage</code> <code class="type">char</code>
+      </p>
+      <p>Обычно копия <code class="literal">pg_type.typstorage</code> из записи типа столбца. Для типов, поддерживающих TOAST, можно изменять это значение после создания столбца и таким образом управлять политикой хранения.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">attcompression</code> <code class="type">char</code>
+      </p>
+      <p>Текущий метод сжатия столбца. Обычно задано значение <code class="literal">'\0'</code>, то есть действует метод, установленный по умолчанию (см. <a class="xref" href="runtime-config-client.html#GUC-DEFAULT-TOAST-COMPRESSION">default_toast_compression</a>). В других случаях: если указано значение <code class="literal">'p'</code>, используется алгоритм сжатия <code class="literal">pglz</code>, если указано <code class="literal">'l'</code> — алгоритм <span class="productname">LZ4</span>. Это значение игнорируется, если <code class="structfield">attstorage</code> не поддерживает сжатие.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">attnotnull</code> <code class="type">bool</code>
+      </p>
+      <p>Представляет ограничение NOT NULL.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">atthasdef</code> <code class="type">bool</code>
+      </p>
+      <p>Столбец имеет значение по умолчанию или генерирующее выражение, в этом случае в каталоге <a class="link" href="catalog-pg-attrdef.html" title="53.6. pg_attrdef"><code class="structname">pg_attrdef</code></a> будет соответствующая запись, собственно задающая это выражение. (Определить, является ли это выражение генерирующим или оно вычисляет значение по умолчанию, можно по атрибуту <code class="structfield">attgenerated</code>.)</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">atthasmissing</code> <code class="type">bool</code>
+      </p>
+      <p>Столбец имеет значение, которое используется, когда он полностью отсутствует в строке. Это имеет место, когда столбец добавляется с неизменчивым значением <code class="literal">DEFAULT</code> после создания строки. Фактическое значение хранится в <code class="structfield">attmissingval</code>.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">attidentity</code> <code class="type">char</code>
+      </p>
+      <p>Пустой символ (<code class="literal">''</code>) указывает, что это не столбец идентификации. Символ <code class="literal">a</code> указывает, что значение генерируется всегда, а <code class="literal">d</code> — что значение генерируется по умолчанию.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">attgenerated</code> <code class="type">char</code>
+      </p>
+      <p>Если нулевой байт (<code class="literal">''</code>), это не генерируемый столбец. В противном случае, <code class="literal">s</code> означает, что генерируемое значение хранится (stored). (Другие значения могут быть добавлены в будущем.)</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">attisdropped</code> <code class="type">bool</code>
+      </p>
+      <p>Столбец был удалён и теперь не является рабочим. Удалённый столбец может по-прежнему физически присутствовать в таблице, но анализатор запросов его игнорирует, так что обратиться к нему из SQL нельзя.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">attislocal</code> <code class="type">bool</code>
+      </p>
+      <p>Столбец определён локально в данном отношении. Заметьте, что столбец может быть определён локально и при этом наследоваться.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">attinhcount</code> <code class="type">int2</code>
+      </p>
+      <p>Число прямых предков этого столбца. Столбец с ненулевым числом предков нельзя удалить или переименовать.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">attstattarget</code> <code class="type">int2</code>
+      </p>
+      <p>Столбец <code class="structfield">attstattarget</code> управляет детализацией статистики, собираемой по этому столбцу командой <a class="link" href="sql-analyze.html" title="ANALYZE"><code class="command">ANALYZE</code></a>. Нулевое значение указывает, что статистика не собирается. При отрицательном значении используется системное ограничение статистики по умолчанию. Точное значение положительных величин определяется типом данных. Для скалярных типов данных, <code class="structfield">attstattarget</code> задаёт и целевое число собираемых <span class="quote">«<span class="quote">самых частых значений</span>»</span>, и целевое число создаваемых групп гистограммы.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition"><code class="structfield">attcollation</code> <code class="type">oid</code> (ссылается на <a class="link" href="catalog-pg-collation.html" title="53.12. pg_collation"><code class="structname">pg_collation</code></a>.<code class="structfield">oid</code>)</p>
+      <p>Заданное для столбца правило сортировки, либо ноль, если тип столбца не сортируемый.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">attacl</code> <code class="type">aclitem[]</code>
+      </p>
+      <p>Права доступа к столбцу, если они были заданы непосредственно для этого столбца</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">attoptions</code> <code class="type">text[]</code>
+      </p>
+      <p>Параметры уровня атрибута, в виде строк <span class="quote">«<span class="quote">ключ=значение</span>»</span></p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">attfdwoptions</code> <code class="type">text[]</code>
+      </p>
+      <p>Параметры уровня атрибута для обёрток сторонних данных, в виде строк <span class="quote">«<span class="quote">ключ=значение</span>»</span></p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">attmissingval</code> <code class="type">anyarray</code>
+      </p>
+      <p>В данном столбце размещается массив с одним элементом. Значение в этом элементе используется, когда столбец полностью отсутствует в строке, что имеет место, когда столбец добавляется с неизменчивым значением <code class="literal">DEFAULT</code> после создания строки. Это значение используется, только когда <code class="structfield">atthasmissing</code> равен true. Если значение отсутствует, столбец будет содержать NULL.</p></td></tr></tbody></table></div></div><br class="table-break" /><p>В записи удалённого столбца в <code class="structname">pg_attribute</code> поле <code class="structfield">atttypid</code> сбрасывается в ноль, но <code class="structfield">attlen</code> и другие поля, копируемые из <a class="link" href="catalog-pg-type.html" title="53.64. pg_type"><code class="structname">pg_type</code></a>, сохраняют актуальные значения. Это нужно, чтобы справиться с ситуацией, когда после удаления столбца удаляется и его тип данных, так что записи в <code class="structname">pg_type</code> больше не будет. В таких случаях для интерпретации содержимого строки таблицы могут использоваться <code class="structfield">attlen</code> и другие поля.</p></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="catalog-pg-attrdef.html" title="53.6. pg_attrdef">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="catalogs.html" title="Глава 53. Системные каталоги">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="catalog-pg-authid.html" title="53.8. pg_authid">След.</a></td></tr><tr><td width="40%" align="left" valign="top">53.6. <code class="structname">pg_attrdef</code> </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 53.8. <code class="structname">pg_authid</code></td></tr></table></div></body></html>

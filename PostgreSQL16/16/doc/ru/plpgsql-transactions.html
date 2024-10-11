@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>43.8. Управление транзакциями</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="plpgsql-cursors.html" title="43.7. Курсоры" /><link rel="next" href="plpgsql-errors-and-messages.html" title="43.9. Сообщения и ошибки" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">43.8. Управление транзакциями</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="plpgsql-cursors.html" title="43.7. Курсоры">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="plpgsql.html" title="Глава 43. PL/pgSQL — процедурный язык SQL">Наверх</a></td><th width="60%" align="center">Глава 43. <span class="application">PL/pgSQL</span> — процедурный язык <acronym class="acronym">SQL</acronym></th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="plpgsql-errors-and-messages.html" title="43.9. Сообщения и ошибки">След.</a></td></tr></table><hr /></div><div class="sect1" id="PLPGSQL-TRANSACTIONS"><div class="titlepage"><div><div><h2 class="title" style="clear: both">43.8. Управление транзакциями <a href="#PLPGSQL-TRANSACTIONS" class="id_link">#</a></h2></div></div></div><p>В процедурах, вызываемых командой <code class="command">CALL</code>, а также в анонимных блоках кода (в команде <code class="command">DO</code>) можно завершать транзакции, выполняя <code class="command">COMMIT</code> и <code class="command">ROLLBACK</code>. После завершения транзакции этими командами новая будет начата автоматически, поэтому отдельной команды <code class="command">START TRANSACTION</code> нет. (Заметьте, что команды <code class="command">BEGIN</code> и <code class="command">END</code> в PL/pgSQL имеют другой смысл.)</p><p>Пример: </p><pre class="programlisting">CREATE PROCEDURE transaction_test1()
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    FOR i IN 0..9 LOOP
+        INSERT INTO test1 (a) VALUES (i);
+        IF i % 2 = 0 THEN
+            COMMIT;
+        ELSE
+            ROLLBACK;
+        END IF;
+    END LOOP;
+END;
+$$;
+
+CALL transaction_test1();</pre><a id="id-1.8.8.10.4" class="indexterm"></a><p id="PLPGSQL-TRANSACTION-CHAIN">Новая транзакция начинается с теми характеристиками, в частности, уровнем изоляции, которые установлены для транзакций по умолчанию. В случаях, когда транзакции фиксируются в цикле, может быть удобнее автоматически начинать следующую транзакцию с теми же характеристиками, что имеет предыдущая. Это позволяют реализовать команды <code class="command">COMMIT AND CHAIN</code> и <code class="command">ROLLBACK AND CHAIN</code>.</p><p>Управление транзакциями возможно только в вызовах <code class="command">CALL</code> или <code class="command">DO</code> в коде верхнего уровня или во вложенных <code class="command">CALL</code> или <code class="command">DO</code> без других промежуточных команд. Например, в стеке вызовов <code class="command">CALL proc1()</code> → <code class="command">CALL proc2()</code> → <code class="command">CALL proc3()</code> вторая и третья процедуры могут управлять транзакциями. Но в стеке <code class="command">CALL proc1()</code> → <code class="command">SELECT func2()</code> → <code class="command">CALL proc3()</code> последняя процедура лишена этой возможности из-за промежуточного <code class="command">SELECT</code>.</p><p>Циклам с курсорами присущи некоторые особенности. Рассмотрите этот пример: </p><pre class="programlisting">CREATE PROCEDURE transaction_test2()
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN SELECT * FROM test2 ORDER BY x LOOP
+        INSERT INTO test1 (a) VALUES (r.x);
+        COMMIT;
+    END LOOP;
+END;
+$$;
+
+CALL transaction_test2();</pre><p> Обычно курсоры автоматически закрываются при фиксировании транзакции. Однако курсор, создаваемый внутри цикла подобным образом, автоматически преобразуется в удерживаемый курсор первой командой <code class="command">COMMIT</code> или <code class="command">ROLLBACK</code>. Это означает, что курсор полностью вычисляется при выполнении первой команды <code class="command">COMMIT</code> или <code class="command">ROLLBACK</code>, а не для каждой очередной строки. При этом он автоматически удаляется после цикла, так что это происходит практически незаметно для пользователя.</p><p>Команды управления транзакциями не допускаются в циклах с курсором, которыми управляют запросы, производящие не только чтение, но и модификацию данных (например, <code class="command">UPDATE ... RETURNING</code>).</p><p>Транзакция не может завершаться внутри блока с обработчиками исключений.</p></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="plpgsql-cursors.html" title="43.7. Курсоры">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="plpgsql.html" title="Глава 43. PL/pgSQL — процедурный язык SQL">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="plpgsql-errors-and-messages.html" title="43.9. Сообщения и ошибки">След.</a></td></tr><tr><td width="40%" align="left" valign="top">43.7. Курсоры </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 43.9. Сообщения и ошибки</td></tr></table></div></body></html>

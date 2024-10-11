@@ -1,0 +1,471 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>9.11. Геометрические функции и операторы</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="functions-enum.html" title="9.10. Функции для перечислений" /><link rel="next" href="functions-net.html" title="9.12. Функции и операторы для работы с сетевыми адресами" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">9.11. Геометрические функции и операторы</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="functions-enum.html" title="9.10. Функции для перечислений">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="functions.html" title="Глава 9. Функции и операторы">Наверх</a></td><th width="60%" align="center">Глава 9. Функции и операторы</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="functions-net.html" title="9.12. Функции и операторы для работы с сетевыми адресами">След.</a></td></tr></table><hr /></div><div class="sect1" id="FUNCTIONS-GEOMETRY"><div class="titlepage"><div><div><h2 class="title" style="clear: both">9.11. Геометрические функции и операторы <a href="#FUNCTIONS-GEOMETRY" class="id_link">#</a></h2></div></div></div><p>Для геометрических типов <code class="type">point</code>, <code class="type">box</code>, <code class="type">lseg</code>, <code class="type">line</code>, <code class="type">path</code>, <code class="type">polygon</code> и <code class="type">circle</code> разработан большой набор встроенных функций и операторов, представленный в <a class="xref" href="functions-geometry.html#FUNCTIONS-GEOMETRY-OP-TABLE" title="Таблица 9.36. Геометрические операторы">Таблице 9.36</a>, <a class="xref" href="functions-geometry.html#FUNCTIONS-GEOMETRY-FUNC-TABLE" title="Таблица 9.37. Геометрические функции">Таблице 9.37</a> и <a class="xref" href="functions-geometry.html#FUNCTIONS-GEOMETRY-CONV-TABLE" title="Таблица 9.38. Функции преобразования геометрических типов">Таблице 9.38</a>.</p><div class="table" id="FUNCTIONS-GEOMETRY-OP-TABLE"><p class="title"><strong>Таблица 9.36. Геометрические операторы</strong></p><div class="table-contents"><table class="table" summary="Геометрические операторы" border="1"><colgroup><col /></colgroup><thead><tr><th class="func_table_entry"><p class="func_signature">Оператор</p>
+       <p>Описание</p>
+       <p>Пример(ы)</p></th></tr></thead><tbody><tr><td class="func_table_entry"><p class="func_signature">
+        <em class="replaceable"><code>геометрический_тип</code></em> <code class="literal">+</code> <code class="type">point</code>
+        → <code class="returnvalue"><em class="replaceable"><code>геометрический_тип</code></em></code>
+       </p>
+       <p>Добавляет координаты второго аргумента типа <code class="type">point</code> к каждой точке первого аргумента, осуществляя таким образом перенос объекта. Имеется для типов <code class="type">point</code>, <code class="type">box</code>, <code class="type">path</code> и <code class="type">circle</code>.</p>
+       <p>
+        <code class="literal">box '(1,1),(0,0)' + point '(2,0)'</code>
+        → <code class="returnvalue">(3,1),(2,0)</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">path</code> <code class="literal">+</code> <code class="type">path</code>
+        → <code class="returnvalue">path</code>
+       </p>
+       <p>Соединяет два открытых пути (если один из путей замкнутый, возвращает NULL).</p>
+       <p>
+        <code class="literal">path '[(0,0),(1,1)]' + path '[(2,2),(3,3),(4,4)]'</code>
+        → <code class="returnvalue">[(0,0),(1,1),(2,2),(3,3),(4,4)]</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <em class="replaceable"><code>геометрический_тип</code></em> <code class="literal">-</code> <code class="type">point</code>
+        → <code class="returnvalue"><em class="replaceable"><code>геометрический_тип</code></em></code>
+       </p>
+       <p>Вычитает координаты второго аргумента типа <code class="type">point</code> из каждой точки первого аргумента, осуществляя таким образом перенос объекта. Имеется для типов <code class="type">point</code>, <code class="type">box</code>, <code class="type">path</code> и <code class="type">circle</code>.</p>
+       <p>
+        <code class="literal">box '(1,1),(0,0)' - point '(2,0)'</code>
+        → <code class="returnvalue">(-1,1),(-2,0)</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <em class="replaceable"><code>геометрический_тип</code></em> <code class="literal">*</code> <code class="type">point</code>
+        → <code class="returnvalue"><em class="replaceable"><code>геометрический_тип</code></em></code>
+       </p>
+       <p>Умножает координаты каждой точки первого аргумента на координаты второго аргумента типа <code class="type">point</code> (координаты точек воспринимаются как комплексные числа с вещественной и мнимой частью, результатом становится их обычное комплексное произведение). Если же рассматривать вторую точку как вектор, данная операция равнозначна умножению размера объекта и расстояния от начала координат на длину вектора с поворотом против часовой стрелки относительно начала координат на угол, равный углу между вектором и осью <em class="replaceable"><code>x</code></em>. Имеется для типов <code class="type">point</code>, <code class="type">box</code>,<a href="#ftn.FUNCTIONS-GEOMETRY-ROTATION-FN" class="footnote"><sup class="footnote" id="FUNCTIONS-GEOMETRY-ROTATION-FN">[a]</sup></a> <code class="type">path</code>, <code class="type">circle</code>.</p>
+       <p>
+        <code class="literal">path '((0,0),(1,0),(1,1))' * point '(3.0,0)'</code>
+        → <code class="returnvalue">((0,0),(3,0),(3,3))</code>
+       </p>
+       <p>
+        <code class="literal">path '((0,0),(1,0),(1,1))' * point(cosd(45), sind(45))</code>
+        → <code class="returnvalue">((0,0),​(0.7071067811865475,0.7071067811865475),​(0,1.414213562373095))</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <em class="replaceable"><code>геометрический_тип</code></em> <code class="literal">/</code> <code class="type">point</code>
+        → <code class="returnvalue"><em class="replaceable"><code>геометрический_тип</code></em></code>
+       </p>
+       <p>Делит координаты каждой точки первого аргумента на координаты второго аргумента типа <code class="type">point</code> (координаты точек воспринимаются как комплексные числа с вещественной и мнимой частью, результатом становится их обычное комплексное частное). Если же рассматривать вторую точку как вектор, данная операция равнозначна делению размера объекта и расстояния от начала координат на длину вектора с поворотом по часовой стрелке относительно начала координат на угол, равный углу между вектором и осью <em class="replaceable"><code>x</code></em>. Имеется для типов <code class="type">point</code>, <code class="type">box</code>,<a href="functions-geometry.html#ftn.FUNCTIONS-GEOMETRY-ROTATION-FN" class="footnoteref"><sup class="footnoteref">[a]</sup></a> <code class="type">path</code>, <code class="type">circle</code>.</p>
+       <p>
+        <code class="literal">path '((0,0),(1,0),(1,1))' / point '(2.0,0)'</code>
+        → <code class="returnvalue">((0,0),(0.5,0),(0.5,0.5))</code>
+       </p>
+       <p>
+        <code class="literal">path '((0,0),(1,0),(1,1))' / point(cosd(45), sind(45))</code>
+        → <code class="returnvalue">((0,0),​(0.7071067811865476,-0.7071067811865476),​(1.4142135623730951,0))</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="literal">@-@</code> <em class="replaceable"><code>геометрический_тип</code></em>
+        → <code class="returnvalue">double precision</code>
+       </p>
+       <p>Вычисляет общую длину. Имеется для типов <code class="type">lseg</code>, <code class="type">path</code>.</p>
+       <p>
+        <code class="literal">@-@ path '[(0,0),(1,0),(1,1)]'</code>
+        → <code class="returnvalue">2</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="literal">@@</code> <em class="replaceable"><code>геометрический_тип</code></em>
+        → <code class="returnvalue">point</code>
+       </p>
+       <p>Вычисляет центральную точку. Имеется для типов <code class="type">box</code>, <code class="type">lseg</code>, <code class="type">polygon</code>, <code class="type">circle</code>.</p>
+       <p>
+        <code class="literal">@@ box '(2,2),(0,0)'</code>
+        → <code class="returnvalue">(1,1)</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="literal">#</code> <em class="replaceable"><code>геометрический_тип</code></em>
+        → <code class="returnvalue">integer</code>
+       </p>
+       <p>Возвращает количество точек. Имеется для типов <code class="type">path</code>, <code class="type">polygon</code>.</p>
+       <p>
+        <code class="literal"># path '((1,0),(0,1),(-1,0))'</code>
+        → <code class="returnvalue">3</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <em class="replaceable"><code>геометрический_тип</code></em> <code class="literal">#</code> <em class="replaceable"><code>геометрический_тип</code></em>
+        → <code class="returnvalue">point</code>
+       </p>
+       <p>Вычисляет точку пересечения, а если пересечения нет, возвращает NULL. Имеется для типов <code class="type">lseg</code>, <code class="type">line</code>.</p>
+       <p>
+        <code class="literal">lseg '[(0,0),(1,1)]' # lseg '[(1,0),(0,1)]'</code>
+        → <code class="returnvalue">(0.5,0.5)</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">box</code> <code class="literal">#</code> <code class="type">box</code>
+        → <code class="returnvalue">box</code>
+       </p>
+       <p>Вычисляет пересечение двух прямоугольников, а если пересечения нет, возвращает NULL.</p>
+       <p>
+        <code class="literal">box '(2,2),(-1,-1)' # box '(1,1),(-2,-2)'</code>
+        → <code class="returnvalue">(1,1),(-1,-1)</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <em class="replaceable"><code>геометрический_тип</code></em> <code class="literal">##</code> <em class="replaceable"><code>геометрический_тип</code></em>
+        → <code class="returnvalue">point</code>
+       </p>
+       <p>Вычисляет ближайшую к первому объекту точку, принадлежащую второму объекту. Имеется для следующих пар типов: (<code class="type">point</code>, <code class="type">box</code>), (<code class="type">point</code>, <code class="type">lseg</code>), (<code class="type">point</code>, <code class="type">line</code>), (<code class="type">lseg</code>, <code class="type">box</code>), (<code class="type">lseg</code>, <code class="type">lseg</code>), (<code class="type">line</code>, <code class="type">lseg</code>).</p>
+       <p>
+        <code class="literal">point '(0,0)' ## lseg '[(2,0),(0,2)]'</code>
+        → <code class="returnvalue">(1,1)</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <em class="replaceable"><code>геометрический_тип</code></em> <code class="literal">&lt;-&gt;</code> <em class="replaceable"><code>геометрический_тип</code></em>
+        → <code class="returnvalue">double precision</code>
+       </p>
+       <p>Вычисляет расстояние между объектами. Имеется для всех семи геометрических типов, для всех сочетаний типа <code class="type">point</code> с другим геометрическим типом, а также для следующих пар типов: (<code class="type">box</code>, <code class="type">lseg</code>), (<code class="type">lseg</code>, <code class="type">line</code>), (<code class="type">polygon</code>, <code class="type">circle</code>) (и пар с обратным порядком).</p>
+       <p>
+        <code class="literal">circle '&lt;(0,0),1&gt;' &lt;-&gt; circle '&lt;(5,0),1&gt;'</code>
+        → <code class="returnvalue">3</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <em class="replaceable"><code>геометрический_тип</code></em> <code class="literal">@&gt;</code> <em class="replaceable"><code>геометрический_тип</code></em>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Первый объект содержит второй? Имеется для следующих пар типов: (<code class="literal">box</code>, <code class="literal">point</code>), (<code class="literal">box</code>, <code class="literal">box</code>), (<code class="literal">path</code>, <code class="literal">point</code>), (<code class="literal">polygon</code>, <code class="literal">point</code>), (<code class="literal">polygon</code>, <code class="literal">polygon</code>), (<code class="literal">circle</code>, <code class="literal">point</code>), (<code class="literal">circle</code>, <code class="literal">circle</code>).</p>
+       <p>
+        <code class="literal">circle '&lt;(0,0),2&gt;' @&gt; point '(1,1)'</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <em class="replaceable"><code>геометрический_тип</code></em> <code class="literal">&lt;@</code> <em class="replaceable"><code>геометрический_тип</code></em>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Первый объект содержится во втором? Имеется для следующих пар типов: (<code class="literal">point</code>, <code class="literal">box</code>), (<code class="literal">point</code>, <code class="literal">lseg</code>), (<code class="literal">point</code>, <code class="literal">line</code>), (<code class="literal">point</code>, <code class="literal">path</code>), (<code class="literal">point</code>, <code class="literal">polygon</code>), (<code class="literal">point</code>, <code class="literal">circle</code>), (<code class="literal">box</code>, <code class="literal">box</code>), (<code class="literal">lseg</code>, <code class="literal">box</code>), (<code class="literal">lseg</code>, <code class="literal">line</code>), (<code class="literal">polygon</code>, <code class="literal">polygon</code>), (<code class="literal">circle</code>, <code class="literal">circle</code>).</p>
+       <p>
+        <code class="literal">point '(1,1)' &lt;@ circle '&lt;(0,0),2&gt;'</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <em class="replaceable"><code>геометрический_тип</code></em> <code class="literal">&amp;&amp;</code> <em class="replaceable"><code>геометрический_тип</code></em>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Объекты пересекаются? (Для выполнения этого условия достаточно одной общей точки.) Имеется для типов <code class="type">box</code>, <code class="type">polygon</code>, <code class="type">circle</code>.</p>
+       <p>
+        <code class="literal">box '(1,1),(0,0)' &amp;&amp; box '(2,2),(0,0)'</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <em class="replaceable"><code>геометрический_тип</code></em> <code class="literal">&lt;&lt;</code> <em class="replaceable"><code>геометрический_тип</code></em>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Первый объект строго слева от второго? Имеется для типов <code class="type">point</code>, <code class="type">box</code>, <code class="type">polygon</code>, <code class="type">circle</code>.</p>
+       <p>
+        <code class="literal">circle '&lt;(0,0),1&gt;' &lt;&lt; circle '&lt;(5,0),1&gt;'</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <em class="replaceable"><code>геометрический_тип</code></em> <code class="literal">&gt;&gt;</code> <em class="replaceable"><code>геометрический_тип</code></em>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Первый объект строго справа от второго? Имеется для типов <code class="type">point</code>, <code class="type">box</code>, <code class="type">polygon</code>, <code class="type">circle</code>.</p>
+       <p>
+        <code class="literal">circle '&lt;(5,0),1&gt;' &gt;&gt; circle '&lt;(0,0),1&gt;'</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <em class="replaceable"><code>геометрический_тип</code></em> <code class="literal">&amp;&lt;</code> <em class="replaceable"><code>геометрический_тип</code></em>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Первый объект не простирается правее второго? Имеется для типов <code class="type">box</code>, <code class="type">polygon</code>, <code class="type">circle</code>.</p>
+       <p>
+        <code class="literal">box '(1,1),(0,0)' &amp;&lt; box '(2,2),(0,0)'</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <em class="replaceable"><code>геометрический_тип</code></em> <code class="literal">&amp;&gt;</code> <em class="replaceable"><code>геометрический_тип</code></em>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Первый объект не простирается левее второго? Имеется для типов <code class="type">box</code>, <code class="type">polygon</code>, <code class="type">circle</code>.</p>
+       <p>
+        <code class="literal">box '(3,3),(0,0)' &amp;&gt; box '(2,2),(0,0)'</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <em class="replaceable"><code>геометрический_тип</code></em> <code class="literal">&lt;&lt;|</code> <em class="replaceable"><code>геометрический_тип</code></em>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Первый объект строго ниже второго? Имеется для типов <code class="type">point</code>, <code class="type">box</code>, <code class="type">polygon</code>, <code class="type">circle</code>.</p>
+       <p>
+        <code class="literal">box '(3,3),(0,0)' &lt;&lt;| box '(5,5),(3,4)'</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <em class="replaceable"><code>геометрический_тип</code></em> <code class="literal">|&gt;&gt;</code> <em class="replaceable"><code>геометрический_тип</code></em>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Первый объект строго выше второго? Имеется для типов <code class="type">point</code>, <code class="type">box</code>, <code class="type">polygon</code>, <code class="type">circle</code>.</p>
+       <p>
+        <code class="literal">box '(5,5),(3,4)' |&gt;&gt; box '(3,3),(0,0)'</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <em class="replaceable"><code>геометрический_тип</code></em> <code class="literal">&amp;&lt;|</code> <em class="replaceable"><code>геометрический_тип</code></em>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Первый объект не простирается выше второго? Имеется для типов <code class="type">box</code>, <code class="type">polygon</code>, <code class="type">circle</code>.</p>
+       <p>
+        <code class="literal">box '(1,1),(0,0)' &amp;&lt;| box '(2,2),(0,0)'</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <em class="replaceable"><code>геометрический_тип</code></em> <code class="literal">|&amp;&gt;</code> <em class="replaceable"><code>геометрический_тип</code></em>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Первый объект не простирается ниже второго? Имеется для типов <code class="type">box</code>, <code class="type">polygon</code>, <code class="type">circle</code>.</p>
+       <p>
+        <code class="literal">box '(3,3),(0,0)' |&amp;&gt; box '(2,2),(0,0)'</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">box</code> <code class="literal">&lt;^</code> <code class="type">box</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Первый объект ниже (или касается снизу) второго?</p>
+       <p>
+        <code class="literal">box '((1,1),(0,0))' &lt;^ box '((2,2),(1,1))'</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">box</code> <code class="literal">&gt;^</code> <code class="type">box</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Первый объект выше (или касается сверху) второго?</p>
+       <p>
+        <code class="literal">box '((2,2),(1,1))' &gt;^ box '((1,1),(0,0))'</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <em class="replaceable"><code>геометрический_тип</code></em> <code class="literal">?#</code> <em class="replaceable"><code>геометрический_тип</code></em>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Объекты пересекаются? Имеется для следующих пар типов: (<code class="type">box</code>, <code class="type">box</code>), (<code class="type">lseg</code>, <code class="type">box</code>), (<code class="type">lseg</code>, <code class="type">lseg</code>), (<code class="type">lseg</code>, <code class="type">line</code>), (<code class="type">line</code>, <code class="type">box</code>), (<code class="type">line</code>, <code class="type">line</code>), (<code class="type">path</code>, <code class="type">path</code>).</p>
+       <p>
+        <code class="literal">lseg '[(-1,0),(1,0)]' ?# box '(2,2),(-2,-2)'</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="literal">?-</code> <code class="type">line</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p class="func_signature">
+        <code class="literal">?-</code> <code class="type">lseg</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Линия является горизонтальной?</p>
+       <p>
+        <code class="literal">?- lseg '[(-1,0),(1,0)]'</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">point</code> <code class="literal">?-</code> <code class="type">point</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Точки выровнены по горизонтали (имеют одинаковую координату y)?</p>
+       <p>
+        <code class="literal">point '(1,0)' ?- point '(0,0)'</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="literal">?|</code> <code class="type">line</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p class="func_signature">
+        <code class="literal">?|</code> <code class="type">lseg</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Линия является вертикальной?</p>
+       <p>
+        <code class="literal">?| lseg '[(-1,0),(1,0)]'</code>
+        → <code class="returnvalue">f</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">point</code> <code class="literal">?|</code> <code class="type">point</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Точки выровнены по вертикали (имеют одинаковую координату x)?</p>
+       <p>
+        <code class="literal">point '(0,1)' ?| point '(0,0)'</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">line</code> <code class="literal">?-|</code> <code class="type">line</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p class="func_signature">
+        <code class="type">lseg</code> <code class="literal">?-|</code> <code class="type">lseg</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Линии перпендикулярны?</p>
+       <p>
+        <code class="literal">lseg '[(0,0),(0,1)]' ?-| lseg '[(0,0),(1,0)]'</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">line</code> <code class="literal">?||</code> <code class="type">line</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p class="func_signature">
+        <code class="type">lseg</code> <code class="literal">?||</code> <code class="type">lseg</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Линии параллельны?</p>
+       <p>
+        <code class="literal">lseg '[(-1,0),(1,0)]' ?|| lseg '[(-1,2),(1,2)]'</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <em class="replaceable"><code>геометрический_тип</code></em> <code class="literal">~=</code> <em class="replaceable"><code>геометрический_тип</code></em>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Объекты совпадают? Имеется для типов <code class="type">point</code>, <code class="type">box</code>, <code class="type">polygon</code>, <code class="type">circle</code>.</p>
+       <p>
+        <code class="literal">polygon '((0,0),(1,1))' ~= polygon '((1,1),(0,0))'</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr></tbody><tbody class="footnotes"><tr><td colspan="1"><div id="ftn.FUNCTIONS-GEOMETRY-ROTATION-FN" class="footnote"><p><a href="#FUNCTIONS-GEOMETRY-ROTATION-FN" class="para"><sup class="para">[a] </sup></a>При <span class="quote">«<span class="quote">повороте</span>»</span> прямоугольника эти операторы только перемещают его угловые точки: стороны прямоугольника считаются всегда параллельными осям. Таким образом, эта операция, в отличие от настоящего поворота, изменяет размер прямоугольника.</p></div></td></tr></tbody></table></div></div><br class="table-break" /><div class="caution"><h3 class="title">Внимание</h3><p>Заметьте, что оператор <span class="quote">«<span class="quote">идентичности</span>»</span>, <code class="literal">~=</code>, представляет собой обычную проверку равенства значений <code class="type">point</code>, <code class="type">box</code>, <code class="type">polygon</code> и <code class="type">circle</code>. Для некоторых геометрических типов определён также оператор <code class="literal">=</code>, но <code class="literal">=</code> проверяет только равенство <span class="emphasis"><em>площадей</em></span>. Другие скалярные операторы сравнения (<code class="literal">&lt;=</code> и т. д.) для тех типов, для которых они реализованы, тоже сравнивают площади.</p></div><div class="note"><h3 class="title">Примечание</h3><p>До <span class="productname">PostgreSQL</span> 14 применявшиеся к точкам операторы <code class="type">point</code> <code class="literal">&lt;&lt;|</code> <code class="type">point</code> (строго ниже) и <code class="type">point</code> <code class="literal">|&gt;&gt;</code> <code class="type">point</code> (строго выше) назывались <code class="literal">&lt;^</code> и <code class="literal">&gt;^</code> соответственно. Эти имена по-прежнему доступны, но считаются устаревшими и в конце концов будут удалены.</p></div><div class="table" id="FUNCTIONS-GEOMETRY-FUNC-TABLE"><p class="title"><strong>Таблица 9.37. Геометрические функции</strong></p><div class="table-contents"><table class="table" summary="Геометрические функции" border="1"><colgroup><col /></colgroup><thead><tr><th class="func_table_entry"><p class="func_signature">Функция</p>
+       <p>Описание</p>
+       <p>Пример(ы)</p></th></tr></thead><tbody><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.17.6.2.2.1.1.1.1" class="indexterm"></a> <code class="function">area</code> ( <em class="replaceable"><code>геометрический_тип</code></em> ) → <code class="returnvalue">double precision</code></p>
+       <p>Вычисляет площадь. Имеется для типов <code class="type">box</code>, <code class="type">path</code>, <code class="type">circle</code>. Путь, переданный в аргументе типа <code class="type">path</code>, должен быть замкнутым; в противном случае возвращается NULL. Если же путь является самопересекающимся, результат может не иметь смысла.</p>
+       <p>
+        <code class="literal">area(box '(2,2),(0,0)')</code>
+        → <code class="returnvalue">4</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.17.6.2.2.2.1.1.1" class="indexterm"></a> <code class="function">center</code> ( <em class="replaceable"><code>geometric_type</code></em> ) → <code class="returnvalue">point</code></p>
+       <p>Вычисляет центральную точку. Имеется для типов <code class="type">box</code>, <code class="type">circle</code>.</p>
+       <p>
+        <code class="literal">center(box '(1,2),(0,0)')</code>
+        → <code class="returnvalue">(0.5,1)</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.17.6.2.2.3.1.1.1" class="indexterm"></a> <code class="function">diagonal</code> ( <code class="type">box</code> ) → <code class="returnvalue">lseg</code></p>
+       <p>Вычисляет диагональ прямоугольника в виде отрезка (аналогично <code class="function">lseg(box)</code>).</p>
+       <p>
+        <code class="literal">diagonal(box '(1,2),(0,0)')</code>
+        → <code class="returnvalue">[(1,2),(0,0)]</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.17.6.2.2.4.1.1.1" class="indexterm"></a> <code class="function">diameter</code> ( <code class="type">circle</code> ) → <code class="returnvalue">double precision</code></p>
+       <p>Вычисляет диаметр круга.</p>
+       <p>
+        <code class="literal">diameter(circle '&lt;(0,0),2&gt;')</code>
+        → <code class="returnvalue">4</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.17.6.2.2.5.1.1.1" class="indexterm"></a> <code class="function">height</code> ( <code class="type">box</code> ) → <code class="returnvalue">double precision</code></p>
+       <p>Вычисляет вертикальный размер прямоугольника.</p>
+       <p>
+        <code class="literal">height(box '(1,2),(0,0)')</code>
+        → <code class="returnvalue">2</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.17.6.2.2.6.1.1.1" class="indexterm"></a> <code class="function">isclosed</code> ( <code class="type">path</code> ) → <code class="returnvalue">boolean</code></p>
+       <p>Путь является замкнутым?</p>
+       <p>
+        <code class="literal">isclosed(path '((0,0),(1,1),(2,0))')</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.17.6.2.2.7.1.1.1" class="indexterm"></a> <code class="function">isopen</code> ( <code class="type">path</code> ) → <code class="returnvalue">boolean</code></p>
+       <p>Путь является открытым?</p>
+       <p>
+        <code class="literal">isopen(path '[(0,0),(1,1),(2,0)]')</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.17.6.2.2.8.1.1.1" class="indexterm"></a> <code class="function">length</code> ( <em class="replaceable"><code>геометрический_тип</code></em> ) → <code class="returnvalue">double precision</code></p>
+       <p>Вычисляет общую длину. Имеется для типов <code class="type">lseg</code>, <code class="type">path</code>.</p>
+       <p>
+        <code class="literal">length(path '((-1,0),(1,0))')</code>
+        → <code class="returnvalue">4</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.17.6.2.2.9.1.1.1" class="indexterm"></a> <code class="function">npoints</code> ( <em class="replaceable"><code>геометрический_тип</code></em> ) → <code class="returnvalue">integer</code></p>
+       <p>Возвращает количество точек. Имеется для типов <code class="type">path</code>, <code class="type">polygon</code>.</p>
+       <p>
+        <code class="literal">npoints(path '[(0,0),(1,1),(2,0)]')</code>
+        → <code class="returnvalue">3</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.17.6.2.2.10.1.1.1" class="indexterm"></a> <code class="function">pclose</code> ( <code class="type">path</code> ) → <code class="returnvalue">path</code></p>
+       <p>Преобразует путь в замкнутый.</p>
+       <p>
+        <code class="literal">pclose(path '[(0,0),(1,1),(2,0)]')</code>
+        → <code class="returnvalue">((0,0),(1,1),(2,0))</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.17.6.2.2.11.1.1.1" class="indexterm"></a> <code class="function">popen</code> ( <code class="type">path</code> ) → <code class="returnvalue">path</code></p>
+       <p>Преобразует путь в открытый.</p>
+       <p>
+        <code class="literal">popen(path '((0,0),(1,1),(2,0))')</code>
+        → <code class="returnvalue">[(0,0),(1,1),(2,0)]</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.17.6.2.2.12.1.1.1" class="indexterm"></a> <code class="function">radius</code> ( <code class="type">circle</code> ) → <code class="returnvalue">double precision</code></p>
+       <p>Вычисляет радиус окружности.</p>
+       <p>
+        <code class="literal">radius(circle '&lt;(0,0),2&gt;')</code>
+        → <code class="returnvalue">2</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.17.6.2.2.13.1.1.1" class="indexterm"></a> <code class="function">slope</code> ( <code class="type">point</code>, <code class="type">point</code> ) → <code class="returnvalue">double precision</code></p>
+       <p>Вычисляет наклон линии, проведённой через две точки.</p>
+       <p>
+        <code class="literal">slope(point '(0,0)', point '(2,1)')</code>
+        → <code class="returnvalue">0.5</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.17.6.2.2.14.1.1.1" class="indexterm"></a> <code class="function">width</code> ( <code class="type">box</code> ) → <code class="returnvalue">double precision</code></p>
+       <p>Вычисляет горизонтальный размер прямоугольника.</p>
+       <p>
+        <code class="literal">width(box '(1,2),(0,0)')</code>
+        → <code class="returnvalue">1</code>
+       </p></td></tr></tbody></table></div></div><br class="table-break" /><div class="table" id="FUNCTIONS-GEOMETRY-CONV-TABLE"><p class="title"><strong>Таблица 9.38. Функции преобразования геометрических типов</strong></p><div class="table-contents"><table class="table" summary="Функции преобразования геометрических типов" border="1"><colgroup><col /></colgroup><thead><tr><th class="func_table_entry"><p class="func_signature">Функция</p>
+       <p>Описание</p>
+       <p>Пример(ы)</p></th></tr></thead><tbody><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.17.7.2.2.1.1.1.1" class="indexterm"></a> <code class="function">box</code> ( <code class="type">circle</code> ) → <code class="returnvalue">box</code></p>
+       <p>Вычисляет прямоугольник, вписанный в окружность.</p>
+       <p>
+        <code class="literal">box(circle '&lt;(0,0),2&gt;')</code>
+        → <code class="returnvalue">(1.414213562373095,1.414213562373095),​(-1.414213562373095,-1.414213562373095)</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">box</code> ( <code class="type">point</code> ) → <code class="returnvalue">box</code></p>
+       <p>Преобразует точку в пустой прямоугольник.</p>
+       <p>
+        <code class="literal">box(point '(1,0)')</code>
+        → <code class="returnvalue">(1,0),(1,0)</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">box</code> ( <code class="type">point</code>, <code class="type">point</code> ) → <code class="returnvalue">box</code></p>
+       <p>Преобразует две угловые точки в прямоугольник.</p>
+       <p>
+        <code class="literal">box(point '(0,1)', point '(1,0)')</code>
+        → <code class="returnvalue">(1,1),(0,0)</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">box</code> ( <code class="type">polygon</code> ) → <code class="returnvalue">box</code></p>
+       <p>Вычисляет окружающий прямоугольник для многоугольника.</p>
+       <p>
+        <code class="literal">box(polygon '((0,0),(1,1),(2,0))')</code>
+        → <code class="returnvalue">(2,1),(0,0)</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.17.7.2.2.5.1.1.1" class="indexterm"></a> <code class="function">bound_box</code> ( <code class="type">box</code>, <code class="type">box</code> ) → <code class="returnvalue">box</code></p>
+       <p>Вычисляет окружающий прямоугольник для двух прямоугольников.</p>
+       <p>
+        <code class="literal">bound_box(box '(1,1),(0,0)', box '(4,4),(3,3)')</code>
+        → <code class="returnvalue">(4,4),(0,0)</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.17.7.2.2.6.1.1.1" class="indexterm"></a> <code class="function">circle</code> ( <code class="type">box</code> ) → <code class="returnvalue">circle</code></p>
+       <p>Вычисляет минимальную окружность, описанную около прямоугольника.</p>
+       <p>
+        <code class="literal">circle(box '(1,1),(0,0)')</code>
+        → <code class="returnvalue">&lt;(0.5,0.5),0.7071067811865476&gt;</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">circle</code> ( <code class="type">point</code>, <code class="type">double precision</code> ) → <code class="returnvalue">circle</code></p>
+       <p>Формирует окружность по точке, задающей центр, и радиусу.</p>
+       <p>
+        <code class="literal">circle(point '(0,0)', 2.0)</code>
+        → <code class="returnvalue">&lt;(0,0),2&gt;</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">circle</code> ( <code class="type">polygon</code> ) → <code class="returnvalue">circle</code></p>
+       <p>Преобразует многоугольник в окружность. Центром окружности будет средняя точка для всех точек многоугольника, а радиусом среднее расстояние от этого центра до точек многоугольника.</p>
+       <p>
+        <code class="literal">circle(polygon '((0,0),(1,3),(2,0))')</code>
+        → <code class="returnvalue">&lt;(1,1),1.6094757082487299&gt;</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.17.7.2.2.9.1.1.1" class="indexterm"></a> <code class="function">line</code> ( <code class="type">point</code>, <code class="type">point</code> ) → <code class="returnvalue">line</code></p>
+       <p>Преобразует две точки в проходящую через них линию.</p>
+       <p>
+        <code class="literal">line(point '(-1,0)', point '(1,0)')</code>
+        → <code class="returnvalue">{0,-1,0}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.17.7.2.2.10.1.1.1" class="indexterm"></a> <code class="function">lseg</code> ( <code class="type">box</code> ) → <code class="returnvalue">lseg</code></p>
+       <p>Вычисляет диагональ прямоугольника в виде отрезка.</p>
+       <p>
+        <code class="literal">lseg(box '(1,0),(-1,0)')</code>
+        → <code class="returnvalue">[(1,0),(-1,0)]</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">lseg</code> ( <code class="type">point</code>, <code class="type">point</code> ) → <code class="returnvalue">lseg</code></p>
+       <p>Формирует отрезок по двум точкам.</p>
+       <p>
+        <code class="literal">lseg(point '(-1,0)', point '(1,0)')</code>
+        → <code class="returnvalue">[(-1,0),(1,0)]</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.17.7.2.2.12.1.1.1" class="indexterm"></a> <code class="function">path</code> ( <code class="type">polygon</code> ) → <code class="returnvalue">path</code></p>
+       <p>Преобразует многоугольник в замкнутый путь с тем же набором точек.</p>
+       <p>
+        <code class="literal">path(polygon '((0,0),(1,1),(2,0))')</code>
+        → <code class="returnvalue">((0,0),(1,1),(2,0))</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.17.7.2.2.13.1.1.1" class="indexterm"></a> <code class="function">point</code> ( <code class="type">double precision</code>, <code class="type">double precision</code> ) → <code class="returnvalue">point</code></p>
+       <p>Формирует точку по заданным координатам.</p>
+       <p>
+        <code class="literal">point(23.4, -44.5)</code>
+        → <code class="returnvalue">(23.4,-44.5)</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">point</code> ( <code class="type">box</code> ) → <code class="returnvalue">point</code></p>
+       <p>Вычисляет центр прямоугольника.</p>
+       <p>
+        <code class="literal">point(box '(1,0),(-1,0)')</code>
+        → <code class="returnvalue">(0,0)</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">point</code> ( <code class="type">circle</code> ) → <code class="returnvalue">point</code></p>
+       <p>Вычисляет центр окружности.</p>
+       <p>
+        <code class="literal">point(circle '&lt;(0,0),2&gt;')</code>
+        → <code class="returnvalue">(0,0)</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">point</code> ( <code class="type">lseg</code> ) → <code class="returnvalue">point</code></p>
+       <p>Вычисляет середину отрезка.</p>
+       <p>
+        <code class="literal">point(lseg '[(-1,0),(1,0)]')</code>
+        → <code class="returnvalue">(0,0)</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">point</code> ( <code class="type">polygon</code> ) → <code class="returnvalue">point</code></p>
+       <p>Вычисляет центр многоугольника (среднее арифметическое по координатам его точек).</p>
+       <p>
+        <code class="literal">point(polygon '((0,0),(1,1),(2,0))')</code>
+        → <code class="returnvalue">(1,0.3333333333333333)</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.17.7.2.2.18.1.1.1" class="indexterm"></a> <code class="function">polygon</code> ( <code class="type">box</code> ) → <code class="returnvalue">polygon</code></p>
+       <p>Преобразует прямоугольник в многоугольник с 4 вершинами.</p>
+       <p>
+        <code class="literal">polygon(box '(1,1),(0,0)')</code>
+        → <code class="returnvalue">((0,0),(0,1),(1,1),(1,0))</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">polygon</code> ( <code class="type">circle</code> ) → <code class="returnvalue">polygon</code></p>
+       <p>Преобразует круг в многоугольник с 12 вершинами.</p>
+       <p>
+        <code class="literal">polygon(circle '&lt;(0,0),2&gt;')</code>
+        → <code class="returnvalue">((-2,0),​(-1.7320508075688774,0.9999999999999999),​(-1.0000000000000002,1.7320508075688772),​(-1.2246063538223773e-16,2),​(0.9999999999999996,1.7320508075688774),​(1.732050807568877,1.0000000000000007),​(2,2.4492127076447545e-16),​(1.7320508075688776,-0.9999999999999994),​(1.0000000000000009,-1.7320508075688767),​(3.673819061467132e-16,-2),​(-0.9999999999999987,-1.732050807568878),​(-1.7320508075688767,-1.0000000000000009))</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">polygon</code> ( <code class="type">integer</code>, <code class="type">circle</code> ) → <code class="returnvalue">polygon</code></p>
+       <p>Преобразует окружность в многоугольник с <em class="replaceable"><code>n</code></em> вершинами.</p>
+       <p>
+        <code class="literal">polygon(4, circle '&lt;(3,0),1&gt;')</code>
+        → <code class="returnvalue">((2,0),​(3,1),​(4,1.2246063538223773e-16),​(3,-1))</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">polygon</code> ( <code class="type">path</code> ) → <code class="returnvalue">polygon</code></p>
+       <p>Преобразует замкнутый путь в многоугольник с тем же набором точек.</p>
+       <p>
+        <code class="literal">polygon(path '((0,0),(1,1),(2,0))')</code>
+        → <code class="returnvalue">((0,0),(1,1),(2,0))</code>
+       </p></td></tr></tbody></table></div></div><br class="table-break" /><p>К двум компонентам типа <code class="type">point</code> (точка) можно обратиться, как к элементам массива с индексами 0 и 1. Например, если <code class="literal">t.p</code> — столбец типа <code class="type">point</code>, <code class="literal">SELECT p[0] FROM t</code> вернёт координату X, а <code class="literal">UPDATE t SET p[1] = ...</code> изменит координату Y. Таким же образом, значение типа <code class="type">box</code> или <code class="type">lseg</code> можно воспринимать как массив двух значений типа <code class="type">point</code>.</p></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="functions-enum.html" title="9.10. Функции для перечислений">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="functions.html" title="Глава 9. Функции и операторы">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="functions-net.html" title="9.12. Функции и операторы для работы с сетевыми адресами">След.</a></td></tr><tr><td width="40%" align="left" valign="top">9.10. Функции для перечислений </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 9.12. Функции и операторы для работы с сетевыми адресами</td></tr></table></div></body></html>

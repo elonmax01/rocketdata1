@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>29.1. Определение использования диска</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="diskusage.html" title="Глава 29. Мониторинг использования диска" /><link rel="next" href="disk-full.html" title="29.2. Ошибка переполнения диска" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">29.1. Определение использования диска</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="diskusage.html" title="Глава 29. Мониторинг использования диска">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="diskusage.html" title="Глава 29. Мониторинг использования диска">Наверх</a></td><th width="60%" align="center">Глава 29. Мониторинг использования диска</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="disk-full.html" title="29.2. Ошибка переполнения диска">След.</a></td></tr></table><hr /></div><div class="sect1" id="DISK-USAGE"><div class="titlepage"><div><div><h2 class="title" style="clear: both">29.1. Определение использования диска <a href="#DISK-USAGE" class="id_link">#</a></h2></div></div></div><a id="id-1.6.16.3.2" class="indexterm"></a><p>Для каждой таблицы создаётся первичный дисковый файл кучи (heap), в котором хранится большая часть данных. Если в таблице есть столбцы с потенциально большими значениями, то также может быть и ассоциированный с этой таблицей файл <acronym class="acronym">TOAST</acronym>, который используется для хранения слишком больших значений, не умещающихся в главной таблице (см. <a class="xref" href="storage-toast.html" title="73.2. TOAST">Раздел 73.2</a>). На каждую таблицу <acronym class="acronym">TOAST</acronym>, если она существует, будет существовать один индекс. Также там могут быть и индексы, ассоциированные с базовой таблицей. Каждая таблица и индекс хранятся в отдельном дисковом файле — возможно более чем в одном файле, если размер этого файла превышает один гигабайт. Преобразования имён для этих файлов описываются в <a class="xref" href="storage-file-layout.html" title="73.1. Размещение файлов базы данных">Разделе 73.1</a>.</p><p>Вы можете осуществлять мониторинг дискового пространства тремя способами: используя SQL-функции, перечисленные в <a class="xref" href="functions-admin.html#FUNCTIONS-ADMIN-DBSIZE" title="Таблица 9.96. Функции получения размера объектов БД">Таблице 9.96</a>, используя модуль <a class="xref" href="oid2name.html" title="oid2name"><span class="refentrytitle">oid2name</span></a> или просматривая системные каталоги вручную. Вышеупомянутые SQL функции являются наиболее простыми и рекомендуются для использования. В продолжении этого раздела рассказывается, как просматривать системные каталоги.</p><p>Используя <span class="application">psql</span> после недавнего применения команд VACUUM или ANALYZE, вы можете выполнить такой запрос, чтобы увидеть сколько дискового пространства использует какая-либо таблица: </p><pre class="programlisting">SELECT pg_relation_filepath(oid), relpages FROM pg_class WHERE relname = 'customer';
+
+ pg_relation_filepath | relpages
+----------------------+----------
+ base/16384/16806     |       60
+(1 row)</pre><p> Каждая страница обычно равна 8kb. (Помните, что <code class="structfield">relpages</code> обновляется только командами <code class="command">VACUUM</code>, <code class="command">ANALYZE</code>, и несколькими командами DDL, такими как <code class="command">CREATE INDEX</code>). Путь к файлу представляет интерес, если вы хотите проанализировать непосредственно файл на диске.</p><p>Чтобы посмотреть пространство, используемое таблицами <acronym class="acronym">TOAST</acronym>, используйте следующий запрос: </p><pre class="programlisting">SELECT relname, relpages
+FROM pg_class,
+     (SELECT reltoastrelid
+      FROM pg_class
+      WHERE relname = 'customer') AS ss
+WHERE oid = ss.reltoastrelid OR
+      oid = (SELECT indexrelid
+             FROM pg_index
+             WHERE indrelid = ss.reltoastrelid)
+ORDER BY relname;
+
+       relname        | relpages
+----------------------+----------
+ pg_toast_16806       |        0
+ pg_toast_16806_index |        1</pre><p>Вы можете легко посмотреть размеры индексов: </p><pre class="programlisting">SELECT c2.relname, c2.relpages
+FROM pg_class c, pg_class c2, pg_index i
+WHERE c.relname = 'customer' AND
+      c.oid = i.indrelid AND
+      c2.oid = i.indexrelid
+ORDER BY c2.relname;
+
+      relname      | relpages
+-------------------+----------
+ customer_id_index |       26</pre><p>Также легко найти самые большие таблицы и индексы, используя эту информацию: </p><pre class="programlisting">SELECT relname, relpages
+FROM pg_class
+ORDER BY relpages DESC;
+
+       relname        | relpages
+----------------------+----------
+ bigtable             |     3290
+ customer             |     3144</pre></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="diskusage.html" title="Глава 29. Мониторинг использования диска">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="diskusage.html" title="Глава 29. Мониторинг использования диска">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="disk-full.html" title="29.2. Ошибка переполнения диска">След.</a></td></tr><tr><td width="40%" align="left" valign="top">Глава 29. Мониторинг использования диска </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 29.2. Ошибка переполнения диска</td></tr></table></div></body></html>

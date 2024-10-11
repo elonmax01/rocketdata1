@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>40.5. Пример событийного триггера, обрабатывающего перезапись таблицы</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="event-trigger-example.html" title="40.4. Полный пример триггера события" /><link rel="next" href="rules.html" title="Глава 41. Система правил" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">40.5. Пример событийного триггера, обрабатывающего перезапись таблицы</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="event-trigger-example.html" title="40.4. Полный пример триггера события">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="event-triggers.html" title="Глава 40. Триггеры событий">Наверх</a></td><th width="60%" align="center">Глава 40. Триггеры событий</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="rules.html" title="Глава 41. Система правил">След.</a></td></tr></table><hr /></div><div class="sect1" id="EVENT-TRIGGER-TABLE-REWRITE-EXAMPLE"><div class="titlepage"><div><div><h2 class="title" style="clear: both">40.5. Пример событийного триггера, обрабатывающего перезапись таблицы <a href="#EVENT-TRIGGER-TABLE-REWRITE-EXAMPLE" class="id_link">#</a></h2></div></div></div><p>Благодаря существованию события <code class="literal">table_rewrite</code>, можно реализовать политику перезаписи таблиц, допускающую перезапись только в определённое время обслуживания.</p><p>Следующий пример демонстрирует реализацию такой политики. </p><pre class="programlisting">CREATE OR REPLACE FUNCTION no_rewrite()
+ RETURNS event_trigger
+ LANGUAGE plpgsql AS
+$$
+---
+--- Реализация локальной политики перезаписи таблиц:
+---   перезапись public.foo не допускается,
+---   другие таблицы могут перезаписываться между 1 часом ночи и 6 часами утра,
+---   если только их размер не превышает 100 блоков
+---
+DECLARE
+  table_oid oid := pg_event_trigger_table_rewrite_oid();
+  current_hour integer := extract('hour' from current_time);
+  pages integer;
+  max_pages integer := 100;
+BEGIN
+  IF pg_event_trigger_table_rewrite_oid() = 'public.foo'::regclass
+  THEN
+        RAISE EXCEPTION 'you''re not allowed to rewrite the table %',
+                        table_oid::regclass;
+  END IF;
+
+  SELECT INTO pages relpages FROM pg_class WHERE oid = table_oid;
+  IF pages &gt; max_pages
+  THEN
+        RAISE EXCEPTION 'rewrites only allowed for table with less than % pages',
+                        max_pages;
+  END IF;
+
+  IF current_hour NOT BETWEEN 1 AND 6
+  THEN
+        RAISE EXCEPTION 'rewrites only allowed between 1am and 6am';
+  END IF;
+END;
+$$;
+
+CREATE EVENT TRIGGER no_rewrite_allowed
+                  ON table_rewrite
+   EXECUTE FUNCTION no_rewrite();</pre></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="event-trigger-example.html" title="40.4. Полный пример триггера события">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="event-triggers.html" title="Глава 40. Триггеры событий">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="rules.html" title="Глава 41. Система правил">След.</a></td></tr><tr><td width="40%" align="left" valign="top">40.4. Полный пример триггера события </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> Глава 41. Система правил</td></tr></table></div></body></html>

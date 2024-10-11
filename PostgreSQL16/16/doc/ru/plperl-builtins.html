@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>45.3. Встроенные функции</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="plperl-data.html" title="45.2. Значения в PL/Perl" /><link rel="next" href="plperl-global.html" title="45.4. Глобальные значения в PL/Perl" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">45.3. Встроенные функции</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="plperl-data.html" title="45.2. Значения в PL/Perl">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="plperl.html" title="Глава 45. PL/Perl — процедурный язык Perl">Наверх</a></td><th width="60%" align="center">Глава 45. PL/Perl — процедурный язык Perl</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="plperl-global.html" title="45.4. Глобальные значения в PL/Perl">След.</a></td></tr></table><hr /></div><div class="sect1" id="PLPERL-BUILTINS"><div class="titlepage"><div><div><h2 class="title" style="clear: both">45.3. Встроенные функции <a href="#PLPERL-BUILTINS" class="id_link">#</a></h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="plperl-builtins.html#PLPERL-DATABASE">45.3.1. Обращение к базе данных из PL/Perl</a></span></dt><dt><span class="sect2"><a href="plperl-builtins.html#PLPERL-UTILITY-FUNCTIONS">45.3.2. Вспомогательные функции в PL/Perl</a></span></dt></dl></div><div class="sect2" id="PLPERL-DATABASE"><div class="titlepage"><div><div><h3 class="title">45.3.1. Обращение к базе данных из PL/Perl <a href="#PLPERL-DATABASE" class="id_link">#</a></h3></div></div></div><p>Обращаться к самой базе данных из кода Perl можно, используя следующие функции:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term">
+      <code class="literal"><code class="function">spi_exec_query</code>(<em class="replaceable"><code>запрос</code></em> [, <em class="replaceable"><code>предел</code></em>])</code>
+      <a id="id-1.8.10.11.2.3.1.1.2" class="indexterm"></a>
+     </span></dt><dd><p>Функция <code class="literal">spi_exec_query</code> выполняет команду SQL и возвращает весь набор строк в виде ссылки на массив хешей. Если <em class="replaceable"><code>предел</code></em> задан и больше нуля, то <code class="function">spi_exec_query</code> получает число строк, не превышающее <em class="replaceable"><code>предел</code></em>, как если бы запрос включал предложение <code class="literal">LIMIT</code>. Без указания <em class="replaceable"><code>предела</code></em> или когда он равен нулю, ограничение на количество строк снимается.</p><p><span class="emphasis"><em>Эту функцию следует использовать, только если вы знаете, что набор будет относительно небольшим.</em></span> Так выглядит пример запроса (<code class="command">SELECT</code>) с дополнительно заданным максимальным числом строк: </p><pre class="programlisting">$rv = spi_exec_query('SELECT * FROM my_table', 5);</pre><p> Этот запрос возвращает не больше 5 строк из таблицы <code class="literal">my_table</code>. Если в <code class="literal">my_table</code> есть столбец <code class="literal">my_column</code>, получить его значение из строки <code class="literal">$i</code> результата можно следующим образом: </p><pre class="programlisting">$foo = $rv-&gt;{rows}[$i]-&gt;{my_column};</pre><p> Общее число строк, возвращённых запросом <code class="command">SELECT</code>, можно получить так: </p><pre class="programlisting">$nrows = $rv-&gt;{processed}</pre><p>Так можно выполнить команду другого типа: </p><pre class="programlisting">$query = "INSERT INTO my_table VALUES (1, 'test')";
+$rv = spi_exec_query($query);</pre><p> Затем можно получить статус команды (например, <code class="literal">SPI_OK_INSERT</code>) следующим образом: </p><pre class="programlisting">$res = $rv-&gt;{status};</pre><p> Чтобы получить число затронутых строк, выполните: </p><pre class="programlisting">$nrows = $rv-&gt;{processed};</pre><p>Полный пример: </p><pre class="programlisting">CREATE TABLE test (
+    i int,
+    v varchar
+);
+
+INSERT INTO test (i, v) VALUES (1, 'first line');
+INSERT INTO test (i, v) VALUES (2, 'second line');
+INSERT INTO test (i, v) VALUES (3, 'third line');
+INSERT INTO test (i, v) VALUES (4, 'immortal');
+
+CREATE OR REPLACE FUNCTION test_munge() RETURNS SETOF test AS $$
+    my $rv = spi_exec_query('select i, v from test;');
+    my $status = $rv-&gt;{status};
+    my $nrows = $rv-&gt;{processed};
+    foreach my $rn (0 .. $nrows - 1) {
+        my $row = $rv-&gt;{rows}[$rn];
+        $row-&gt;{i} += 200 if defined($row-&gt;{i});
+        $row-&gt;{v} =~ tr/A-Za-z/a-zA-Z/ if (defined($row-&gt;{v}));
+        return_next($row);
+    }
+    return undef;
+$$ LANGUAGE plperl;
+
+SELECT * FROM test_munge();</pre></dd><dt><span class="term">
+      <code class="literal"><code class="function">spi_query(<em class="replaceable"><code>команда</code></em>)</code></code>
+      <a id="id-1.8.10.11.2.3.2.1.2" class="indexterm"></a>
+     <br /></span><span class="term">
+      <code class="literal"><code class="function">spi_fetchrow(<em class="replaceable"><code>cursor</code></em>)</code></code>
+      <a id="id-1.8.10.11.2.3.2.2.2" class="indexterm"></a>
+     <br /></span><span class="term">
+      <code class="literal"><code class="function">spi_cursor_close(<em class="replaceable"><code>cursor</code></em>)</code></code>
+      <a id="id-1.8.10.11.2.3.2.3.2" class="indexterm"></a>
+     </span></dt><dd><p>Функции <code class="literal">spi_query</code> и <code class="literal">spi_fetchrow</code> применяются в паре, когда набор строк может быть очень большим или когда нужно возвращать строки по мере их поступления. Функция <code class="literal">spi_fetchrow</code> работает <span class="emphasis"><em>только</em></span> с <code class="literal">spi_query</code>. Следующий пример показывает, как использовать их вместе: </p><pre class="programlisting">CREATE TYPE foo_type AS (the_num INTEGER, the_text TEXT);
+
+CREATE OR REPLACE FUNCTION lotsa_md5 (INTEGER) RETURNS SETOF foo_type AS $$
+    use Digest::MD5 qw(md5_hex);
+    my $file = '/usr/share/dict/words';
+    my $t = localtime;
+    elog(NOTICE, "opening file $file at $t" );
+    open my $fh, '&lt;', $file # здесь мы обращаемся к файлу!
+        or elog(ERROR, "cannot open $file for reading: $!");
+    my @words = &lt;$fh&gt;;
+    close $fh;
+    $t = localtime;
+    elog(NOTICE, "closed file $file at $t");
+    chomp(@words);
+    my $row;
+    my $sth = spi_query("SELECT * FROM generate_series(1,$_[0]) AS b(a)");
+    while (defined ($row = spi_fetchrow($sth))) {
+        return_next({
+            the_num =&gt; $row-&gt;{a},
+            the_text =&gt; md5_hex($words[rand @words])
+        });
+    }
+    return;
+$$ LANGUAGE plperlu;
+
+SELECT * from lotsa_md5(500);</pre><p>Обычно вызов <code class="function">spi_fetchrow</code> нужно повторять, пока не будет получен результат <code class="literal">undef</code>, показывающий, что все строки уже прочитаны. Курсор, возвращаемый функцией <code class="literal">spi_query</code>, автоматически освобождается, когда <code class="function">spi_fetchrow</code> возвращает <code class="literal">undef</code>. Если вы не хотите читать все строки, освободите курсор, выполнив <code class="function">spi_cursor_close</code>, чтобы не допустить утечки памяти.</p></dd><dt><span class="term">
+      <code class="literal"><code class="function">spi_prepare(<em class="replaceable"><code>команда</code></em>, <em class="replaceable"><code>типы аргументов</code></em>)</code></code>
+      <a id="id-1.8.10.11.2.3.3.1.2" class="indexterm"></a>
+     <br /></span><span class="term">
+      <code class="literal"><code class="function">spi_query_prepared(<em class="replaceable"><code>план</code></em>, <em class="replaceable"><code>аргументы</code></em>)</code></code>
+      <a id="id-1.8.10.11.2.3.3.2.2" class="indexterm"></a>
+     <br /></span><span class="term">
+      <code class="literal"><code class="function">spi_exec_prepared(<em class="replaceable"><code>план</code></em> [, <em class="replaceable"><code>атрибуты</code></em>], <em class="replaceable"><code>аргументы</code></em>)</code></code>
+      <a id="id-1.8.10.11.2.3.3.3.2" class="indexterm"></a>
+     <br /></span><span class="term">
+      <code class="literal"><code class="function">spi_freeplan(<em class="replaceable"><code>план</code></em>)</code></code>
+      <a id="id-1.8.10.11.2.3.3.4.2" class="indexterm"></a>
+     </span></dt><dd><p>Функции <code class="literal">spi_prepare</code>, <code class="literal">spi_query_prepared</code>, <code class="literal">spi_exec_prepared</code> и <code class="literal">spi_freeplan</code> реализуют ту же функциональность, но для подготовленных запросов. Функция <code class="literal">spi_prepare</code> принимает строку запроса с нумерованными местозаполнителями аргументов ($1, $2 и т. д.) и список строк с типами аргументов: </p><pre class="programlisting">$plan = spi_prepare('SELECT * FROM test WHERE id &gt; $1 AND name = $2',
+                                                     'INTEGER', 'TEXT');</pre><p> План запроса, подготовленный вызовом <code class="literal">spi_prepare</code>, можно использовать вместо строки запроса либо в <code class="literal">spi_exec_prepared</code>, возвращающей тот же результат, что и <code class="literal">spi_exec_query</code>, либо в <code class="literal">spi_query_prepared</code>, возвращающей курсор так же, как <code class="literal">spi_query</code>, который затем можно передать в <code class="literal">spi_fetchrow</code>. В необязательном втором параметре <code class="literal">spi_exec_prepared</code> можно передать хеш с атрибутами; в настоящее время поддерживается только атрибут <code class="literal">limit</code>, задающий максимальное число строк, которое может вернуть запрос. Без указания <code class="literal">limit</code> или при указании его равным нулю ограничение на количество строк снимается.</p><p>Подготовленные запросы хороши тем, что позволяют использовать единожды подготовленный план для неоднократного выполнения запроса. Когда план оказывается не нужен, его можно освободить, вызвав <code class="literal">spi_freeplan</code>: </p><pre class="programlisting">CREATE OR REPLACE FUNCTION init() RETURNS VOID AS $$
+        $_SHARED{my_plan} = spi_prepare('SELECT (now() + $1)::date AS now',
+                                        'INTERVAL');
+$$ LANGUAGE plperl;
+
+CREATE OR REPLACE FUNCTION add_time( INTERVAL ) RETURNS TEXT AS $$
+        return spi_exec_prepared(
+                $_SHARED{my_plan},
+                $_[0]
+        )-&gt;{rows}-&gt;[0]-&gt;{now};
+$$ LANGUAGE plperl;
+
+CREATE OR REPLACE FUNCTION done() RETURNS VOID AS $$
+        spi_freeplan( $_SHARED{my_plan});
+        undef $_SHARED{my_plan};
+$$ LANGUAGE plperl;
+
+SELECT init();
+SELECT add_time('1 day'), add_time('2 days'), add_time('3 days');
+SELECT done();
+
+  add_time  |  add_time  |  add_time
+------------+------------+------------
+ 2005-12-10 | 2005-12-11 | 2005-12-12</pre><p> Заметьте, что параметры для <code class="literal">spi_prepare</code> обозначаются как $1, $2, $3 и т. д., так что по возможности не записывайте строки запросов в двойных кавычках, чтобы не спровоцировать трудноуловимые ошибки.</p><p>Ещё один пример, иллюстрирующий использование необязательного параметра <code class="literal">spi_exec_prepared</code>: </p><pre class="programlisting">CREATE TABLE hosts AS SELECT id, ('192.168.1.'||id)::inet AS address
+                      FROM generate_series(1,3) AS id;
+
+CREATE OR REPLACE FUNCTION init_hosts_query() RETURNS VOID AS $$
+        $_SHARED{plan} = spi_prepare('SELECT * FROM hosts
+                                      WHERE address &lt;&lt; $1', 'inet');
+$$ LANGUAGE plperl;
+
+CREATE OR REPLACE FUNCTION query_hosts(inet) RETURNS SETOF hosts AS $$
+        return spi_exec_prepared(
+                $_SHARED{plan},
+                {limit =&gt; 2},
+                $_[0]
+        )-&gt;{rows};
+$$ LANGUAGE plperl;
+
+CREATE OR REPLACE FUNCTION release_hosts_query() RETURNS VOID AS $$
+        spi_freeplan($_SHARED{plan});
+        undef $_SHARED{plan};
+$$ LANGUAGE plperl;
+
+SELECT init_hosts_query();
+SELECT query_hosts('192.168.1.0/30');
+SELECT release_hosts_query();
+
+    query_hosts
+-----------------
+ (1,192.168.1.1)
+ (2,192.168.1.2)
+(2 rows)</pre></dd><dt><span class="term">
+      <code class="literal"><code class="function">spi_commit()</code></code>
+      <a id="id-1.8.10.11.2.3.4.1.2" class="indexterm"></a>
+     <br /></span><span class="term">
+      <code class="literal"><code class="function">spi_rollback()</code></code>
+      <a id="id-1.8.10.11.2.3.4.2.2" class="indexterm"></a>
+     </span></dt><dd><p>Эти функции фиксируют или откатывают текущую транзакцию. Они могут вызываться только в процедурах или в анонимных блоках кода (в команде <code class="command">DO</code>), вызываемых из кода верхнего уровня. (Заметьте, что выполнить SQL-команды <code class="command">COMMIT</code> или <code class="command">ROLLBACK</code> через <code class="function">spi_exec_query</code> или подобную функцию нельзя. Соответствующие операции могут выполняться только данными функциями.) После завершения одной транзакции следующая начинается автоматически, отдельной функции для этого нет.</p><p>Пример: </p><pre class="programlisting">CREATE PROCEDURE transaction_test1()
+LANGUAGE plperl
+AS $$
+foreach my $i (0..9) {
+    spi_exec_query("INSERT INTO test1 (a) VALUES ($i)");
+    if ($i % 2 == 0) {
+        spi_commit();
+    } else {
+        spi_rollback();
+    }
+}
+$$;
+
+CALL transaction_test1();</pre></dd></dl></div></div><div class="sect2" id="PLPERL-UTILITY-FUNCTIONS"><div class="titlepage"><div><div><h3 class="title">45.3.2. Вспомогательные функции в PL/Perl <a href="#PLPERL-UTILITY-FUNCTIONS" class="id_link">#</a></h3></div></div></div><div class="variablelist"><dl class="variablelist"><dt><span class="term">
+      <code class="literal"><code class="function">elog(<em class="replaceable"><code>уровень</code></em>, <em class="replaceable"><code>сообщение</code></em>)</code></code>
+      <a id="id-1.8.10.11.3.2.1.1.2" class="indexterm"></a>
+     </span></dt><dd><p>Выдаёт служебное сообщение или сообщение об ошибке. Возможные уровни сообщений: <code class="literal">DEBUG</code> (ОТЛАДКА), <code class="literal">LOG</code> (СООБЩЕНИЕ), <code class="literal">INFO</code> (ИНФОРМАЦИЯ), <code class="literal">NOTICE</code> (ЗАМЕЧАНИЕ), <code class="literal">WARNING</code> (ПРЕДУПРЕЖДЕНИЕ) и <code class="literal">ERROR</code> (ОШИБКА). С уровнем <code class="literal">ERROR</code> выдаётся ошибка; если она не перехватывается окружающим кодом Perl, она распространяется в вызывающий запрос, что приводит к прерыванию текущей транзакции или подтранзакции. По сути то же самое делает команда <code class="literal">die</code> языка Perl. При использовании других уровней происходит просто вывод сообщения с заданным уровнем важности. Будут ли сообщения определённого уровня передаваться клиенту и/или записываться в журнал, определяется конфигурационными параметрами <a class="xref" href="runtime-config-logging.html#GUC-LOG-MIN-MESSAGES">log_min_messages</a> и <a class="xref" href="runtime-config-client.html#GUC-CLIENT-MIN-MESSAGES">client_min_messages</a>. За дополнительными сведениями обратитесь к <a class="xref" href="runtime-config.html" title="Глава 20. Настройка сервера">Главе 20</a>.</p></dd><dt><span class="term">
+      <code class="literal"><code class="function">quote_literal(<em class="replaceable"><code>строка</code></em>)</code></code>
+      <a id="id-1.8.10.11.3.2.2.1.2" class="indexterm"></a>
+     </span></dt><dd><p>Оформляет переданную строку для использования в качестве текстовой строки в SQL-операторе. Включённые в неё апострофы и обратная косая черта при этом дублируются. Заметьте, что <code class="function">quote_literal</code> возвращает undef, когда получает аргумент undef; если такие аргументы возможны, часто лучше использовать <code class="function">quote_nullable</code>.</p></dd><dt><span class="term">
+      <code class="literal"><code class="function">quote_nullable(<em class="replaceable"><code>строка</code></em>)</code></code>
+      <a id="id-1.8.10.11.3.2.3.1.2" class="indexterm"></a>
+     </span></dt><dd><p>Оформляет переданную строку для использования в качестве текстовой строки в SQL-операторе; либо, если поступает аргумент undef, возвращает строку «NULL» (без кавычек). Символы апостроф и обратная косая черта дублируются должным образом.</p></dd><dt><span class="term">
+      <code class="literal"><code class="function">quote_ident(<em class="replaceable"><code>строка</code></em>)</code></code>
+      <a id="id-1.8.10.11.3.2.4.1.2" class="indexterm"></a>
+     </span></dt><dd><p>Оформляет переданную строку для использования в качестве идентификатора в SQL-операторе. При необходимости идентификатор заключается в кавычки (например, если он содержит символы, недопустимые в открытом виде, или буквы в разном регистре). Если переданная строка содержит кавычки, они дублируются.</p></dd><dt><span class="term">
+      <code class="literal"><code class="function">decode_bytea(<em class="replaceable"><code>строка</code></em>)</code></code>
+      <a id="id-1.8.10.11.3.2.5.1.2" class="indexterm"></a>
+     </span></dt><dd><p>Возвращает неформатированные двоичные данные, представленные содержимым заданной строки, которая должна быть закодирована как <code class="type">bytea</code>.</p></dd><dt><span class="term">
+      <code class="literal"><code class="function">encode_bytea(<em class="replaceable"><code>строка</code></em>)</code></code>
+      <a id="id-1.8.10.11.3.2.6.1.2" class="indexterm"></a>
+     </span></dt><dd><p>Возвращает закодированные в виде <code class="type">bytea</code> двоичные данные, содержащиеся в переданной строке.</p></dd><dt><span class="term">
+      <code class="literal"><code class="function">encode_array_literal(<em class="replaceable"><code>массив</code></em>)</code></code>
+      <a id="id-1.8.10.11.3.2.7.1.2" class="indexterm"></a>
+     <br /></span><span class="term">
+      <code class="literal"><code class="function">encode_array_literal(<em class="replaceable"><code>массив</code></em>, <em class="replaceable"><code>разделитель</code></em>)</code></code>
+     </span></dt><dd><p>Возвращает содержимое указанного массива в виде строки в формате массива (см. <a class="xref" href="arrays.html#ARRAYS-INPUT" title="8.15.2. Ввод значения массива">Подраздел 8.15.2</a>). Возвращает значение аргумента неизменённым, если это не ссылка не массив. Разделитель элементов в строке массива по умолчанию — «<code class="literal">, </code>» (если разделитель не определён или undef).</p></dd><dt><span class="term">
+      <code class="literal"><code class="function">encode_typed_literal(<em class="replaceable"><code>значение</code></em>, <em class="replaceable"><code>имя_типа</code></em>)</code></code>
+      <a id="id-1.8.10.11.3.2.8.1.2" class="indexterm"></a>
+     </span></dt><dd><p>Преобразует переменную Perl в значение типа данных, указанного во втором аргументе, и возвращает строковое представление этого значения. Корректно обрабатывает вложенные массивы и значения составных типов.</p></dd><dt><span class="term">
+      <code class="literal"><code class="function">encode_array_constructor(<em class="replaceable"><code>массив</code></em>)</code></code>
+      <a id="id-1.8.10.11.3.2.9.1.2" class="indexterm"></a>
+     </span></dt><dd><p>Возвращает содержимое переданного массива в виде строки в формате конструктора массива (см. <a class="xref" href="sql-expressions.html#SQL-SYNTAX-ARRAY-CONSTRUCTORS" title="4.2.12. Конструкторы массивов">Подраздел 4.2.12</a>). Отдельные значения заключаются в кавычки функцией <code class="function">quote_nullable</code>. Возвращает значение аргумента, заключённое в кавычки функцией <code class="function">quote_nullable</code>, если аргумент — не ссылка на массив.</p></dd><dt><span class="term">
+      <code class="literal"><code class="function">looks_like_number(<em class="replaceable"><code>строка</code></em>)</code></code>
+      <a id="id-1.8.10.11.3.2.10.1.2" class="indexterm"></a>
+     </span></dt><dd><p>Возвращает значение true, если содержимое переданной строки похоже на число, по правилам Perl, и false в обратном случае. Возвращает undef для аргумента undef. Ведущие и замыкающие пробелы игнорируются. Строки <code class="literal">Inf</code> и <code class="literal">Infinity</code> считаются представляющими число (бесконечность).</p></dd><dt><span class="term">
+      <code class="literal"><code class="function">is_array_ref(<em class="replaceable"><code>аргумент</code></em>)</code></code>
+      <a id="id-1.8.10.11.3.2.11.1.2" class="indexterm"></a>
+     </span></dt><dd><p>Возвращает значение true, если переданный аргумент можно воспринять как ссылку на массив, то есть это ссылка на <code class="literal">ARRAY</code> или <code class="literal">PostgreSQL::InServer::ARRAY</code>. В противном случае возвращает false.</p></dd></dl></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="plperl-data.html" title="45.2. Значения в PL/Perl">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="plperl.html" title="Глава 45. PL/Perl — процедурный язык Perl">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="plperl-global.html" title="45.4. Глобальные значения в PL/Perl">След.</a></td></tr><tr><td width="40%" align="left" valign="top">45.2. Значения в PL/Perl </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 45.4. Глобальные значения в PL/Perl</td></tr></table></div></body></html>

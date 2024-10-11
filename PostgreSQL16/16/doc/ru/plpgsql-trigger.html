@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>43.10. Триггерные функции</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="plpgsql-errors-and-messages.html" title="43.9. Сообщения и ошибки" /><link rel="next" href="plpgsql-implementation.html" title="43.11. PL/pgSQL изнутри" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">43.10. Триггерные функции</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="plpgsql-errors-and-messages.html" title="43.9. Сообщения и ошибки">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="plpgsql.html" title="Глава 43. PL/pgSQL — процедурный язык SQL">Наверх</a></td><th width="60%" align="center">Глава 43. <span class="application">PL/pgSQL</span> — процедурный язык <acronym class="acronym">SQL</acronym></th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="plpgsql-implementation.html" title="43.11. PL/pgSQL изнутри">След.</a></td></tr></table><hr /></div><div class="sect1" id="PLPGSQL-TRIGGER"><div class="titlepage"><div><div><h2 class="title" style="clear: both">43.10. Триггерные функции <a href="#PLPGSQL-TRIGGER" class="id_link">#</a></h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="plpgsql-trigger.html#PLPGSQL-DML-TRIGGER">43.10.1. Триггеры при изменении данных</a></span></dt><dt><span class="sect2"><a href="plpgsql-trigger.html#PLPGSQL-EVENT-TRIGGER">43.10.2. Триггеры событий</a></span></dt></dl></div><a id="id-1.8.8.12.2" class="indexterm"></a><p>В <span class="application">PL/pgSQL</span> можно создавать триггерные функции, которые будут вызываться при изменениях данных или событиях в базе данных. Триггерная функция создаётся командой <code class="command">CREATE FUNCTION</code>, при этом у функции не должно быть аргументов, а типом возвращаемого значения должен быть <code class="type">trigger</code> (для триггеров, срабатывающих при изменениях данных) или <code class="type">event_trigger</code> (для триггеров, срабатывающих при событиях в базе). Для триггеров автоматически определяются специальные локальные переменные с именами вида <code class="varname">TG_<em class="replaceable"><code>имя</code></em></code>, описывающие условие, повлёкшее вызов триггера.</p><div class="sect2" id="PLPGSQL-DML-TRIGGER"><div class="titlepage"><div><div><h3 class="title">43.10.1. Триггеры при изменении данных <a href="#PLPGSQL-DML-TRIGGER" class="id_link">#</a></h3></div></div></div><p><a class="link" href="triggers.html" title="Глава 39. Триггеры">Триггер при изменении данных</a> объявляется как функция без аргументов и с типом результата <code class="type">trigger</code>. Заметьте, что эта функция должна объявляться без аргументов, даже если ожидается, что она будет получать аргументы, заданные в команде <code class="command">CREATE TRIGGER</code> — такие аргументы передаются через <code class="varname">TG_ARGV</code>, как описано ниже.</p><p>Когда функция на <span class="application">PL/pgSQL</span> срабатывает как триггер, в блоке верхнего уровня автоматически создаются несколько специальных переменных: </p><div class="variablelist"><dl class="variablelist"><dt id="PLPGSQL-DML-TRIGGER-NEW"><span class="term"><code class="varname">NEW</code> <code class="type">record</code></span> <a href="#PLPGSQL-DML-TRIGGER-NEW" class="id_link">#</a></dt><dd><p>Новая строка базы данных для команд <code class="command">INSERT</code>/<code class="command">UPDATE</code> в триггерах уровня строки. В триггерах уровня оператора и для команды <code class="command">DELETE</code> эта переменная имеет значение NULL.</p></dd><dt id="PLPGSQL-DML-TRIGGER-OLD"><span class="term"><code class="varname">OLD</code> <code class="type">record</code></span> <a href="#PLPGSQL-DML-TRIGGER-OLD" class="id_link">#</a></dt><dd><p>Старая строка базы данных для команд <code class="command">UPDATE</code>/<code class="command">DELETE</code> в триггерах уровня строки. В триггерах уровня оператора и для команды <code class="command">INSERT</code> эта переменная имеет значение NULL.</p></dd><dt id="PLPGSQL-DML-TRIGGER-TG-NAME"><span class="term"><code class="varname">TG_NAME</code> <code class="type">name</code></span> <a href="#PLPGSQL-DML-TRIGGER-TG-NAME" class="id_link">#</a></dt><dd><p>Имя сработавшего триггера.</p></dd><dt id="PLPGSQL-DML-TRIGGER-TG-WHEN"><span class="term"><code class="varname">TG_WHEN</code> <code class="type">text</code></span> <a href="#PLPGSQL-DML-TRIGGER-TG-WHEN" class="id_link">#</a></dt><dd><p><code class="literal">BEFORE</code>, <code class="literal">AFTER</code> или <code class="literal">INSTEAD OF</code> в зависимости от определения триггера.</p></dd><dt id="PLPGSQL-DML-TRIGGER-TG-LEVEL"><span class="term"><code class="varname">TG_LEVEL</code> <code class="type">text</code></span> <a href="#PLPGSQL-DML-TRIGGER-TG-LEVEL" class="id_link">#</a></dt><dd><p><code class="literal">ROW</code> или <code class="literal">STATEMENT</code> в зависимости от определения триггера.</p></dd><dt id="PLPGSQL-DML-TRIGGER-TG-OP"><span class="term"><code class="varname">TG_OP</code> <code class="type">text</code></span> <a href="#PLPGSQL-DML-TRIGGER-TG-OP" class="id_link">#</a></dt><dd><p>Операция, для которой сработал триггер: <code class="literal">INSERT</code>, <code class="literal">UPDATE</code>, <code class="literal">DELETE</code> или <code class="literal">TRUNCATE</code>.</p></dd><dt id="PLPGSQL-DML-TRIGGER-TG-RELID"><span class="term"><code class="varname">TG_RELID</code> <code class="type">oid</code> (ссылается на <a class="link" href="catalog-pg-class.html" title="53.11. pg_class"><code class="structname">pg_class</code></a>.<code class="structfield">oid</code>)</span> <a href="#PLPGSQL-DML-TRIGGER-TG-RELID" class="id_link">#</a></dt><dd><p>OID таблицы, для которой сработал триггер.</p></dd><dt id="PLPGSQL-DML-TRIGGER-TG-RELNAME"><span class="term"><code class="varname">TG_RELNAME</code> <code class="type">name</code></span> <a href="#PLPGSQL-DML-TRIGGER-TG-RELNAME" class="id_link">#</a></dt><dd><p>Таблица, для которой сработал триггер. Эта переменная устарела и может стать недоступной в будущих релизах. Вместо неё нужно использовать <code class="literal">TG_TABLE_NAME</code>.</p></dd><dt id="PLPGSQL-DML-TRIGGER-TG-TABLE-NAME"><span class="term"><code class="varname">TG_TABLE_NAME</code> <code class="type">name</code></span> <a href="#PLPGSQL-DML-TRIGGER-TG-TABLE-NAME" class="id_link">#</a></dt><dd><p>Таблица, для которой сработал триггер.</p></dd><dt id="PLPGSQL-DML-TRIGGER-TG-TABLE-SCHEMA"><span class="term"><code class="varname">TG_TABLE_SCHEMA</code> <code class="type">name</code></span> <a href="#PLPGSQL-DML-TRIGGER-TG-TABLE-SCHEMA" class="id_link">#</a></dt><dd><p>Схема таблицы, для которой сработал триггер.</p></dd><dt id="PLPGSQL-DML-TRIGGER-TG-NARGS"><span class="term"><code class="varname">TG_NARGS</code> <code class="type">integer</code></span> <a href="#PLPGSQL-DML-TRIGGER-TG-NARGS" class="id_link">#</a></dt><dd><p>Число аргументов в команде <code class="command">CREATE TRIGGER</code>, которые передаются в триггерную функцию.</p></dd><dt id="PLPGSQL-DML-TRIGGER-TG-ARGV"><span class="term"><code class="varname">TG_ARGV</code> <code class="type">text[]</code></span> <a href="#PLPGSQL-DML-TRIGGER-TG-ARGV" class="id_link">#</a></dt><dd><p>Аргументы от оператора <code class="command">CREATE TRIGGER</code>. Индекс массива начинается с 0. Для недопустимых значений индекса (&lt; 0 или &gt;= <code class="varname">tg_nargs</code>) возвращается NULL.</p></dd></dl></div><p>Триггерная функция должна вернуть либо <code class="symbol">NULL</code>, либо запись/строку, соответствующую структуре таблице, для которой сработал триггер.</p><p>Если <code class="literal">BEFORE</code> триггер уровня строки возвращает <code class="symbol">NULL</code>, то все дальнейшие действия с этой строкой прекращаются (т. е. не срабатывают последующие триггеры, команда <code class="command">INSERT</code>/<code class="command">UPDATE</code>/<code class="command">DELETE</code> для этой строки не выполняется). Если возвращается не <code class="symbol">NULL</code>, то дальнейшая обработка продолжается именно с этой строкой. Возвращение строки отличной от начальной <code class="varname">NEW</code>, изменяет строку, которая будет вставлена или изменена. Поэтому, если в триггерной функции нужно выполнить некоторые действия и не менять саму строку, то нужно возвратить переменную <code class="varname">NEW</code> (или её эквивалент). Для того чтобы изменить сохраняемую строку, можно поменять отдельные значения в переменной <code class="varname">NEW</code> и затем её вернуть. Либо создать и вернуть полностью новую переменную. В случае строчного триггера <code class="literal">BEFORE</code> для команды <code class="command">DELETE</code> само возвращаемое значение не имеет прямого эффекта, но оно должно быть отличным от <code class="symbol">NULL</code>, чтобы не прерывать обработку строки. Обратите внимание, что переменная <code class="varname">NEW</code> всегда <code class="symbol">NULL</code> в триггерах на <code class="command">DELETE</code>, поэтому возвращать её не имеет смысла. Традиционной идиомой для триггеров <code class="command">DELETE</code> является возврат переменной <code class="varname">OLD</code>.</p><p>Триггеры <code class="literal">INSTEAD OF</code> (это всегда триггеры уровня строк и они могут применяться только с представлениями) могут возвращать NULL, чтобы показать, что они не выполняли никаких изменений, так что обработку этой строки можно не продолжать (то есть, не вызывать последующие триггеры и не считать строку в числе обработанных строк для окружающих команд <code class="command">INSERT</code>/<code class="command">UPDATE</code>/<code class="command">DELETE</code>). В противном случае должно быть возвращено значение, отличное от NULL, показывающее, что триггер выполнил запрошенную операцию. Для операций <code class="command">INSERT</code> и <code class="command">UPDATE</code> возвращаемым значением должно быть <code class="varname">NEW</code>, которое триггерная функция может модифицировать для поддержки предложений <code class="command">INSERT RETURNING</code> и <code class="command">UPDATE RETURNING</code> (это также повлияет на значение строки, передаваемое последующим триггерам, или доступное под специальным псевдонимом <code class="varname">EXCLUDED</code> в операторе <code class="command">INSERT</code> с предложением <code class="literal">ON CONFLICT DO UPDATE</code>). Для операций <code class="command">DELETE</code> возвращаемым значением должно быть <code class="varname">OLD</code>.</p><p>Возвращаемое значение для строчного триггера AFTER и триггеров уровня оператора (BEFORE или AFTER) всегда игнорируется. Это может быть и NULL. Однако в этих триггерах по-прежнему можно прервать вызвавшую их команду, для этого нужно явно вызвать ошибку.</p><p><a class="xref" href="plpgsql-trigger.html#PLPGSQL-TRIGGER-EXAMPLE" title="Пример 43.3. Триггерная функция на PL/pgSQL">Пример 43.3</a> показывает пример триггерной функции в <span class="application">PL/pgSQL</span>.</p><div class="example" id="PLPGSQL-TRIGGER-EXAMPLE"><p class="title"><strong>Пример 43.3. Триггерная функция на <span class="application">PL/pgSQL</span></strong></p><div class="example-contents"><p>Триггер, показанный в этом примере, при любом добавлении или изменении строки в таблице сохраняет в этой строке информацию о текущем пользователе и отметку времени. Кроме того, он требует, чтобы было указано имя сотрудника и зарплата задавалась положительным числом.</p><pre class="programlisting">CREATE TABLE emp (
+    empname           text,
+    salary            integer,
+    last_date         timestamp,
+    last_user         text
+);
+
+CREATE FUNCTION emp_stamp() RETURNS trigger AS $emp_stamp$
+    BEGIN
+        -- Проверить, что указаны имя сотрудника и зарплата
+        IF NEW.empname IS NULL THEN
+            RAISE EXCEPTION 'empname cannot be null';
+        END IF;
+        IF NEW.salary IS NULL THEN
+            RAISE EXCEPTION '% cannot have null salary', NEW.empname;
+        END IF;
+
+        -- Кто будет работать, если за это надо будет платить?
+        IF NEW.salary &lt; 0 THEN
+            RAISE EXCEPTION '% cannot have a negative salary', NEW.empname;
+        END IF;
+
+        -- Запомнить, кто и когда изменил запись
+        NEW.last_date := current_timestamp;
+        NEW.last_user := current_user;
+        RETURN NEW;
+    END;
+$emp_stamp$ LANGUAGE plpgsql;
+
+CREATE TRIGGER emp_stamp BEFORE INSERT OR UPDATE ON emp
+    FOR EACH ROW EXECUTE FUNCTION emp_stamp();</pre></div></div><br class="example-break" /><p>Другой вариант ведения журнала изменений для таблицы предполагает создание новой таблицы, которая будет содержать отдельную запись для каждой выполненной команды INSERT, UPDATE, DELETE. Этот подход можно рассматривать как протоколирование изменений таблицы для аудита. <a class="xref" href="plpgsql-trigger.html#PLPGSQL-TRIGGER-AUDIT-EXAMPLE" title="Пример 43.4. Триггерная функция для аудита в PL/pgSQL">Пример 43.4</a> показывает реализацию соответствующей триггерной функции в <span class="application">PL/pgSQL</span>.</p><div class="example" id="PLPGSQL-TRIGGER-AUDIT-EXAMPLE"><p class="title"><strong>Пример 43.4. Триггерная функция для аудита в <span class="application">PL/pgSQL</span></strong></p><div class="example-contents"><p>Показанный в этом примере триггер гарантирует, что любое добавление, изменение или удаление строки в таблице <code class="literal">emp</code> будет зафиксировано в таблице <code class="literal">emp_audit</code> (для аудита). Также он фиксирует текущее время, имя пользователя и тип выполняемой операции.</p><pre class="programlisting">CREATE TABLE emp (
+    empname           text NOT NULL,
+    salary            integer
+);
+
+CREATE TABLE emp_audit(
+    operation         char(1)   NOT NULL,
+    stamp             timestamp NOT NULL,
+    userid            text      NOT NULL,
+    empname           text      NOT NULL,
+    salary            integer
+);
+
+CREATE OR REPLACE FUNCTION process_emp_audit() RETURNS TRIGGER AS $emp_audit$
+    BEGIN
+        --
+        -- Добавление строки в emp_audit, которая отражает операцию, выполняемую в emp,
+        -- для определения типа операции применяется специальная переменная TG_OP.
+        --
+        IF (TG_OP = 'DELETE') THEN
+            INSERT INTO emp_audit SELECT 'D', now(), current_user, OLD.*;
+        ELSIF (TG_OP = 'UPDATE') THEN
+            INSERT INTO emp_audit SELECT 'U', now(), current_user, NEW.*;
+        ELSIF (TG_OP = 'INSERT') THEN
+            INSERT INTO emp_audit SELECT 'I', now(), current_user, NEW.*;
+        END IF;
+        RETURN NULL; -- возвращаемое значение для триггера AFTER игнорируется
+    END;
+$emp_audit$ LANGUAGE plpgsql;
+
+CREATE TRIGGER emp_audit
+AFTER INSERT OR UPDATE OR DELETE ON emp
+    FOR EACH ROW EXECUTE FUNCTION process_emp_audit();</pre></div></div><br class="example-break" /><p>У предыдущего примера есть разновидность, которая использует представление, соединяющее основную таблицу и таблицу аудита, для отображения даты последнего изменения каждой строки. При этом подходе по-прежнему ведётся полный журнал аудита в отдельной таблице, но также имеется представление с упрощенным аудиторским следом. Это представление содержит временную метку, которая вычисляется для каждой строки из данных аудиторской таблицы. <a class="xref" href="plpgsql-trigger.html#PLPGSQL-VIEW-TRIGGER-AUDIT-EXAMPLE" title="Пример 43.5. Триггерная функция на PL/pgSQL для аудита в представлении">Пример 43.5</a> показывает пример триггера на представление для аудита в <span class="application">PL/pgSQL</span>.</p><div class="example" id="PLPGSQL-VIEW-TRIGGER-AUDIT-EXAMPLE"><p class="title"><strong>Пример 43.5. Триггерная функция на <span class="application">PL/pgSQL</span> для аудита в представлении</strong></p><div class="example-contents"><p>В этом примере триггер, связанный с представлением, делает это представление изменяемым и гарантирует, что любая команда на добавление, изменение или удаление строки в представлении будет записана для аудита в таблицу <code class="literal">emp_audit</code>. Также записываются временная метка, имя пользователя и тип выполняемой операции. Представление показывает дату последнего изменения для каждой строки.</p><pre class="programlisting">CREATE TABLE emp (
+    empname           text PRIMARY KEY,
+    salary            integer
+);
+
+CREATE TABLE emp_audit(
+    operation         char(1)   NOT NULL,
+    userid            text      NOT NULL,
+    empname           text      NOT NULL,
+    salary            integer,
+    stamp             timestamp NOT NULL
+);
+
+CREATE VIEW emp_view AS
+    SELECT e.empname,
+           e.salary,
+           max(ea.stamp) AS last_updated
+      FROM emp e
+      LEFT JOIN emp_audit ea ON ea.empname = e.empname
+     GROUP BY 1, 2;
+
+CREATE OR REPLACE FUNCTION update_emp_view() RETURNS TRIGGER AS $$
+    BEGIN
+        --
+        -- Выполнить требуемую операцию в emp и добавить в emp_audit строку,
+        -- отражающую эту операцию.
+        --
+        IF (TG_OP = 'DELETE') THEN
+            DELETE FROM emp WHERE empname = OLD.empname;
+            IF NOT FOUND THEN RETURN NULL; END IF;
+
+            OLD.last_updated = now();
+            INSERT INTO emp_audit VALUES('D', current_user, OLD.*);
+            RETURN OLD;
+        ELSIF (TG_OP = 'UPDATE') THEN
+            UPDATE emp SET salary = NEW.salary WHERE empname = OLD.empname;
+            IF NOT FOUND THEN RETURN NULL; END IF;
+
+            NEW.last_updated = now();
+            INSERT INTO emp_audit VALUES('U', current_user, NEW.*);
+            RETURN NEW;
+        ELSIF (TG_OP = 'INSERT') THEN
+            INSERT INTO emp VALUES(NEW.empname, NEW.salary);
+
+            NEW.last_updated = now();
+            INSERT INTO emp_audit VALUES('I', current_user, NEW.*);
+            RETURN NEW;
+        END IF;
+    END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER emp_audit
+INSTEAD OF INSERT OR UPDATE OR DELETE ON emp_view
+    FOR EACH ROW EXECUTE FUNCTION update_emp_view();</pre></div></div><br class="example-break" /><p>Один из вариантов использования триггеров это поддержание в актуальном состоянии отдельной таблицы итогов для некоторой таблицы. В некоторых случаях отдельная таблица с итогами может использоваться в запросах вместо основной таблицы. При этом зачастую время выполнения запросов значительно сокращается. Эта техника широко используется в хранилищах данных, где таблицы фактов могут быть очень большими. <a class="xref" href="plpgsql-trigger.html#PLPGSQL-TRIGGER-SUMMARY-EXAMPLE" title="Пример 43.6. Триггерная функция на PL/pgSQL для ведения таблицы итогов">Пример 43.6</a> демонстрирует триггерную функцию на <span class="application">PL/pgSQL</span>, которая поддерживает таблицу итогов для таблицы фактов в хранилище данных.</p><div class="example" id="PLPGSQL-TRIGGER-SUMMARY-EXAMPLE"><p class="title"><strong>Пример 43.6. Триггерная функция на <span class="application">PL/pgSQL</span> для ведения таблицы итогов</strong></p><div class="example-contents"><p>Представленная здесь схема данных частично основана на примере <span class="emphasis"><em>Grocery Store</em></span> из книги <span class="emphasis"><em>The Data Warehouse Toolkit</em></span> Ральфа Кимбалла (Ralph Kimball).</p><pre class="programlisting">--
+-- Основные таблицы: таблица временных периодов и таблица фактов продаж
+--
+CREATE TABLE time_dimension (
+    time_key                    integer NOT NULL,
+    day_of_week                 integer NOT NULL,
+    day_of_month                integer NOT NULL,
+    month                       integer NOT NULL,
+    quarter                     integer NOT NULL,
+    year                        integer NOT NULL
+);
+CREATE UNIQUE INDEX time_dimension_key ON time_dimension(time_key);
+
+CREATE TABLE sales_fact (
+    time_key                    integer NOT NULL,
+    product_key                 integer NOT NULL,
+    store_key                   integer NOT NULL,
+    amount_sold                 numeric(12,2) NOT NULL,
+    units_sold                  integer NOT NULL,
+    amount_cost                 numeric(12,2) NOT NULL
+);
+CREATE INDEX sales_fact_time ON sales_fact(time_key);
+
+--
+-- Таблица с итогами продаж по периодам
+--
+CREATE TABLE sales_summary_bytime (
+    time_key                    integer NOT NULL,
+    amount_sold                 numeric(15,2) NOT NULL,
+    units_sold                  numeric(12) NOT NULL,
+    amount_cost                 numeric(15,2) NOT NULL
+);
+CREATE UNIQUE INDEX sales_summary_bytime_key ON sales_summary_bytime(time_key);
+
+--
+-- Функция и триггер для пересчёта столбцов итогов при выполнении
+-- команд INSERT, UPDATE, DELETE
+--
+CREATE OR REPLACE FUNCTION maint_sales_summary_bytime() RETURNS TRIGGER
+AS $maint_sales_summary_bytime$
+    DECLARE
+        delta_time_key          integer;
+        delta_amount_sold       numeric(15,2);
+        delta_units_sold        numeric(12);
+        delta_amount_cost       numeric(15,2);
+    BEGIN
+
+        -- Вычислить изменение количества/суммы.
+        IF (TG_OP = 'DELETE') THEN
+
+            delta_time_key = OLD.time_key;
+            delta_amount_sold = -1 * OLD.amount_sold;
+            delta_units_sold = -1 * OLD.units_sold;
+            delta_amount_cost = -1 * OLD.amount_cost;
+
+        ELSIF (TG_OP = 'UPDATE') THEN
+
+            -- Запретить изменение time_key -
+            -- (это ограничение не должно вызвать неудобств, так как
+            -- в основном изменения будут выполняться по схеме DELETE + INSERT).
+            IF ( OLD.time_key != NEW.time_key) THEN
+                RAISE EXCEPTION 'Update of time_key : % -&gt; % not allowed',
+                                                      OLD.time_key, NEW.time_key;
+            END IF;
+
+            delta_time_key = OLD.time_key;
+            delta_amount_sold = NEW.amount_sold - OLD.amount_sold;
+            delta_units_sold = NEW.units_sold - OLD.units_sold;
+            delta_amount_cost = NEW.amount_cost - OLD.amount_cost;
+
+        ELSIF (TG_OP = 'INSERT') THEN
+
+            delta_time_key = NEW.time_key;
+            delta_amount_sold = NEW.amount_sold;
+            delta_units_sold = NEW.units_sold;
+            delta_amount_cost = NEW.amount_cost;
+
+        END IF;
+
+
+        -- Внести новые значения в существующую строку итогов или
+        -- добавить новую.
+        &lt;&lt;insert_update&gt;&gt;
+        LOOP
+            UPDATE sales_summary_bytime
+                SET amount_sold = amount_sold + delta_amount_sold,
+                    units_sold = units_sold + delta_units_sold,
+                    amount_cost = amount_cost + delta_amount_cost
+                WHERE time_key = delta_time_key;
+
+            EXIT insert_update WHEN found;
+
+            BEGIN
+                INSERT INTO sales_summary_bytime (
+                            time_key,
+                            amount_sold,
+                            units_sold,
+                            amount_cost)
+                    VALUES (
+                            delta_time_key,
+                            delta_amount_sold,
+                            delta_units_sold,
+                            delta_amount_cost
+                           );
+
+                EXIT insert_update;
+
+            EXCEPTION
+                WHEN UNIQUE_VIOLATION THEN
+                    -- ничего не делать
+            END;
+        END LOOP insert_update;
+
+        RETURN NULL;
+
+    END;
+$maint_sales_summary_bytime$ LANGUAGE plpgsql;
+
+CREATE TRIGGER maint_sales_summary_bytime
+AFTER INSERT OR UPDATE OR DELETE ON sales_fact
+    FOR EACH ROW EXECUTE FUNCTION maint_sales_summary_bytime();
+
+INSERT INTO sales_fact VALUES(1,1,1,10,3,15);
+INSERT INTO sales_fact VALUES(1,2,1,20,5,35);
+INSERT INTO sales_fact VALUES(2,2,1,40,15,135);
+INSERT INTO sales_fact VALUES(2,3,1,10,1,13);
+SELECT * FROM sales_summary_bytime;
+DELETE FROM sales_fact WHERE product_key = 1;
+SELECT * FROM sales_summary_bytime;
+UPDATE sales_fact SET units_sold = units_sold * 2;
+SELECT * FROM sales_summary_bytime;</pre></div></div><br class="example-break" /><p>Триггеры <code class="literal">AFTER</code> также могут использовать <em class="firstterm">переходные таблицы</em> для просмотра всего набора строк, изменённых оператором, вызвавшим триггер. Команда <code class="command">CREATE TRIGGER</code> назначает имена одной или обеим переходным таблицам, а затем функция может по этим именам обращаться к ним как к временным таблицам только для чтения. Это иллюстрирует <a class="xref" href="plpgsql-trigger.html#PLPGSQL-TRIGGER-AUDIT-TRANSITION-EXAMPLE" title="Пример 43.7. Организация аудита с переходными таблицами">Пример 43.7</a>.</p><div class="example" id="PLPGSQL-TRIGGER-AUDIT-TRANSITION-EXAMPLE"><p class="title"><strong>Пример 43.7. Организация аудита с переходными таблицами</strong></p><div class="example-contents"><p>В данном примере достигается тот же результат, что и в <a class="xref" href="plpgsql-trigger.html#PLPGSQL-TRIGGER-AUDIT-EXAMPLE" title="Пример 43.4. Триггерная функция для аудита в PL/pgSQL">Пример 43.4</a>, но вместо триггера, срабатывающего для каждой строки, в нём используется триггер, срабатывающий единожды для оператора и получающий нужные ему данные в переходной таблице. Это может быть гораздо быстрее, чем вариант с построчным триггером, когда целевой оператор изменяет сразу множество строк. Заметьте, что мы должны объявить отдельные триггеры для каждого вида события, так как предложения <code class="literal">REFERENCING</code> в каждом случае будут разными. Но это не мешает при желании использовать одну триггерную функцию. (На практике может быть лучше использовать три отдельные функции и не проверять <code class="varname">TG_OP</code> во время выполнения.)</p><pre class="programlisting">CREATE TABLE emp (
+    empname           text NOT NULL,
+    salary            integer
+);
+
+CREATE TABLE emp_audit(
+    operation         char(1)   NOT NULL,
+    stamp             timestamp NOT NULL,
+    userid            text      NOT NULL,
+    empname           text      NOT NULL,
+    salary            integer
+);
+
+CREATE OR REPLACE FUNCTION process_emp_audit() RETURNS TRIGGER AS $emp_audit$
+    BEGIN
+        --
+        -- Добавление строк в emp_audit, которые отражают операции, выполняемые в emp,
+        -- для определения типа операций применяется специальная переменная TG_OP.
+        --
+        IF (TG_OP = 'DELETE') THEN
+            INSERT INTO emp_audit
+                SELECT 'D', now(), current_user, o.* FROM old_table o;
+        ELSIF (TG_OP = 'UPDATE') THEN
+            INSERT INTO emp_audit
+                SELECT 'U', now(), current_user, n.* FROM new_table n;
+        ELSIF (TG_OP = 'INSERT') THEN
+            INSERT INTO emp_audit
+                SELECT 'I', now(), current_user, n.* FROM new_table n;
+        END IF;
+        RETURN NULL; -- возвращаемое значение для триггера AFTER игнорируется
+    END;
+$emp_audit$ LANGUAGE plpgsql;
+
+CREATE TRIGGER emp_audit_ins
+    AFTER INSERT ON emp
+    REFERENCING NEW TABLE AS new_table
+    FOR EACH STATEMENT EXECUTE FUNCTION process_emp_audit();
+CREATE TRIGGER emp_audit_upd
+    AFTER UPDATE ON emp
+    REFERENCING OLD TABLE AS old_table NEW TABLE AS new_table
+    FOR EACH STATEMENT EXECUTE FUNCTION process_emp_audit();
+CREATE TRIGGER emp_audit_del
+    AFTER DELETE ON emp
+    REFERENCING OLD TABLE AS old_table
+    FOR EACH STATEMENT EXECUTE FUNCTION process_emp_audit();</pre></div></div><br class="example-break" /></div><div class="sect2" id="PLPGSQL-EVENT-TRIGGER"><div class="titlepage"><div><div><h3 class="title">43.10.2. Триггеры событий <a href="#PLPGSQL-EVENT-TRIGGER" class="id_link">#</a></h3></div></div></div><p>В <span class="application">PL/pgSQL</span> можно создавать <a class="link" href="event-triggers.html" title="Глава 40. Триггеры событий">событийные триггеры</a>. <span class="productname">PostgreSQL</span> требует, чтобы функция, которая вызывается как событийный триггер, объявлялась без аргументов и типом возвращаемого значения был <code class="literal">event_trigger</code>.</p><p>Когда функция на <span class="application">PL/pgSQL</span> вызывается как событийный триггер, в блоке верхнего уровня автоматически создаются несколько специальных переменных: </p><div class="variablelist"><dl class="variablelist"><dt id="PLPGSQL-EVENT-TRIGGER-TG-EVENT"><span class="term"><code class="varname">TG_EVENT</code> <code class="type">text</code></span> <a href="#PLPGSQL-EVENT-TRIGGER-TG-EVENT" class="id_link">#</a></dt><dd><p>событие, при котором сработал триггер.</p></dd><dt id="PLPGSQL-EVENT-TRIGGER-TG-TAG"><span class="term"><code class="varname">TG_TAG</code> <code class="type">text</code></span> <a href="#PLPGSQL-EVENT-TRIGGER-TG-TAG" class="id_link">#</a></dt><dd><p>тег команды, для которой сработал триггер.</p></dd></dl></div><p><a class="xref" href="plpgsql-trigger.html#PLPGSQL-EVENT-TRIGGER-EXAMPLE" title="Пример 43.8. Функция событийного триггера на PL/pgSQL">Пример 43.8</a> демонстрирует реализацию функции событийного триггера на <span class="application">PL/pgSQL</span>.</p><div class="example" id="PLPGSQL-EVENT-TRIGGER-EXAMPLE"><p class="title"><strong>Пример 43.8. Функция событийного триггера на <span class="application">PL/pgSQL</span></strong></p><div class="example-contents"><p>Триггер в этом примере просто выдаёт сообщение <code class="literal">NOTICE</code> каждый раз, когда выполняется поддерживаемая команда.</p><pre class="programlisting">CREATE OR REPLACE FUNCTION snitch() RETURNS event_trigger AS $$
+BEGIN
+    RAISE NOTICE 'snitch: % %', tg_event, tg_tag;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE EVENT TRIGGER snitch ON ddl_command_start EXECUTE FUNCTION snitch();</pre></div></div><br class="example-break" /></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="plpgsql-errors-and-messages.html" title="43.9. Сообщения и ошибки">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="plpgsql.html" title="Глава 43. PL/pgSQL — процедурный язык SQL">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="plpgsql-implementation.html" title="43.11. PL/pgSQL изнутри">След.</a></td></tr><tr><td width="40%" align="left" valign="top">43.9. Сообщения и ошибки </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 43.11. <span class="application">PL/pgSQL</span> изнутри</td></tr></table></div></body></html>

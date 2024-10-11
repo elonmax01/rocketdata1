@@ -1,0 +1,320 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>43.13. Портирование из Oracle PL/SQL</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="plpgsql-development-tips.html" title="43.12. Советы по разработке на PL/pgSQL" /><link rel="next" href="pltcl.html" title="Глава 44. PL/Tcl — процедурный язык Tcl" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">43.13. Портирование из <span class="productname">Oracle</span> PL/SQL</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="plpgsql-development-tips.html" title="43.12. Советы по разработке на PL/pgSQL">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="plpgsql.html" title="Глава 43. PL/pgSQL — процедурный язык SQL">Наверх</a></td><th width="60%" align="center">Глава 43. <span class="application">PL/pgSQL</span> — процедурный язык <acronym class="acronym">SQL</acronym></th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="pltcl.html" title="Глава 44. PL/Tcl — процедурный язык Tcl">След.</a></td></tr></table><hr /></div><div class="sect1" id="PLPGSQL-PORTING"><div class="titlepage"><div><div><h2 class="title" style="clear: both">43.13. Портирование из <span class="productname">Oracle</span> PL/SQL <a href="#PLPGSQL-PORTING" class="id_link">#</a></h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="plpgsql-porting.html#PLPGSQL-PORTING-EXAMPLES">43.13.1. Примеры портирования</a></span></dt><dt><span class="sect2"><a href="plpgsql-porting.html#PLPGSQL-PORTING-OTHER">43.13.2. На что ещё обратить внимание</a></span></dt><dt><span class="sect2"><a href="plpgsql-porting.html#PLPGSQL-PORTING-APPENDIX">43.13.3. Приложение</a></span></dt></dl></div><a id="id-1.8.8.15.2" class="indexterm"></a><a id="id-1.8.8.15.3" class="indexterm"></a><p>В этом разделе рассматриваются различия между языками <span class="productname">PostgreSQL</span> <span class="application">PL/pgSQL</span> и Oracle <span class="application">PL/SQL</span>, чтобы помочь разработчикам, переносящим приложения из <span class="trademark">Oracle</span>® в <span class="productname">PostgreSQL</span>.</p><p><span class="application">PL/pgSQL</span> во многих аспектах похож на PL/SQL . Это блочно-структурированный, императивный язык, в котором все переменные должны объявляться. Присваивания, циклы и условные операторы в обоих языках похожи. Основные отличия, которые необходимо иметь в виду при портировании с <span class="application">PL/SQL</span> в <span class="application">PL/pgSQL</span>, следующие: </p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Если имя, используемое в SQL-команде, может быть как именем столбца таблицы, фигурирующей в команде, так и ссылкой на переменную функции, то <span class="application">PL/SQL</span> считает, что это имя столбца таблицы. Однако <span class="application">PL/pgSQL</span> по умолчанию выдаёт ошибку, сообщая о такой неоднозначности. Установив <code class="literal">plpgsql.variable_conflict</code> = <code class="literal">use_column</code>, это поведение можно поменять на принятое в <span class="application">PL/SQL</span> и описанное в <a class="xref" href="plpgsql-implementation.html#PLPGSQL-VAR-SUBST" title="43.11.1. Подстановка переменных">Подразделе 43.11.1</a>. В первую очередь, было бы правильно избегать таких двусмысленностей, но если требуется портировать большое количество кода, зависящее от данного поведения, то установка переменной <code class="literal">variable_conflict</code> может быть лучшим решением.</p></li><li class="listitem"><p>В <span class="productname">PostgreSQL</span> тело функции должно быть записано в виде строки. Поэтому нужно использовать знак доллара в качестве кавычек или экранировать одиночные кавычки в теле функции. (См. <a class="xref" href="plpgsql-development-tips.html#PLPGSQL-QUOTE-TIPS" title="43.12.1. Обработка кавычек">Подраздел 43.12.1</a>.)</p></li><li class="listitem"><p>Имена типов данных часто требуют корректировки. Например, в Oracle строковые значения часто объявляются с типом <code class="type">varchar2</code>, не являющимся стандартным типом SQL. В <span class="productname">PostgreSQL</span> вместо него нужно использовать <code class="type">varchar</code> или <code class="type">text</code>. Подобным образом, тип <code class="type">number</code> нужно заменять на <code class="type">numeric</code> или другой числовой тип, если найдётся более подходящий.</p></li><li class="listitem"><p>Для группировки функций вместо пакетов используются схемы.</p></li><li class="listitem"><p>Так как пакетов нет, нет и пакетных переменных. Это несколько раздражает. Вместо этого можно хранить состояние каждого сеанса во временных таблицах.</p></li><li class="listitem"><p>Целочисленные циклы <code class="command">FOR</code> с указанием <code class="literal">REVERSE</code> работают по-разному. В <span class="application">PL/SQL</span> значение счётчика уменьшается от второго числа к первому, в то время как в <span class="application">PL/pgSQL</span> счётчик уменьшается от первого ко второму. Поэтому при портировании нужно менять местами границы цикла. Это печально, но вряд ли будет изменено. (См. <a class="xref" href="plpgsql-control-structures.html#PLPGSQL-INTEGER-FOR" title="43.6.5.5. FOR (целочисленный вариант)">Подраздел 43.6.5.5</a>.)</p></li><li class="listitem"><p>Циклы <code class="command">FOR</code> по запросам (не курсорам) также работают по-разному. Переменная цикла должна быть объявлена, в то время как в <span class="application">PL/SQL</span> она объявляется неявно. Преимущество в том, что значения переменных доступны и после выхода из цикла.</p></li><li class="listitem"><p>Существуют некоторые отличия в нотации при использовании курсорных переменных.</p></li></ul></div><div class="sect2" id="PLPGSQL-PORTING-EXAMPLES"><div class="titlepage"><div><div><h3 class="title">43.13.1. Примеры портирования <a href="#PLPGSQL-PORTING-EXAMPLES" class="id_link">#</a></h3></div></div></div><p><a class="xref" href="plpgsql-porting.html#PGSQL-PORTING-EX1" title="Пример 43.9. Портирование простой функции из PL/SQL в PL/pgSQL">Пример 43.9</a> показывает, как портировать простую функцию из <span class="application">PL/SQL</span> в <span class="application">PL/pgSQL</span>.</p><div class="example" id="PGSQL-PORTING-EX1"><p class="title"><strong>Пример 43.9. Портирование простой функции из <span class="application">PL/SQL</span> в <span class="application">PL/pgSQL</span></strong></p><div class="example-contents"><p>Функция <span class="productname">Oracle</span> <span class="application">PL/SQL</span>: </p><pre class="programlisting">CREATE OR REPLACE FUNCTION cs_fmt_browser_version(v_name varchar2,
+                                                  v_version varchar2)
+RETURN varchar2 IS
+BEGIN
+    IF v_version IS NULL THEN
+        RETURN v_name;
+    END IF;
+    RETURN v_name || '/' || v_version;
+END;
+/
+show errors;</pre><p>Пройдемся по этой функции и посмотрим различия по сравнению с <span class="application">PL/pgSQL</span>: </p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Имя типа <code class="type">varchar2</code> нужно сменить на <code class="type">varchar</code> или <code class="type">text</code>. В примерах данного раздела мы будем использовать <code class="type">varchar</code>, но обычно лучше выбрать <code class="type">text</code>, если не требуется ограничивать длину строк.</p></li><li class="listitem"><p>Ключевое слово <code class="literal">RETURN</code> в прототипе функции (не в теле функции) заменяется на <code class="literal">RETURNS</code> в <span class="productname">PostgreSQL</span>. Кроме того, <code class="literal">IS</code> становится <code class="literal">AS</code>, и нужно добавить предложение <code class="literal">LANGUAGE</code>, потому что <span class="application">PL/pgSQL</span> — не единственный возможный язык.</p></li><li class="listitem"><p>В <span class="productname">PostgreSQL</span> тело функции является строкой, поэтому нужно использовать кавычки или знаки доллара. Это заменяет завершающий <code class="literal">/</code> в подходе Oracle.</p></li><li class="listitem"><p>Команда <code class="literal">show errors</code> не существует в <span class="productname">PostgreSQL</span> и не требуется, так как ошибки будут выводиться автоматически.</p></li></ul></div><p>Вот как эта функция будет выглядеть после портирования в <span class="productname">PostgreSQL</span>: </p><pre class="programlisting">CREATE OR REPLACE FUNCTION cs_fmt_browser_version(v_name varchar,
+                                                  v_version varchar)
+RETURNS varchar AS $$
+BEGIN
+    IF v_version IS NULL THEN
+        RETURN v_name;
+    END IF;
+    RETURN v_name || '/' || v_version;
+END;
+$$ LANGUAGE plpgsql;</pre></div></div><br class="example-break" /><p><a class="xref" href="plpgsql-porting.html#PLPGSQL-PORTING-EX2" title="Пример 43.10. Портирование функции, создающей другую функцию, из PL/SQL в PL/pgSQL">Пример 43.10</a> показывает, как портировать функцию, которая создаёт другую функцию, и как обрабатывать проблемы с кавычками.</p><div class="example" id="PLPGSQL-PORTING-EX2"><p class="title"><strong>Пример 43.10. Портирование функции, создающей другую функцию, из <span class="application">PL/SQL</span> в <span class="application">PL/pgSQL</span></strong></p><div class="example-contents"><p>Следующая процедура получает строки из <code class="command">SELECT</code> и строит большую функцию, в целях эффективности возвращающую результат в операторах <code class="literal">IF</code>.</p><p>Версия Oracle: </p><pre class="programlisting">CREATE OR REPLACE PROCEDURE cs_update_referrer_type_proc IS
+    CURSOR referrer_keys IS
+        SELECT * FROM cs_referrer_keys
+        ORDER BY try_order;
+    func_cmd VARCHAR(4000);
+BEGIN
+    func_cmd := 'CREATE OR REPLACE FUNCTION cs_find_referrer_type(v_host IN VARCHAR2,
+                 v_domain IN VARCHAR2, v_url IN VARCHAR2) RETURN VARCHAR2 IS BEGIN';
+
+    FOR referrer_key IN referrer_keys LOOP
+        func_cmd := func_cmd ||
+          ' IF v_' || referrer_key.kind
+          || ' LIKE ''' || referrer_key.key_string
+          || ''' THEN RETURN ''' || referrer_key.referrer_type
+          || '''; END IF;';
+    END LOOP;
+
+    func_cmd := func_cmd || ' RETURN NULL; END;';
+
+    EXECUTE IMMEDIATE func_cmd;
+END;
+/
+show errors;</pre><p>В конечном итоге в <span class="productname">PostgreSQL</span> эта функция может выглядеть так: </p><pre class="programlisting">CREATE OR REPLACE PROCEDURE cs_update_referrer_type_proc() AS $func$
+DECLARE
+    referrer_keys CURSOR IS
+        SELECT * FROM cs_referrer_keys
+        ORDER BY try_order;
+    func_body text;
+    func_cmd text;
+BEGIN
+    func_body := 'BEGIN';
+
+    FOR referrer_key IN referrer_keys LOOP
+        func_body := func_body ||
+          ' IF v_' || referrer_key.kind
+          || ' LIKE ' || quote_literal(referrer_key.key_string)
+          || ' THEN RETURN ' || quote_literal(referrer_key.referrer_type)
+          || '; END IF;' ;
+    END LOOP;
+
+    func_body := func_body || ' RETURN NULL; END;';
+
+    func_cmd :=
+      'CREATE OR REPLACE FUNCTION cs_find_referrer_type(v_host varchar,
+                                                        v_domain varchar,
+                                                        v_url varchar)
+        RETURNS varchar AS '
+      || quote_literal(func_body)
+      || ' LANGUAGE plpgsql;' ;
+
+    EXECUTE func_cmd;
+END;
+$func$ LANGUAGE plpgsql;</pre><p> Обратите внимание, что тело функции строится отдельно, с использованием <code class="literal">quote_literal</code> для дублирования кавычек. Эта техника необходима, потому что мы не можем безопасно использовать знаки доллара при определении новой функции: мы не знаем наверняка, какие строки будут вставлены из <code class="structfield">referrer_key.key_string</code>. (Мы предполагаем, что <code class="structfield">referrer_key.kind</code> всегда имеет значение из списка: <code class="literal">host</code>, <code class="literal">domain</code> или <code class="literal">url</code>, но <code class="structfield">referrer_key.key_string</code> может быть чем угодно, в частности, может содержать знаки доллара.) На самом деле, в этой функций есть улучшение по сравнению с оригиналом Oracle, потому что не будет генерироваться неправильный код, когда <code class="structfield">referrer_key.key_string</code> или <code class="structfield">referrer_key.referrer_type</code> содержат кавычки.</p></div></div><br class="example-break" /><p><a class="xref" href="plpgsql-porting.html#PLPGSQL-PORTING-EX3" title="Пример 43.11. Портирование из PL/SQL в PL/pgSQL процедуры, которая манипулирует строками и содержит OUT параметры">Пример 43.11</a> показывает, как портировать функцию с выходными параметрами (<code class="literal">OUT</code>) и манипулирующую строками. В <span class="productname">PostgreSQL</span> нет встроенной функции <code class="function">instr</code>, но её можно создать, используя комбинацию других функций. В <a class="xref" href="plpgsql-porting.html#PLPGSQL-PORTING-APPENDIX" title="43.13.3. Приложение">Подраздел 43.13.3</a> приведена реализации <code class="function">instr</code> на <span class="application">PL/pgSQL</span>, которая может быть полезна вам при портировании ваших функций.</p><div class="example" id="PLPGSQL-PORTING-EX3"><p class="title"><strong>Пример 43.11. Портирование из <span class="application">PL/SQL</span> в <span class="application">PL/pgSQL</span> процедуры, которая манипулирует строками и содержит <code class="literal">OUT</code> параметры</strong></p><div class="example-contents"><p>Следующая процедура на языке <span class="productname">Oracle</span> PL/SQL разбирает URL и возвращает составляющие его элементы (сервер, путь и запрос).</p><p>Версия Oracle: </p><pre class="programlisting">CREATE OR REPLACE PROCEDURE cs_parse_url(
+    v_url IN VARCHAR2,
+    v_host OUT VARCHAR2,  -- Возвращается как результат
+    v_path OUT VARCHAR2,  -- И это тоже
+    v_query OUT VARCHAR2) -- И это
+IS
+    a_pos1 INTEGER;
+    a_pos2 INTEGER;
+BEGIN
+    v_host := NULL;
+    v_path := NULL;
+    v_query := NULL;
+    a_pos1 := instr(v_url, '//');
+
+    IF a_pos1 = 0 THEN
+        RETURN;
+    END IF;
+    a_pos2 := instr(v_url, '/', a_pos1 + 2);
+    IF a_pos2 = 0 THEN
+        v_host := substr(v_url, a_pos1 + 2);
+        v_path := '/';
+        RETURN;
+    END IF;
+
+    v_host := substr(v_url, a_pos1 + 2, a_pos2 - a_pos1 - 2);
+    a_pos1 := instr(v_url, '?', a_pos2 + 1);
+
+    IF a_pos1 = 0 THEN
+        v_path := substr(v_url, a_pos2);
+        RETURN;
+    END IF;
+
+    v_path := substr(v_url, a_pos2, a_pos1 - a_pos2);
+    v_query := substr(v_url, a_pos1 + 1);
+END;
+/
+show errors;</pre><p>Вот возможная трансляция в <span class="application">PL/pgSQL</span>: </p><pre class="programlisting">CREATE OR REPLACE FUNCTION cs_parse_url(
+    v_url IN VARCHAR,
+    v_host OUT VARCHAR,  -- Возвращается как результат
+    v_path OUT VARCHAR,  -- И это тоже
+    v_query OUT VARCHAR) -- И это
+AS $$
+DECLARE
+    a_pos1 INTEGER;
+    a_pos2 INTEGER;
+BEGIN
+    v_host := NULL;
+    v_path := NULL;
+    v_query := NULL;
+    a_pos1 := instr(v_url, '//');
+
+    IF a_pos1 = 0 THEN
+        RETURN;
+    END IF;
+    a_pos2 := instr(v_url, '/', a_pos1 + 2);
+    IF a_pos2 = 0 THEN
+        v_host := substr(v_url, a_pos1 + 2);
+        v_path := '/';
+        RETURN;
+    END IF;
+
+    v_host := substr(v_url, a_pos1 + 2, a_pos2 - a_pos1 - 2);
+    a_pos1 := instr(v_url, '?', a_pos2 + 1);
+
+    IF a_pos1 = 0 THEN
+        v_path := substr(v_url, a_pos2);
+        RETURN;
+    END IF;
+
+    v_path := substr(v_url, a_pos2, a_pos1 - a_pos2);
+    v_query := substr(v_url, a_pos1 + 1);
+END;
+$$ LANGUAGE plpgsql;</pre><p> Эту функцию можно использовать так: </p><pre class="programlisting">SELECT * FROM cs_parse_url('http://foobar.com/query.cgi?baz');</pre></div></div><br class="example-break" /><p><a class="xref" href="plpgsql-porting.html#PLPGSQL-PORTING-EX4" title="Пример 43.12. Портирование процедуры из PL/SQL в PL/pgSQL">Пример 43.12</a> показывает, как портировать процедуру, использующую большое количество специфических для Oracle возможностей.</p><div class="example" id="PLPGSQL-PORTING-EX4"><p class="title"><strong>Пример 43.12. Портирование процедуры из <span class="application">PL/SQL</span> в <span class="application">PL/pgSQL</span></strong></p><div class="example-contents"><p>Версия Oracle: </p><pre class="programlisting">CREATE OR REPLACE PROCEDURE cs_create_job(v_job_id IN INTEGER) IS
+    a_running_job_count INTEGER;
+BEGIN
+    LOCK TABLE cs_jobs IN EXCLUSIVE MODE;
+
+    SELECT count(*) INTO a_running_job_count FROM cs_jobs WHERE end_stamp IS NULL;
+
+    IF a_running_job_count &gt; 0 THEN
+        COMMIT; -- освободить блокировку
+        raise_application_error(-20000,
+                 'Unable to create a new job: a job is currently running.');
+    END IF;
+
+    DELETE FROM cs_active_job;
+    INSERT INTO cs_active_job(job_id) VALUES (v_job_id);
+
+    BEGIN
+        INSERT INTO cs_jobs (job_id, start_stamp) VALUES (v_job_id, now());
+    EXCEPTION
+        WHEN dup_val_on_index THEN NULL; -- ничего не делать, если задание уже есть
+    END;
+    COMMIT;
+END;
+/
+show errors</pre><p>Вот как эту процедуру можно переписать на <span class="application">PL/pgSQL</span>: </p><pre class="programlisting">CREATE OR REPLACE PROCEDURE cs_create_job(v_job_id integer) AS $$
+DECLARE
+    a_running_job_count integer;
+BEGIN
+    LOCK TABLE cs_jobs IN EXCLUSIVE MODE;
+
+    SELECT count(*) INTO a_running_job_count FROM cs_jobs WHERE end_stamp IS NULL;
+
+    IF a_running_job_count &gt; 0 THEN
+        COMMIT; -- освободить блокировку
+        RAISE EXCEPTION 'Unable to create a new job: a job is currently running'; -- <span id="co.plpgsql-porting-raise"></span>(1)
+    END IF;
+
+    DELETE FROM cs_active_job;
+    INSERT INTO cs_active_job(job_id) VALUES (v_job_id);
+
+    BEGIN
+        INSERT INTO cs_jobs (job_id, start_stamp) VALUES (v_job_id, now());
+    EXCEPTION
+        WHEN unique_violation THEN -- <span id="co.plpgsql-porting-exception"></span>(2)
+            -- ничего не делать, если задание уже есть
+    END;
+    COMMIT;
+END;
+$$ LANGUAGE plpgsql;</pre><p> </p><div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#co.plpgsql-porting-raise">(1)</a> </p></td><td valign="top" align="left"><p>Синтаксис <code class="literal">RAISE</code> существенно отличается от Oracle, хотя основной вариант <code class="literal">RAISE</code> <em class="replaceable"><code>имя_исключения</code></em> работает похоже.</p></td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#co.plpgsql-porting-exception">(2)</a> </p></td><td valign="top" align="left"><p>Имена исключений, поддерживаемые <span class="application">PL/pgSQL</span>, отличаются от исключений в Oracle. Количество встроенных имён исключений значительно больше (см. <a class="xref" href="errcodes-appendix.html" title="Приложение A. Коды ошибок PostgreSQL">Приложение A</a>). В настоящее время нет способа задать пользовательское имя исключения, хотя вместо этого можно вызывать ошибку с заданным пользователем значением SQLSTATE.</p></td></tr></table></div></div></div><br class="example-break" /></div><div class="sect2" id="PLPGSQL-PORTING-OTHER"><div class="titlepage"><div><div><h3 class="title">43.13.2. На что ещё обратить внимание <a href="#PLPGSQL-PORTING-OTHER" class="id_link">#</a></h3></div></div></div><p>В этом разделе рассматриваются ещё несколько вещей, на которые нужно обращать внимание при портировании функций из Oracle <span class="application">PL/SQL</span> в <span class="productname">PostgreSQL</span>.</p><div class="sect3" id="PLPGSQL-PORTING-EXCEPTIONS"><div class="titlepage"><div><div><h4 class="title">43.13.2.1. Неявный откат изменений после возникновения исключения <a href="#PLPGSQL-PORTING-EXCEPTIONS" class="id_link">#</a></h4></div></div></div><p>В <span class="application">PL/pgSQL</span> при перехвате исключения в секции <code class="literal">EXCEPTION</code> все изменения в базе данных с начала блока автоматически откатываются. В Oracle это эквивалентно следующему: </p><pre class="programlisting">BEGIN
+    SAVEPOINT s1;
+    ... здесь код ...
+EXCEPTION
+    WHEN ... THEN
+        ROLLBACK TO s1;
+        ... здесь код ...
+    WHEN ... THEN
+        ROLLBACK TO s1;
+        ... здесь код ...
+END;</pre><p> При портировании процедуры Oracle, которая использует <code class="command">SAVEPOINT</code> и <code class="command">ROLLBACK TO</code> в таком же стиле, задача простая: достаточно убрать операторы <code class="command">SAVEPOINT</code> и <code class="command">ROLLBACK TO</code>. Если же <code class="command">SAVEPOINT</code> и <code class="command">ROLLBACK TO</code> используются по-другому, то придётся подумать.</p></div><div class="sect3" id="PLPGSQL-PORTING-OTHER-EXECUTE"><div class="titlepage"><div><div><h4 class="title">43.13.2.2. <code class="command">EXECUTE</code> <a href="#PLPGSQL-PORTING-OTHER-EXECUTE" class="id_link">#</a></h4></div></div></div><p><span class="application">PL/pgSQL</span> версия <code class="command">EXECUTE</code> работает аналогично версии в <span class="application">PL/SQL</span>, но нужно помнить об использовании <code class="function">quote_literal</code> и <code class="function">quote_ident</code>, как описано в <a class="xref" href="plpgsql-statements.html#PLPGSQL-STATEMENTS-EXECUTING-DYN" title="43.5.4. Выполнение динамически формируемых команд">Подразделе 43.5.4</a>. Без использования этих функций конструкции типа <code class="literal">EXECUTE 'SELECT * FROM $1';</code> будут работать ненадёжно.</p></div><div class="sect3" id="PLPGSQL-PORTING-OPTIMIZATION"><div class="titlepage"><div><div><h4 class="title">43.13.2.3. Оптимизация функций на <span class="application">PL/pgSQL</span> <a href="#PLPGSQL-PORTING-OPTIMIZATION" class="id_link">#</a></h4></div></div></div><p>Для оптимизации исполнения <span class="productname">PostgreSQL</span> предоставляет два модификатора при создании функции: <span class="quote">«<span class="quote">изменчивость</span>»</span> (будет ли функция всегда возвращать тот же результат при тех же аргументах) и <span class="quote">«<span class="quote">строгость</span>»</span> (возвращает ли функция NULL, если хотя бы один из аргументов NULL). Для получения подробной информации обратитесь к справочной странице <a class="xref" href="sql-createfunction.html" title="CREATE FUNCTION"><span class="refentrytitle">CREATE FUNCTION</span></a>.</p><p>При использовании этих атрибутов оптимизации оператор <code class="command">CREATE FUNCTION</code> может выглядеть примерно так: </p><pre class="programlisting">CREATE FUNCTION foo(...) RETURNS integer AS $$
+...
+$$ LANGUAGE plpgsql STRICT IMMUTABLE;</pre></div></div><div class="sect2" id="PLPGSQL-PORTING-APPENDIX"><div class="titlepage"><div><div><h3 class="title">43.13.3. Приложение <a href="#PLPGSQL-PORTING-APPENDIX" class="id_link">#</a></h3></div></div></div><p>Этот раздел содержит код для совместимых с Oracle функций <code class="function">instr</code>, которые можно использовать для упрощения портирования.</p><a id="id-1.8.8.15.8.3" class="indexterm"></a><pre class="programlisting">
+--
+-- instr functions that mimic Oracle's counterpart
+-- Syntax: instr(string1, string2 [, n [, m]])
+-- where [] denotes optional parameters.
+--
+-- Search string1, beginning at the nth character, for the mth occurrence
+-- of string2.  If n is negative, search backwards, starting at the abs(n)'th
+-- character from the end of string1.
+-- If n is not passed, assume 1 (search starts at first character).
+-- If m is not passed, assume 1 (find first occurrence).
+-- Returns starting index of string2 in string1, or 0 if string2 is not found.
+--
+
+CREATE FUNCTION instr(varchar, varchar) RETURNS integer AS $$
+BEGIN
+    RETURN instr($1, $2, 1);
+END;
+$$ LANGUAGE plpgsql STRICT IMMUTABLE;
+
+
+CREATE FUNCTION instr(string varchar, string_to_search_for varchar,
+                      beg_index integer)
+RETURNS integer AS $$
+DECLARE
+    pos integer NOT NULL DEFAULT 0;
+    temp_str varchar;
+    beg integer;
+    length integer;
+    ss_length integer;
+BEGIN
+    IF beg_index &gt; 0 THEN
+        temp_str := substring(string FROM beg_index);
+        pos := position(string_to_search_for IN temp_str);
+
+        IF pos = 0 THEN
+            RETURN 0;
+        ELSE
+            RETURN pos + beg_index - 1;
+        END IF;
+    ELSIF beg_index &lt; 0 THEN
+        ss_length := char_length(string_to_search_for);
+        length := char_length(string);
+        beg := length + 1 + beg_index;
+
+        WHILE beg &gt; 0 LOOP
+            temp_str := substring(string FROM beg FOR ss_length);
+            IF string_to_search_for = temp_str THEN
+                RETURN beg;
+            END IF;
+
+            beg := beg - 1;
+        END LOOP;
+
+        RETURN 0;
+    ELSE
+        RETURN 0;
+    END IF;
+END;
+$$ LANGUAGE plpgsql STRICT IMMUTABLE;
+
+
+CREATE FUNCTION instr(string varchar, string_to_search_for varchar,
+                      beg_index integer, occur_index integer)
+RETURNS integer AS $$
+DECLARE
+    pos integer NOT NULL DEFAULT 0;
+    occur_number integer NOT NULL DEFAULT 0;
+    temp_str varchar;
+    beg integer;
+    i integer;
+    length integer;
+    ss_length integer;
+BEGIN
+    IF occur_index &lt;= 0 THEN
+        RAISE 'argument ''%'' is out of range', occur_index
+          USING ERRCODE = '22003';
+    END IF;
+
+    IF beg_index &gt; 0 THEN
+        beg := beg_index - 1;
+        FOR i IN 1..occur_index LOOP
+            temp_str := substring(string FROM beg + 1);
+            pos := position(string_to_search_for IN temp_str);
+            IF pos = 0 THEN
+                RETURN 0;
+            END IF;
+            beg := beg + pos;
+        END LOOP;
+
+        RETURN beg;
+    ELSIF beg_index &lt; 0 THEN
+        ss_length := char_length(string_to_search_for);
+        length := char_length(string);
+        beg := length + 1 + beg_index;
+
+        WHILE beg &gt; 0 LOOP
+            temp_str := substring(string FROM beg FOR ss_length);
+            IF string_to_search_for = temp_str THEN
+                occur_number := occur_number + 1;
+                IF occur_number = occur_index THEN
+                    RETURN beg;
+                END IF;
+            END IF;
+
+            beg := beg - 1;
+        END LOOP;
+
+        RETURN 0;
+    ELSE
+        RETURN 0;
+    END IF;
+END;
+$$ LANGUAGE plpgsql STRICT IMMUTABLE;
+
+</pre></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="plpgsql-development-tips.html" title="43.12. Советы по разработке на PL/pgSQL">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="plpgsql.html" title="Глава 43. PL/pgSQL — процедурный язык SQL">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="pltcl.html" title="Глава 44. PL/Tcl — процедурный язык Tcl">След.</a></td></tr><tr><td width="40%" align="left" valign="top">43.12. Советы по разработке на <span class="application">PL/pgSQL</span> </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> Глава 44. PL/Tcl — процедурный язык Tcl</td></tr></table></div></body></html>

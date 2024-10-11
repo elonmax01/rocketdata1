@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>31.2. Подписка</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="logical-replication-publication.html" title="31.1. Публикация" /><link rel="next" href="logical-replication-row-filter.html" title="31.3. Фильтры строк" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">31.2. Подписка</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="logical-replication-publication.html" title="31.1. Публикация">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="logical-replication.html" title="Глава 31. Логическая репликация">Наверх</a></td><th width="60%" align="center">Глава 31. Логическая репликация</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="logical-replication-row-filter.html" title="31.3. Фильтры строк">След.</a></td></tr></table><hr /></div><div class="sect1" id="LOGICAL-REPLICATION-SUBSCRIPTION"><div class="titlepage"><div><div><h2 class="title" style="clear: both">31.2. Подписка <a href="#LOGICAL-REPLICATION-SUBSCRIPTION" class="id_link">#</a></h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="logical-replication-subscription.html#LOGICAL-REPLICATION-SUBSCRIPTION-SLOT">31.2.1. Управление слотами репликации</a></span></dt><dt><span class="sect2"><a href="logical-replication-subscription.html#LOGICAL-REPLICATION-SUBSCRIPTION-EXAMPLES">31.2.2. Примеры: настройка логической репликации</a></span></dt><dt><span class="sect2"><a href="logical-replication-subscription.html#LOGICAL-REPLICATION-SUBSCRIPTION-EXAMPLES-DEFERRED-SLOT">31.2.3. Примеры: создание слота отложенной репликации</a></span></dt></dl></div><p><em class="firstterm">Подписка</em> — это принимающая сторона логической репликации. Узел, на котором определяется подписка, называется <em class="firstterm">подписчиком</em>. В свойствах подписки определяется подключение к другой базе данных и набор публикаций (из одной или нескольких), на которые подписчик хочет подписаться.</p><p>База данных подписчика работает так же, как и экземпляр любой другой базы PostgreSQL, и может быть публикующей для других баз, если в ней определены собственные подписки.</p><p>Узел подписчика может подписываться на несколько подписок, если требуется. В одной паре публикующий сервер/подписчик могут быть определены несколько подписок, но при этом нужно позаботиться о том, чтобы публикуемые объекты в разных подписках не перекрывались.</p><p>Изменения в каждой подписке будут приходить через один слот репликации (см. <a class="xref" href="warm-standby.html#STREAMING-REPLICATION-SLOTS" title="27.2.6. Слоты репликации">Подраздел 27.2.6</a>). Дополнительные слоты репликации могут потребоваться для начальной синхронизации данных, уже существующих в таблицах, но будут удалены в конце синхронизации.</p><p>Подписка логической репликации может представлять собой ведомый узел для синхронной репликации (см. <a class="xref" href="warm-standby.html#SYNCHRONOUS-REPLICATION" title="27.2.8. Синхронная репликация">Подраздел 27.2.8</a>). В этом случае именем ведомого узла по умолчанию будет имя подписки. Другое имя можно задать в свойстве <code class="literal">application_name</code> в строке подключения для данной подписки.</p><p>Подписки могут быть выгружены командой <code class="command">pg_dump</code>, если её выполняет суперпользователь. В противном случае выдаётся предупреждение и подписки пропускаются, так как обычным пользователям не разрешено читать всю информацию о подписках из каталога <code class="structname">pg_subscription</code>.</p><p>Подписки добавляются командой <a class="link" href="sql-createsubscription.html" title="CREATE SUBSCRIPTION"><code class="command">CREATE SUBSCRIPTION</code></a> и могут быть остановлены/возобновлены в любой момент командой <a class="link" href="sql-altersubscription.html" title="ALTER SUBSCRIPTION"><code class="command">ALTER SUBSCRIPTION</code></a>, а также удалены командой <a class="link" href="sql-dropsubscription.html" title="DROP SUBSCRIPTION"><code class="command">DROP SUBSCRIPTION</code></a>.</p><p>Когда подписка удаляется и пересоздаётся, информация о синхронизации теряется. Это означает, что после этого данные необходимо синхронизировать заново.</p><p>Определения схемы не реплицируются, а публикуемые таблицы должны существовать в базе подписчика. Объектами репликации могут быть только обычные таблицы. Так, например, нельзя произвести репликацию в представление.</p><p>Таблицы публикации сопоставляются с таблицами подписчика по полностью заданным именам таблиц. Репликация в таблицы с другими именами на стороне подписчика не поддерживается.</p><p>Столбцы таблиц также сопоставляются по именам. Порядок столбцов в таблице подписчика может отличаться от порядка столбцов в публикации. Также могут не совпадать типы столбцов; достаточно только возможности преобразования текстового представления данных в целевой тип. Например, данные столбца типа <code class="type">integer</code> могут реплицироваться в столбец типа <code class="type">bigint</code>. Целевая таблица может также содержать дополнительные столбцы, отсутствующие в публикуемой таблице. Такие столбцы будут заполнены значениями по умолчанию, заданными в определении целевой таблицы. Однако логическая репликация в двоичном формате имеет более строгие ограничения. За подробностями обратитесь к описанию параметра <a class="link" href="sql-createsubscription.html#SQL-CREATESUBSCRIPTION-WITH-BINARY"><code class="literal">binary</code></a> команды <code class="command">CREATE SUBSCRIPTION</code>.</p><div class="sect2" id="LOGICAL-REPLICATION-SUBSCRIPTION-SLOT"><div class="titlepage"><div><div><h3 class="title">31.2.1. Управление слотами репликации <a href="#LOGICAL-REPLICATION-SUBSCRIPTION-SLOT" class="id_link">#</a></h3></div></div></div><p>Как упоминалось ранее, каждая (активная) подписка получает изменения из слота репликации на удалённой (публикующей) стороне.</p><p>Дополнительные слоты синхронизации таблиц обычно существуют временно, создаются только для выполнения начальной синхронизации таблиц и автоматически удаляются, когда становятся не нужны. Эти слоты синхронизации таблиц называются так: <span class="quote">«<span class="quote"><code class="literal">pg_%u_sync_%u_%llu</code></span>»</span> (параметры: <em class="parameter"><code>oid</code></em> подписки, <em class="parameter"><code>relid</code></em> таблицы, системный идентификатор <em class="parameter"><code>sysid</code></em>).</p><p>Обычно удалённый слот репликации создаётся автоматически, когда подписка создаётся командой <code class="command">CREATE SUBSCRIPTION</code>, и удаляется автоматически, когда подписка удаляется командой <code class="command">DROP SUBSCRIPTION</code>. Однако в некоторых ситуациях может быть полезно или даже необходимо манипулировать подпиской и нижележащим слотом по отдельности. Например, возможны такие сценарии: </p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>При создании подписки слот репликации может уже существовать. В этом случае подписку можно создать с параметром <code class="literal">create_slot = false</code>, чтобы она была связана с существующим слотом.</p></li><li class="listitem"><p>При создании подписки удалённый узел может быть недоступен или находиться в нерабочем состоянии. В этом случае подписку можно создать с указанием <code class="literal">connect = false</code>. При этом подключение к удалённому узлу не будет устанавливаться. Этот вариант использует <span class="application">pg_dump</span>. Чтобы активировать такую подписку впоследствии, удалённый слот репликации нужно будет создать вручную.</p></li><li class="listitem"><p>При ликвидации публикации может потребоваться сохранить слот репликации. Например, это полезно, когда нужно перенести базу данных подписчика на другой узел и активировать её там. В этом случае разорвите связь подписки со слотом, используя команду <code class="command">ALTER SUBSCRIPTION</code>, прежде чем удалять подписку.</p></li><li class="listitem"><p>При ликвидации подписки удалённый узел может быть недоступен. В этом случае разорвите связь подписки со слотом, используя команду <code class="command">ALTER SUBSCRIPTION</code>, прежде чем пытаться удалять подписку. Если удалённый экземпляр базы данных прекратил существование, больше никакие действия не требуются. Если же экземпляр удалённой базы данных просто оказался недоступным, слот репликации (и все оставшиеся слоты синхронизации таблиц) нужно будет удалить вручную; в противном случае публикующий сервер(ы) продолжит сохранять WAL и может в конце концов заполнить всё место на диске. Такие случаи заслуживают самого серьёзного разбирательства.</p></li></ul></div></div><div class="sect2" id="LOGICAL-REPLICATION-SUBSCRIPTION-EXAMPLES"><div class="titlepage"><div><div><h3 class="title">31.2.2. Примеры: настройка логической репликации <a href="#LOGICAL-REPLICATION-SUBSCRIPTION-EXAMPLES" class="id_link">#</a></h3></div></div></div><p>Создайте несколько тестовых таблиц на публикующем сервере. </p><pre class="programlisting">test_pub=# CREATE TABLE t1(a int, b text, PRIMARY KEY(a));
+CREATE TABLE
+test_pub=# CREATE TABLE t2(c int, d text, PRIMARY KEY(c));
+CREATE TABLE
+test_pub=# CREATE TABLE t3(e int, f text, PRIMARY KEY(e));
+CREATE TABLE</pre><p>Создайте такие же таблицы на стороне подписчика. </p><pre class="programlisting">test_sub=# CREATE TABLE t1(a int, b text, PRIMARY KEY(a));
+CREATE TABLE
+test_sub=# CREATE TABLE t2(c int, d text, PRIMARY KEY(c));
+CREATE TABLE
+test_sub=# CREATE TABLE t3(e int, f text, PRIMARY KEY(e));
+CREATE TABLE</pre><p>Вставьте данные в таблицы на стороне публикующего сервера. </p><pre class="programlisting">test_pub=# INSERT INTO t1 VALUES (1, 'one'), (2, 'two'), (3, 'three');
+INSERT 0 3
+test_pub=# INSERT INTO t2 VALUES (1, 'A'), (2, 'B'), (3, 'C');
+INSERT 0 3
+test_pub=# INSERT INTO t3 VALUES (1, 'i'), (2, 'ii'), (3, 'iii');
+INSERT 0 3</pre><p>Создайте публикации для таблиц. Для публикаций <code class="literal">pub2</code> и <code class="literal">pub3a</code> параметром <a class="link" href="sql-createpublication.html#SQL-CREATEPUBLICATION-WITH-PUBLISH"><code class="literal">publish</code></a> отключаются некоторые операции, а публикация <code class="literal">pub3b</code> создаётся с фильтром строк (см. <a class="xref" href="logical-replication-row-filter.html" title="31.3. Фильтры строк">Раздел 31.3</a>). </p><pre class="programlisting">test_pub=# CREATE PUBLICATION pub1 FOR TABLE t1;
+CREATE PUBLICATION
+test_pub=# CREATE PUBLICATION pub2 FOR TABLE t2 WITH (publish = 'truncate');
+CREATE PUBLICATION
+test_pub=# CREATE PUBLICATION pub3a FOR TABLE t3 WITH (publish = 'truncate');
+CREATE PUBLICATION
+test_pub=# CREATE PUBLICATION pub3b FOR TABLE t3 WHERE (e &gt; 5);
+CREATE PUBLICATION</pre><p>Создайте подписки на публикации. Подписка <code class="literal">sub3</code> оформляется сразу на две публикации, <code class="literal">pub3a</code> и <code class="literal">pub3b</code>. Для всех подписок будут по умолчанию скопированы начальные данные. </p><pre class="programlisting">test_sub=# CREATE SUBSCRIPTION sub1
+test_sub-# CONNECTION 'host=localhost dbname=test_pub application_name=sub1'
+test_sub-# PUBLICATION pub1;
+CREATE SUBSCRIPTION
+test_sub=# CREATE SUBSCRIPTION sub2
+test_sub-# CONNECTION 'host=localhost dbname=test_pub application_name=sub2'
+test_sub-# PUBLICATION pub2;
+CREATE SUBSCRIPTION
+test_sub=# CREATE SUBSCRIPTION sub3
+test_sub-# CONNECTION 'host=localhost dbname=test_pub application_name=sub3'
+test_sub-# PUBLICATION pub3a, pub3b;
+CREATE SUBSCRIPTION</pre><p>Вы можете убедиться в том, что начальные данные таблицы копируются независимо от того, какие операции исключены параметром <code class="literal">publish</code>. </p><pre class="programlisting">test_sub=# SELECT * FROM t1;
+ a |   b
+---+-------
+ 1 | one
+ 2 | two
+ 3 | three
+(3 rows)
+
+test_sub=# SELECT * FROM t2;
+ c | d
+---+---
+ 1 | A
+ 2 | B
+ 3 | C
+(3 rows)</pre><p>Кроме того, поскольку при копировании исходных данных игнорируется исключение операций, определяемое в <code class="literal">publish</code>, и у публикации <code class="literal">pub3a</code> нет фильтра строк, скопированная таблица <code class="literal">t3</code> содержит все строки, при том что они не соответствуют фильтру строк публикации <code class="literal">pub3b</code>. </p><pre class="programlisting">test_sub=# SELECT * FROM t3;
+ e |  f
+---+-----
+ 1 | i
+ 2 | ii
+ 3 | iii
+(3 rows)</pre><p>Вставьте дополнительные данные в таблицы на стороне публикации. </p><pre class="programlisting">test_pub=# INSERT INTO t1 VALUES (4, 'four'), (5, 'five'), (6, 'six');
+INSERT 0 3
+test_pub=# INSERT INTO t2 VALUES (4, 'D'), (5, 'E'), (6, 'F');
+INSERT 0 3
+test_pub=# INSERT INTO t3 VALUES (4, 'iv'), (5, 'v'), (6, 'vi');
+INSERT 0 3</pre><p>Теперь на стороне публикации данные выглядят так: </p><pre class="programlisting">test_pub=# SELECT * FROM t1;
+ a |   b
+---+-------
+ 1 | one
+ 2 | two
+ 3 | three
+ 4 | four
+ 5 | five
+ 6 | six
+(6 rows)
+
+test_pub=# SELECT * FROM t2;
+ c | d
+---+---
+ 1 | A
+ 2 | B
+ 3 | C
+ 4 | D
+ 5 | E
+ 6 | F
+(6 rows)
+
+test_pub=# SELECT * FROM t3;
+ e |  f
+---+-----
+ 1 | i
+ 2 | ii
+ 3 | iii
+ 4 | iv
+ 5 | v
+ 6 | vi
+(6 rows)</pre><p>Вы можете заметить, что в процессе обычной репликации учитывается список операций, определённый в <code class="literal">publish</code>. Вследствие этого через публикации <code class="literal">pub2</code> и <code class="literal">pub3a</code> не реплицируются операции <code class="literal">INSERT</code>. Кроме того, для публикации <code class="literal">pub3b</code> реплицируются только данные, соответствующие фильтру строк <code class="literal">pub3b</code>. Теперь данные на стороне подписчика выглядят так: </p><pre class="programlisting">test_sub=# SELECT * FROM t1;
+ a |   b
+---+-------
+ 1 | one
+ 2 | two
+ 3 | three
+ 4 | four
+ 5 | five
+ 6 | six
+(6 rows)
+
+test_sub=# SELECT * FROM t2;
+ c | d
+---+---
+ 1 | A
+ 2 | B
+ 3 | C
+(3 rows)
+
+test_sub=# SELECT * FROM t3;
+ e |  f
+---+-----
+ 1 | i
+ 2 | ii
+ 3 | iii
+ 6 | vi
+(4 rows)</pre></div><div class="sect2" id="LOGICAL-REPLICATION-SUBSCRIPTION-EXAMPLES-DEFERRED-SLOT"><div class="titlepage"><div><div><h3 class="title">31.2.3. Примеры: создание слота отложенной репликации <a href="#LOGICAL-REPLICATION-SUBSCRIPTION-EXAMPLES-DEFERRED-SLOT" class="id_link">#</a></h3></div></div></div><p>В некоторых случаях (например, <a class="xref" href="logical-replication-subscription.html#LOGICAL-REPLICATION-SUBSCRIPTION-SLOT" title="31.2.1. Управление слотами репликации">Подраздел 31.2.1</a>), если слот удалённой репликации не был создан автоматически, пользователю необходимо создать его вручную, прежде чем подписку можно будет активировать. Шаги по созданию слота и активации подписки показаны в следующих примерах. В этих примерах указан стандартный модуль вывода логического декодирования (<code class="literal">pgoutput</code>), который используется встроенной логической репликацией.</p><p>Сначала создайте публикацию, которая будет использоваться для примеров. </p><pre class="programlisting">test_pub=# CREATE PUBLICATION pub1 FOR ALL TABLES;
+CREATE PUBLICATION</pre><p>Пример 1: В подписке указано <code class="literal">connect = false</code>.</p><p>
+    </p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Создайте подписку. </p><pre class="programlisting">test_sub=# CREATE SUBSCRIPTION sub1
+test_sub-# CONNECTION 'host=localhost dbname=test_pub'
+test_sub-# PUBLICATION pub1
+test_sub-# WITH (connect=false);
+ПРЕДУПРЕЖДЕНИЕ:  подписка создана, но не подключена
+ПОДСКАЗКА:  Чтобы начать репликацию, вы должны вручную создать слот репликации, включить подписку, а затем обновить её.
+CREATE SUBSCRIPTION</pre></li><li class="listitem"><p>На публикующем сервере вручную создайте слот. Поскольку имя не было указано при выполнении <code class="literal">CREATE SUBSCRIPTION</code>, имя создаваемого слота совпадает с именем подписки, например «sub1». </p><pre class="programlisting">test_pub=# SELECT * FROM pg_create_logical_replication_slot('sub1', 'pgoutput');
+ slot_name |    lsn
+-----------+-----------
+ sub1      | 0/19404D0
+(1 row)</pre></li><li class="listitem"><p>На подписчике выполните активацию подписки. После этого таблицы <code class="literal">pub1</code> начнут реплицироваться. </p><pre class="programlisting">test_sub=# ALTER SUBSCRIPTION sub1 ENABLE;
+ALTER SUBSCRIPTION
+test_sub=# ALTER SUBSCRIPTION sub1 REFRESH PUBLICATION;
+ALTER SUBSCRIPTION</pre></li></ul></div><p>
+   </p><p>Пример 2: В подписке указано <code class="literal">connect = false</code>, но также указан параметр <a class="link" href="sql-createsubscription.html#SQL-CREATESUBSCRIPTION-WITH-SLOT-NAME"><code class="literal">slot_name</code></a>. </p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Создайте подписку. </p><pre class="programlisting">test_sub=# CREATE SUBSCRIPTION sub1
+test_sub-# CONNECTION 'host=localhost dbname=test_pub'
+test_sub-# PUBLICATION pub1
+test_sub-# WITH (connect=false, slot_name='myslot');
+ПРЕДУПРЕЖДЕНИЕ:  подписка создана, но не подключена
+ПОДСКАЗКА:  Чтобы начать репликацию, вы должны вручную создать слот репликации, включить подписку, а затем обновить её.
+CREATE SUBSCRIPTION</pre></li><li class="listitem"><p>На публикующем сервере вручную создайте слот с тем же именем, которое использовалось при выполнении <code class="literal">CREATE SUBSCRIPTION</code>, например «myslot». </p><pre class="programlisting">test_pub=# SELECT * FROM pg_create_logical_replication_slot('myslot', 'pgoutput');
+ slot_name |    lsn
+-----------+-----------
+ myslot    | 0/19059A0
+(1 row)</pre></li><li class="listitem"><p>На подписчике остальные шаги активации подписки такие же, как указано выше. </p><pre class="programlisting">test_sub=# ALTER SUBSCRIPTION sub1 ENABLE;
+ALTER SUBSCRIPTION
+test_sub=# ALTER SUBSCRIPTION sub1 REFRESH PUBLICATION;
+ALTER SUBSCRIPTION</pre></li></ul></div><p>Пример 3: В подписке указано <code class="literal">slot_name = NONE</code> </p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Создайте подписку. Если <code class="literal">slot_name = NONE</code>, также необходимо указать <code class="literal">enabled = false</code> и <code class="literal">create_slot = false</code>. </p><pre class="programlisting">test_sub=# CREATE SUBSCRIPTION sub1
+test_sub-# CONNECTION 'host=localhost dbname=test_pub'
+test_sub-# PUBLICATION pub1
+test_sub-# WITH (slot_name=NONE, enabled=false, create_slot=false);
+CREATE SUBSCRIPTION</pre></li><li class="listitem"><p>На публикующем сервере вручную создайте слот с любым именем, например «myslot». </p><pre class="programlisting">test_pub=# SELECT * FROM pg_create_logical_replication_slot('myslot', 'pgoutput');
+ slot_name |    lsn
+-----------+-----------
+ myslot    | 0/1905930
+(1 row)</pre></li><li class="listitem"><p>На подписчике свяжите подписку с только что созданным именем слота. </p><pre class="programlisting">test_sub=# ALTER SUBSCRIPTION sub1 SET (slot_name='myslot');
+ALTER SUBSCRIPTION</pre></li><li class="listitem"><p>Остальные шаги активации подписки такие же, как указано выше. </p><pre class="programlisting">test_sub=# ALTER SUBSCRIPTION sub1 ENABLE;
+ALTER SUBSCRIPTION
+test_sub=# ALTER SUBSCRIPTION sub1 REFRESH PUBLICATION;
+ALTER SUBSCRIPTION</pre></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="logical-replication-publication.html" title="31.1. Публикация">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="logical-replication.html" title="Глава 31. Логическая репликация">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="logical-replication-row-filter.html" title="31.3. Фильтры строк">След.</a></td></tr><tr><td width="40%" align="left" valign="top">31.1. Публикация </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 31.3. Фильтры строк</td></tr></table></div></body></html>

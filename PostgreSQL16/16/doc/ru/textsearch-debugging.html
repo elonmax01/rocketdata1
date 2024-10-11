@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>12.8. Тестирование и отладка текстового поиска</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="textsearch-configuration.html" title="12.7. Пример конфигурации" /><link rel="next" href="textsearch-indexes.html" title="12.9. Типы индексов, предпочитаемые для текстового поиска" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">12.8. Тестирование и отладка текстового поиска</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="textsearch-configuration.html" title="12.7. Пример конфигурации">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="textsearch.html" title="Глава 12. Полнотекстовый поиск">Наверх</a></td><th width="60%" align="center">Глава 12. Полнотекстовый поиск</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="textsearch-indexes.html" title="12.9. Типы индексов, предпочитаемые для текстового поиска">След.</a></td></tr></table><hr /></div><div class="sect1" id="TEXTSEARCH-DEBUGGING"><div class="titlepage"><div><div><h2 class="title" style="clear: both">12.8. Тестирование и отладка текстового поиска <a href="#TEXTSEARCH-DEBUGGING" class="id_link">#</a></h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="textsearch-debugging.html#TEXTSEARCH-CONFIGURATION-TESTING">12.8.1. Тестирование конфигурации</a></span></dt><dt><span class="sect2"><a href="textsearch-debugging.html#TEXTSEARCH-PARSER-TESTING">12.8.2. Тестирование анализатора</a></span></dt><dt><span class="sect2"><a href="textsearch-debugging.html#TEXTSEARCH-DICTIONARY-TESTING">12.8.3. Тестирование словаря</a></span></dt></dl></div><p>Поведение нестандартной конфигурации текстового поиска по мере её усложнения может стать непонятным. В этом разделе описаны функции, полезные для тестирования объектов текстового поиска. Вы можете тестировать конфигурацию как целиком, так и по частям, отлаживая анализаторы и словари по отдельности.</p><div class="sect2" id="TEXTSEARCH-CONFIGURATION-TESTING"><div class="titlepage"><div><div><h3 class="title">12.8.1. Тестирование конфигурации <a href="#TEXTSEARCH-CONFIGURATION-TESTING" class="id_link">#</a></h3></div></div></div><p>Созданную конфигурацию текстового поиска можно легко протестировать с помощью функции <code class="function">ts_debug</code>.</p><a id="id-1.5.11.11.3.3" class="indexterm"></a><pre class="synopsis">ts_debug([<span class="optional"><em class="replaceable"><code>конфигурация</code></em> <code class="type">regconfig</code>,</span>] <em class="replaceable"><code>документ</code></em> <code class="type">text</code>,
+         OUT <em class="replaceable"><code>псевдоним</code></em> <code class="type">text</code>,
+         OUT <em class="replaceable"><code>описание</code></em> <code class="type">text</code>,
+         OUT <em class="replaceable"><code>фрагмент</code></em> <code class="type">text</code>,
+         OUT <em class="replaceable"><code>словари</code></em> <code class="type">regdictionary[]</code>,
+         OUT <em class="replaceable"><code>словарь</code></em> <code class="type">regdictionary</code>,
+         OUT <em class="replaceable"><code>лексемы</code></em> <code class="type">text[]</code>)
+         returns setof record</pre><p><code class="function">ts_debug</code> выводит информацию обо всех фрагментах данного документа, которые были выданы анализатором и обработаны настроенными словарями. Она использует конфигурацию, указанную в аргументе <em class="replaceable"><code>config</code></em>, или <code class="varname">default_text_search_config</code>, если этот аргумент опущен.</p><p><code class="function">ts_debug</code> возвращает по одной строке для каждого фрагмента, найденного в тексте анализатором. Эта строка содержит следующие столбцы: </p><div class="itemizedlist"><ul class="itemizedlist compact" style="list-style-type: bullet; "><li class="listitem" style="list-style-type: disc"><p><em class="replaceable"><code>синоним</code></em> <code class="type">text</code> — краткое имя типа фрагмента</p></li><li class="listitem" style="list-style-type: disc"><p><em class="replaceable"><code>описание</code></em> <code class="type">text</code> — описание типа фрагмента</p></li><li class="listitem" style="list-style-type: disc"><p><em class="replaceable"><code>фрагмент</code></em> <code class="type">text</code> — текст фрагмента</p></li><li class="listitem" style="list-style-type: disc"><p><em class="replaceable"><code>словари</code></em> <code class="type">regdictionary[]</code> — словари, назначенные в конфигурации для фрагментов такого типа</p></li><li class="listitem" style="list-style-type: disc"><p><em class="replaceable"><code>словарь</code></em> <code class="type">regdictionary</code> — словарь, распознавший этот фрагмент, или <code class="literal">NULL</code>, если подходящего словаря не нашлось</p></li><li class="listitem" style="list-style-type: disc"><p><em class="replaceable"><code>лексемы</code></em> <code class="type">text[]</code> — лексемы, выданные словарём, распознавшим фрагмент, или <code class="literal">NULL</code>, если подходящий словарь не нашёлся; может быть также пустым массивом (<code class="literal">{}</code>), если фрагмент распознан как стоп-слово</p></li></ul></div><p>Простой пример: </p><pre class="screen">
+SELECT * FROM ts_debug('english', 'a fat  cat sat on a mat - it ate a fat rats');
+   alias   |   description   | token |  dictionaries  |  dictionary  | lexemes
+-----------+-----------------+-------+----------------+--------------+---------
+ asciiword | Word, all ASCII | a     | {english_stem} | english_stem | {}
+ blank     | Space symbols   |       | {}             |              |
+ asciiword | Word, all ASCII | fat   | {english_stem} | english_stem | {fat}
+ blank     | Space symbols   |       | {}             |              |
+ asciiword | Word, all ASCII | cat   | {english_stem} | english_stem | {cat}
+ blank     | Space symbols   |       | {}             |              |
+ asciiword | Word, all ASCII | sat   | {english_stem} | english_stem | {sat}
+ blank     | Space symbols   |       | {}             |              |
+ asciiword | Word, all ASCII | on    | {english_stem} | english_stem | {}
+ blank     | Space symbols   |       | {}             |              |
+ asciiword | Word, all ASCII | a     | {english_stem} | english_stem | {}
+ blank     | Space symbols   |       | {}             |              |
+ asciiword | Word, all ASCII | mat   | {english_stem} | english_stem | {mat}
+ blank     | Space symbols   |       | {}             |              |
+ blank     | Space symbols   | -     | {}             |              |
+ asciiword | Word, all ASCII | it    | {english_stem} | english_stem | {}
+ blank     | Space symbols   |       | {}             |              |
+ asciiword | Word, all ASCII | ate   | {english_stem} | english_stem | {ate}
+ blank     | Space symbols   |       | {}             |              |
+ asciiword | Word, all ASCII | a     | {english_stem} | english_stem | {}
+ blank     | Space symbols   |       | {}             |              |
+ asciiword | Word, all ASCII | fat   | {english_stem} | english_stem | {fat}
+ blank     | Space symbols   |       | {}             |              |
+ asciiword | Word, all ASCII | rats  | {english_stem} | english_stem | {rat}
+</pre><p>Для более полной демонстрации мы сначала создадим конфигурацию <code class="literal">public.english</code> и словарь Ispell для английского языка:</p><pre class="programlisting">CREATE TEXT SEARCH CONFIGURATION public.english
+  ( COPY = pg_catalog.english );
+
+CREATE TEXT SEARCH DICTIONARY english_ispell (
+    TEMPLATE = ispell,
+    DictFile = english,
+    AffFile = english,
+    StopWords = english
+);
+
+ALTER TEXT SEARCH CONFIGURATION public.english
+   ALTER MAPPING FOR asciiword WITH english_ispell, english_stem;</pre><pre class="screen">SELECT * FROM ts_debug('public.english', 'The Brightest supernovaes');
+   alias   |   description   |    token    |         dictionaries          |   dictionary   |   lexemes
+-----------+-----------------+-------------+-------------------------------+----------------+-------------
+ asciiword | Word, all ASCII | The         | {english_ispell,english_stem} | english_ispell | {}
+ blank     | Space symbols   |             | {}                            |                |
+ asciiword | Word, all ASCII | Brightest   | {english_ispell,english_stem} | english_ispell | {bright}
+ blank     | Space symbols   |             | {}                            |                |
+ asciiword | Word, all ASCII | supernovaes | {english_ispell,english_stem} | english_stem   | {supernova}</pre><p>В этом примере слово <code class="literal">Brightest</code> было воспринято анализатором как фрагмент <code class="literal">ASCII word</code> (синоним <code class="literal">asciiword</code>). Для этого типа фрагментов список словарей включает <code class="literal">english_ispell</code> и <code class="literal">english_stem</code>. Данное слово было распознано словарём <code class="literal">english_ispell</code>, который свёл его к <code class="literal">bright</code>. Слово <code class="literal">supernovaes</code> оказалось незнакомо словарю <code class="literal">english_ispell</code>, так что оно было передано следующему словарю, который его благополучно распознал (на самом деле <code class="literal">english_stem</code> — это стеммер Snowball, который распознаёт всё, поэтому он включён в список словарей последним).</p><p>Слово <code class="literal">The</code> было распознано словарём <code class="literal">english_ispell</code> как стоп-слово (см. <a class="xref" href="textsearch-dictionaries.html#TEXTSEARCH-STOPWORDS" title="12.6.1. Стоп-слова">Подраздел 12.6.1</a>) и поэтому не будет индексироваться. Пробелы тоже отбрасываются, так как в данной конфигурации для них нет словарей.</p><p>Вы можете уменьшить ширину вывода, явно перечислив только те столбцы, которые вы хотите видеть: </p><pre class="screen">
+SELECT alias, token, dictionary, lexemes
+FROM ts_debug('public.english', 'The Brightest supernovaes');
+   alias   |    token    |   dictionary   |   lexemes
+-----------+-------------+----------------+-------------
+ asciiword | The         | english_ispell | {}
+ blank     |             |                |
+ asciiword | Brightest   | english_ispell | {bright}
+ blank     |             |                |
+ asciiword | supernovaes | english_stem   | {supernova}
+</pre></div><div class="sect2" id="TEXTSEARCH-PARSER-TESTING"><div class="titlepage"><div><div><h3 class="title">12.8.2. Тестирование анализатора <a href="#TEXTSEARCH-PARSER-TESTING" class="id_link">#</a></h3></div></div></div><p>Следующие функции позволяют непосредственно протестировать анализатор текстового поиска.</p><a id="id-1.5.11.11.4.3" class="indexterm"></a><pre class="synopsis">ts_parse(<em class="replaceable"><code>имя_анализатора</code></em> <code class="type">text</code>, <em class="replaceable"><code>документ</code></em> <code class="type">text</code>,
+         OUT <em class="replaceable"><code>код_фрагмента</code></em> <code class="type">integer</code>, OUT <em class="replaceable"><code>фрагмент</code></em> <code class="type">text</code>) returns <code class="type">setof record</code>
+ts_parse(<em class="replaceable"><code>oid_анализатора</code></em> <code class="type">oid</code>, <em class="replaceable"><code>документ</code></em> <code class="type">text</code>,
+         OUT <em class="replaceable"><code>код_фрагмента</code></em> <code class="type">integer</code>, OUT <em class="replaceable"><code>фрагмент</code></em> <code class="type">text</code>) returns <code class="type">setof record</code></pre><p><code class="function">ts_parse</code> разбирает данный документ и возвращает набор записей, по одной для каждого извлечённого фрагмента. Каждая запись содержит <code class="varname">код_фрагмента</code>, код назначенного типа фрагмента, и <code class="varname">фрагмент</code>, собственно текст фрагмента. Например: </p><pre class="screen">
+SELECT * FROM ts_parse('default', '123 - a number');
+ tokid | token
+-------+--------
+    22 | 123
+    12 |
+    12 | -
+     1 | a
+    12 |
+     1 | number
+</pre><a id="id-1.5.11.11.4.6" class="indexterm"></a><pre class="synopsis">ts_token_type(<em class="replaceable"><code>имя_анализатора</code></em> <code class="type">text</code>, OUT <em class="replaceable"><code>код_фрагмента</code></em> <code class="type">integer</code>,
+              OUT <em class="replaceable"><code>псевдоним</code></em> <code class="type">text</code>, OUT <em class="replaceable"><code>описание</code></em> <code class="type">text</code>) returns <code class="type">setof record</code>
+ts_token_type(<em class="replaceable"><code>oid_анализатора</code></em> <code class="type">oid</code>, OUT <em class="replaceable"><code>код_фрагмента</code></em> <code class="type">integer</code>,
+              OUT <em class="replaceable"><code>псевдоним</code></em> <code class="type">text</code>, OUT <em class="replaceable"><code>описание</code></em> <code class="type">text</code>) returns <code class="type">setof record</code></pre><p><code class="function">ts_token_type</code> возвращает таблицу, описывающую все типы фрагментов, которые может распознать анализатор. Для каждого типа в этой таблице указывается целочисленный <code class="varname">tokid</code> (идентификатор), который анализатор использует для пометки фрагмента этого типа, <code class="varname">alias</code> (псевдоним), с которым этот тип фигурирует в командах конфигурации, и <code class="varname">description</code> (краткое описание). Например: </p><pre class="screen">
+SELECT * FROM ts_token_type('default');
+ tokid |      alias      |               description
+-------+-----------------+------------------------------------------
+     1 | asciiword       | Word, all ASCII
+     2 | word            | Word, all letters
+     3 | numword         | Word, letters and digits
+     4 | email           | Email address
+     5 | url             | URL
+     6 | host            | Host
+     7 | sfloat          | Scientific notation
+     8 | version         | Version number
+     9 | hword_numpart   | Hyphenated word part, letters and digits
+    10 | hword_part      | Hyphenated word part, all letters
+    11 | hword_asciipart | Hyphenated word part, all ASCII
+    12 | blank           | Space symbols
+    13 | tag             | XML tag
+    14 | protocol        | Protocol head
+    15 | numhword        | Hyphenated word, letters and digits
+    16 | asciihword      | Hyphenated word, all ASCII
+    17 | hword           | Hyphenated word, all letters
+    18 | url_path        | URL path
+    19 | file            | File or path name
+    20 | float           | Decimal notation
+    21 | int             | Signed integer
+    22 | uint            | Unsigned integer
+    23 | entity          | XML entity
+</pre></div><div class="sect2" id="TEXTSEARCH-DICTIONARY-TESTING"><div class="titlepage"><div><div><h3 class="title">12.8.3. Тестирование словаря <a href="#TEXTSEARCH-DICTIONARY-TESTING" class="id_link">#</a></h3></div></div></div><p>Для тестирования словаря предназначена функция <code class="function">ts_lexize</code>.</p><a id="id-1.5.11.11.5.3" class="indexterm"></a><pre class="synopsis">ts_lexize(<em class="replaceable"><code>словарь</code></em> <code class="type">regdictionary</code>, <em class="replaceable"><code>фрагмент</code></em> <code class="type">text</code>) returns <code class="type">text[]</code></pre><p><code class="function">ts_lexize</code> возвращает массив лексем, если входной <em class="replaceable"><code>фрагмент</code></em> известен словарю, либо пустой массив, если этот фрагмент считается в словаре стоп-словом, либо <code class="literal">NULL</code>, если он не был распознан.</p><p>Примеры: </p><pre class="screen">
+SELECT ts_lexize('english_stem', 'stars');
+ ts_lexize
+-----------
+ {star}
+
+SELECT ts_lexize('english_stem', 'a');
+ ts_lexize
+-----------
+ {}
+</pre><div class="note"><h3 class="title">Примечание</h3><p>Функция <code class="function">ts_lexize</code> принимает одиночный <span class="emphasis"><em>фрагмент</em></span>, а не просто текст. Вот пример возможного заблуждения: </p><pre class="screen">
+SELECT ts_lexize('thesaurus_astro', 'supernovae stars') is null;
+ ?column?
+----------
+ t
+</pre><p> Хотя фраза <code class="literal">supernovae stars</code> есть в тезаурусе <code class="literal">thesaurus_astro</code>, <code class="function">ts_lexize</code> не работает, так как она не разбирает входной текст, а воспринимает его как один фрагмент. Поэтому для проверки тезаурусов следует использовать функции <code class="function">plainto_tsquery</code> и <code class="function">to_tsvector</code>, например: </p><pre class="screen">
+SELECT plainto_tsquery('supernovae stars');
+ plainto_tsquery
+-----------------
+ 'sn'
+</pre></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="textsearch-configuration.html" title="12.7. Пример конфигурации">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="textsearch.html" title="Глава 12. Полнотекстовый поиск">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="textsearch-indexes.html" title="12.9. Типы индексов, предпочитаемые для текстового поиска">След.</a></td></tr><tr><td width="40%" align="left" valign="top">12.7. Пример конфигурации </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 12.9. Типы индексов, предпочитаемые для текстового поиска</td></tr></table></div></body></html>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>dblink_get_result</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="contrib-dblink-get-notify.html" title="dblink_get_notify" /><link rel="next" href="contrib-dblink-cancel-query.html" title="dblink_cancel_query" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">dblink_get_result</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="contrib-dblink-get-notify.html" title="dblink_get_notify">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="dblink.html" title="F.12. dblink — подключение к другим базам данных PostgreSQL">Наверх</a></td><th width="60%" align="center">F.12. dblink — подключение к другим базам данных PostgreSQL</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="contrib-dblink-cancel-query.html" title="dblink_cancel_query">След.</a></td></tr></table><hr /></div><div class="refentry" id="CONTRIB-DBLINK-GET-RESULT"><div class="titlepage"></div><a id="id-1.11.7.22.18.1" class="indexterm"></a><div class="refnamediv"><h2><span class="refentrytitle">dblink_get_result</span></h2><p>dblink_get_result — получает результат асинхронного запроса</p></div><div class="refsynopsisdiv"><h2>Синтаксис</h2><pre class="synopsis">dblink_get_result(text connname [, bool fail_on_error]) returns setof record</pre></div><div class="refsect1" id="id-1.11.7.22.18.5"><h2>Описание</h2><p><code class="function">dblink_get_result</code> получает результаты асинхронного запроса, запущенного ранее вызовом <code class="function">dblink_send_query</code>. Если запрос ещё выполняется, <code class="function">dblink_get_result</code> будет ждать его завершения.</p></div><div class="refsect1" id="id-1.11.7.22.18.6"><h2>Аргументы</h2><div class="variablelist"><dl class="variablelist"><dt><span class="term"><em class="parameter"><code>connname</code></em></span></dt><dd><p>Имя используемого подключения.</p></dd><dt><span class="term"><em class="parameter"><code>fail_on_error</code></em></span></dt><dd><p>Если равен true (это значение по умолчанию), в случае ошибки, выданной на удалённой стороне соединения, ошибка также выдаётся локально. Если равен false, удалённая ошибка выдаётся локально как ЗАМЕЧАНИЕ, и функция не возвращает строки.</p></dd></dl></div></div><div class="refsect1" id="id-1.11.7.22.18.7"><h2>Возвращаемое значение</h2><p>Для асинхронного запроса (то есть, SQL-оператора, возвращающего строки) эта функция выдаёт строки, полученные в результате запроса. Чтобы использовать эту функцию, вы должны задать ожидаемый набор столбцов, как ранее говорилось в описании <code class="function">dblink</code>.</p><p>Для асинхронной команды (то есть, SQL-оператора, не возвращающего строки), эта функция возвращает одну строку с одним текстовым столбцом, содержащим строку состояния команды. Для такого вызова в предложении <code class="literal">FROM</code> так же необходимо определить, что результат будет содержать один текстовый столбец.</p></div><div class="refsect1" id="id-1.11.7.22.18.8"><h2>Замечания</h2><p>Эта функция <span class="emphasis"><em>должна</em></span> вызываться, если <code class="function">dblink_send_query</code> возвращает 1. Её нужно вызывать по одному разу для каждого отправленного запроса, а затем ещё раз для получения пустого набора данных, прежде чем подключением можно будет пользоваться снова.</p><p>Когда используются <code class="function">dblink_send_query</code> и <code class="function">dblink_get_result</code>, подсистема <span class="application">dblink</span> получает весь набор удалённых результатов, прежде чем передавать его для локальной обработки. Если запрос возвращает большое количество строк, это может занимать много памяти в локальном сеансе. Поэтому может быть лучше открыть такой запрос как курсор, вызвав <code class="function">dblink_open</code>, а затем выбирать результаты удобоваримыми порциями. Кроме того, можно воспользоваться простой функцией <code class="function">dblink()</code>, которая не допускает заполнения памяти, выгружая большие наборы результатов на диск.</p></div><div class="refsect1" id="id-1.11.7.22.18.9"><h2>Примеры</h2><pre class="screen">contrib_regression=# SELECT dblink_connect('dtest1', 'dbname=contrib_regression');
+ dblink_connect
+----------------
+ OK
+(1 row)
+
+contrib_regression=# SELECT * FROM
+contrib_regression-# dblink_send_query('dtest1', 'select * from foo where f1 &lt; 3') AS t1;
+ t1
+----
+  1
+(1 row)
+
+contrib_regression=# SELECT * FROM dblink_get_result('dtest1') AS t1(f1 int, f2 text, f3 text[]);
+ f1 | f2 |     f3
+----+----+------------
+  0 | a  | {a0,b0,c0}
+  1 | b  | {a1,b1,c1}
+  2 | c  | {a2,b2,c2}
+(3 rows)
+
+contrib_regression=# SELECT * FROM dblink_get_result('dtest1') AS t1(f1 int, f2 text, f3 text[]);
+ f1 | f2 | f3
+----+----+----
+(0 rows)
+
+contrib_regression=# SELECT * FROM
+contrib_regression-# dblink_send_query('dtest1', 'select * from foo where f1 &lt; 3; select * from foo where f1 &gt; 6') AS t1;
+ t1
+----
+  1
+(1 row)
+
+contrib_regression=# SELECT * FROM dblink_get_result('dtest1') AS t1(f1 int, f2 text, f3 text[]);
+ f1 | f2 |     f3
+----+----+------------
+  0 | a  | {a0,b0,c0}
+  1 | b  | {a1,b1,c1}
+  2 | c  | {a2,b2,c2}
+(3 rows)
+
+contrib_regression=# SELECT * FROM dblink_get_result('dtest1') AS t1(f1 int, f2 text, f3 text[]);
+ f1 | f2 |      f3
+----+----+---------------
+  7 | h  | {a7,b7,c7}
+  8 | i  | {a8,b8,c8}
+  9 | j  | {a9,b9,c9}
+ 10 | k  | {a10,b10,c10}
+(4 rows)
+
+contrib_regression=# SELECT * FROM dblink_get_result('dtest1') AS t1(f1 int, f2 text, f3 text[]);
+ f1 | f2 | f3
+----+----+----
+(0 rows)</pre></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="contrib-dblink-get-notify.html" title="dblink_get_notify">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="dblink.html" title="F.12. dblink — подключение к другим базам данных PostgreSQL">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="contrib-dblink-cancel-query.html" title="dblink_cancel_query">След.</a></td></tr><tr><td width="40%" align="left" valign="top">dblink_get_notify </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> dblink_cancel_query</td></tr></table></div></body></html>

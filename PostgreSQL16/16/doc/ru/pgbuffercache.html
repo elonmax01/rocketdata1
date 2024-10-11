@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>F.27. pg_buffercache — информация о состоянии буферного кеша PostgreSQL</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="passwordcheck.html" title="F.26. passwordcheck — проверка надёжности пароля" /><link rel="next" href="pgcrypto.html" title="F.28. pgcrypto — криптографические функции" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">F.27. pg_buffercache — информация о состоянии буферного кеша <span class="productname">PostgreSQL</span></th></tr><tr><td width="10%" align="left"><a accesskey="p" href="passwordcheck.html" title="F.26. passwordcheck — проверка надёжности пароля">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="contrib.html" title="Приложение F. Дополнительно поставляемые модули и расширения">Наверх</a></td><th width="60%" align="center">Приложение F. Дополнительно поставляемые модули и расширения</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="pgcrypto.html" title="F.28. pgcrypto — криптографические функции">След.</a></td></tr></table><hr /></div><div class="sect1" id="PGBUFFERCACHE"><div class="titlepage"><div><div><h2 class="title" style="clear: both">F.27. pg_buffercache — информация о состоянии буферного кеша <span class="productname">PostgreSQL</span> <a href="#PGBUFFERCACHE" class="id_link">#</a></h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="pgbuffercache.html#PGBUFFERCACHE-PG-BUFFERCACHE">F.27.1. Представление <code class="structname">pg_buffercache</code></a></span></dt><dt><span class="sect2"><a href="pgbuffercache.html#PGBUFFERCACHE-SUMMARY">F.27.2. Функция <code class="function">pg_buffercache_summary()</code></a></span></dt><dt><span class="sect2"><a href="pgbuffercache.html#PGBUFFERCACHE-USAGE-COUNTS">F.27.3. Функция <code class="function">pg_buffercache_usage_counts()</code></a></span></dt><dt><span class="sect2"><a href="pgbuffercache.html#PGBUFFERCACHE-SAMPLE-OUTPUT">F.27.4. Пример вывода</a></span></dt><dt><span class="sect2"><a href="pgbuffercache.html#PGBUFFERCACHE-AUTHORS">F.27.5. Авторы</a></span></dt></dl></div><a id="id-1.11.7.37.2" class="indexterm"></a><p>Модуль <code class="filename">pg_buffercache</code> даёт возможность понять, что происходит в общем кеше буферов в реальном времени.</p><a id="id-1.11.7.37.4" class="indexterm"></a><a id="id-1.11.7.37.5" class="indexterm"></a><p>Этот модуль предоставляет функцию <code class="function">pg_buffercache_pages()</code> (обёрнута в представление <code class="structname">pg_buffercache</code>), а также функции <code class="function">pg_buffercache_summary()</code> и <code class="function">pg_buffercache_usage_counts()</code>.</p><p>Функция <code class="function">pg_buffercache_pages()</code> возвращает набор записей, каждая строка которого описывает состояние одного буфера в общем кеше. Для удобства пользования обёрткой функции является представление <code class="structname">pg_buffercache</code>.</p><p>Функция <code class="function">pg_buffercache_summary()</code> возвращает одну строку со сводной информацией о состоянии общего кеша буферов.</p><p>Функция <code class="function">pg_buffercache_usage_counts()</code> возвращает набор записей, в каждой строке которого указано количество буферов в разбивке по счётчику использования.</p><p>По умолчанию его использование разрешено только суперпользователям и ролям с правами роли <code class="literal">pg_monitor</code>. Дать доступ другим можно с помощью <code class="command">GRANT</code>.</p><div class="sect2" id="PGBUFFERCACHE-PG-BUFFERCACHE"><div class="titlepage"><div><div><h3 class="title">F.27.1. Представление <code class="structname">pg_buffercache</code> <a href="#PGBUFFERCACHE-PG-BUFFERCACHE" class="id_link">#</a></h3></div></div></div><p>Определения столбцов, содержащихся в представлении, показаны в <a class="xref" href="pgbuffercache.html#PGBUFFERCACHE-COLUMNS" title="Таблица F.15. Столбцы pg_buffercache">Таблице F.15</a>.</p><div class="table" id="PGBUFFERCACHE-COLUMNS"><p class="title"><strong>Таблица F.15. Столбцы <code class="structname">pg_buffercache</code></strong></p><div class="table-contents"><table class="table" summary="Столбцы pg_buffercache" border="1"><colgroup><col /></colgroup><thead><tr><th class="catalog_table_entry"><p class="column_definition">Тип столбца</p>
+      <p>Описание</p></th></tr></thead><tbody><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">bufferid</code> <code class="type">integer</code>
+      </p>
+      <p>ID, в диапазоне 1..<code class="varname">shared_buffers</code></p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition"><code class="structfield">relfilenode</code> <code class="type">oid</code> (ссылается на <a class="link" href="catalog-pg-class.html" title="53.11. pg_class"><code class="structname">pg_class</code></a>.<code class="structfield">relfilenode</code>)</p>
+      <p>Номер файлового узла для отношения</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition"><code class="structfield">reltablespace</code> <code class="type">oid</code> (ссылается на <a class="link" href="catalog-pg-tablespace.html" title="53.56. pg_tablespace"><code class="structname">pg_tablespace</code></a>.<code class="structfield">oid</code>)</p>
+      <p>OID табличного пространства, содержащего отношение</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition"><code class="structfield">reldatabase</code> <code class="type">oid</code> (ссылается на <a class="link" href="catalog-pg-database.html" title="53.15. pg_database"><code class="structname">pg_database</code></a>.<code class="structfield">oid</code>)</p>
+      <p>OID базы данных, содержащей отношение</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">relforknumber</code> <code class="type">smallint</code>
+      </p>
+      <p>Номер слоя в отношении; см. <code class="filename">common/relpath.h</code></p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">relblocknumber</code> <code class="type">bigint</code>
+      </p>
+      <p>Номер страницы в отношении</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">isdirty</code> <code class="type">boolean</code>
+      </p>
+      <p>Страница загрязнена?</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">usagecount</code> <code class="type">smallint</code>
+      </p>
+      <p>Счётчик обращений по часовой стрелке</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">pinning_backends</code> <code class="type">integer</code>
+      </p>
+      <p>Число обслуживающих процессов, закрепивших этот буфер</p></td></tr></tbody></table></div></div><br class="table-break" /><p>Для каждого буфера в общем кеше выдаётся одна строка. Для неиспользуемых буферов все поля равны NULL, за исключением <code class="structfield">bufferid</code>. Общие системные каталоги показываются как относящиеся к базе данных под номером 0.</p><p>Так как кеш используется совместно всеми базами данных, обычно в нём находятся и страницы из отношений, не принадлежащих текущей базе данных. Это означает, что для некоторых строк при соединении с <code class="structname">pg_class</code> не найдутся соответствующие строки, либо соединение будет некорректным. Если вы хотите выполнить соединение с <code class="structname">pg_class</code>, будет правильным ограничить соединение строками, в которых <code class="structfield">reldatabase</code> содержит OID текущей базы данных или ноль.</p><p>Для копирования данных состояния, которые будут отображаться, блокировки в менеджере буферов не устанавливаются. Поэтому обращения к представлению <code class="structname">pg_buffercache</code> меньше сказываются на обычной активности буферов, но набор результатов, полученный для всех буферов, в целом может оказаться несогласованным. Однако внутри каждого отдельного буфера согласованность информации гарантируется.</p></div><div class="sect2" id="PGBUFFERCACHE-SUMMARY"><div class="titlepage"><div><div><h3 class="title">F.27.2. Функция <code class="function">pg_buffercache_summary()</code> <a href="#PGBUFFERCACHE-SUMMARY" class="id_link">#</a></h3></div></div></div><p>Определения столбцов, возвращаемых функцией, показаны в <a class="xref" href="pgbuffercache.html#PGBUFFERCACHE-SUMMARY-COLUMNS" title="Таблица F.16. Выходные столбцы pg_buffercache_summary()">Таблице F.16</a>.</p><div class="table" id="PGBUFFERCACHE-SUMMARY-COLUMNS"><p class="title"><strong>Таблица F.16. Выходные столбцы <code class="function">pg_buffercache_summary()</code></strong></p><div class="table-contents"><table class="table" summary="Выходные столбцы pg_buffercache_summary()" border="1"><colgroup><col /></colgroup><thead><tr><th class="catalog_table_entry"><p class="column_definition">Тип столбца</p>
+      <p>Описание</p></th></tr></thead><tbody><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">buffers_used</code> <code class="type">int4</code>
+      </p>
+      <p>Число используемых общих буферов</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">buffers_unused</code> <code class="type">int4</code>
+      </p>
+      <p>Число неиспользуемых общих буферов</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">buffers_dirty</code> <code class="type">int4</code>
+      </p>
+      <p>Число загрязнённых общих буферов</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">buffers_pinned</code> <code class="type">int4</code>
+      </p>
+      <p>Число закреплённых общих буферов</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">usagecount_avg</code> <code class="type">float8</code>
+      </p>
+      <p>Среднее значение счётчика использования общих буферов</p></td></tr></tbody></table></div></div><br class="table-break" /><p>Функция <code class="function">pg_buffercache_summary()</code> возвращает одну строку со сводной информацией о состоянии всех общих буферов. Подобную и более подробную информацию можно получить из представления <code class="structname">pg_buffercache</code>, но <code class="function">pg_buffercache_summary()</code> обходится существенно дешевле.</p><p>Как и представление <code class="structname">pg_buffercache</code>, <code class="function">pg_buffercache_summary()</code> не получает блокировки менеджера буферов, поэтому при параллельной работе в базе данных допустима незначительная погрешность результатов функции.</p></div><div class="sect2" id="PGBUFFERCACHE-USAGE-COUNTS"><div class="titlepage"><div><div><h3 class="title">F.27.3. Функция <code class="function">pg_buffercache_usage_counts()</code> <a href="#PGBUFFERCACHE-USAGE-COUNTS" class="id_link">#</a></h3></div></div></div><p>Определения столбцов, возвращаемых функцией, показаны в <a class="xref" href="pgbuffercache.html#PGBUFFERCACHE_USAGE_COUNTS-COLUMNS" title="Таблица F.17. Выходные столбцы pg_buffercache_usage_counts()">Таблице F.17</a>.</p><div class="table" id="PGBUFFERCACHE_USAGE_COUNTS-COLUMNS"><p class="title"><strong>Таблица F.17. Выходные столбцы <code class="function">pg_buffercache_usage_counts()</code></strong></p><div class="table-contents"><table class="table" summary="Выходные столбцы pg_buffercache_usage_counts()" border="1"><colgroup><col /></colgroup><thead><tr><th class="catalog_table_entry"><p class="column_definition">Тип столбца</p>
+      <p>Описание</p></th></tr></thead><tbody><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">usage_count</code> <code class="type">int4</code>
+      </p>
+      <p>Возможное значение счётчика использования буферов</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">buffers</code> <code class="type">int4</code>
+      </p>
+      <p>Число буферов в разбивке по счётчику использования</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">dirty</code> <code class="type">int4</code>
+      </p>
+      <p>Число загрязнённых буферов в разбивке по счётчику использования</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">pinned</code> <code class="type">int4</code>
+      </p>
+      <p>Число закреплённых буферов в разбивке по счётчику использования</p></td></tr></tbody></table></div></div><br class="table-break" /><p>Функция <code class="function">pg_buffercache_usage_counts()</code> возвращает набор строк со сводной информацией о состоянии всех общих буферов, агрегированных по возможным значениям счётчика использования. Подобную и более подробную информацию можно получить с помощью представления <code class="structname">pg_buffercache</code>, но <code class="function">pg_buffercache_usage_counts()</code> обходится существенно дешевле.</p><p>Как и представление <code class="structname">pg_buffercache</code>, <code class="function">pg_buffercache_usage_counts()</code> не получает блокировки менеджера буферов, поэтому при параллельной работе в базе данных допустима незначительная погрешность результатов функции.</p></div><div class="sect2" id="PGBUFFERCACHE-SAMPLE-OUTPUT"><div class="titlepage"><div><div><h3 class="title">F.27.4. Пример вывода <a href="#PGBUFFERCACHE-SAMPLE-OUTPUT" class="id_link">#</a></h3></div></div></div><pre class="screen">regression=# SELECT n.nspname, c.relname, count(*) AS buffers
+             FROM pg_buffercache b JOIN pg_class c
+             ON b.relfilenode = pg_relation_filenode(c.oid) AND
+                b.reldatabase IN (0, (SELECT oid FROM pg_database
+                                      WHERE datname = current_database()))
+             JOIN pg_namespace n ON n.oid = c.relnamespace
+             GROUP BY n.nspname, c.relname
+             ORDER BY 3 DESC
+             LIMIT 10;
+
+  nspname   |        relname         | buffers
+------------+------------------------+---------
+ public     | delete_test_table      |     593
+ public     | delete_test_table_pkey |     494
+ pg_catalog | pg_attribute           |     472
+ public     | quad_poly_tbl          |     353
+ public     | tenk2                  |     349
+ public     | tenk1                  |     349
+ public     | gin_test_idx           |     306
+ pg_catalog | pg_largeobject         |     206
+ public     | gin_test_tbl           |     188
+ public     | spgist_text_tbl        |     182
+(10 rows)
+
+
+regression=# SELECT * FROM pg_buffercache_summary();
+ buffers_used | buffers_unused | buffers_dirty | buffers_pinned | usagecount_avg
+--------------+----------------+---------------+----------------+----------------
+          248 |        2096904 |            39 |              0 |       3.141129
+(1 row)
+
+
+regression=# SELECT * FROM pg_buffercache_usage_counts();
+ usage_count | buffers | dirty | pinned
+-------------+---------+-------+--------
+           0 |   14650 |     0 |      0
+           1 |    1436 |   671 |      0
+           2 |     102 |    88 |      0
+           3 |      23 |    21 |      0
+           4 |       9 |     7 |      0
+           5 |     164 |   106 |      0
+(6 rows)</pre></div><div class="sect2" id="PGBUFFERCACHE-AUTHORS"><div class="titlepage"><div><div><h3 class="title">F.27.5. Авторы <a href="#PGBUFFERCACHE-AUTHORS" class="id_link">#</a></h3></div></div></div><p>Марк Кирквуд <code class="email">&lt;<a class="email" href="mailto:markir@paradise.net.nz">markir@paradise.net.nz</a>&gt;</code></p><p>Предложения по конструкции: Нейл Конвей <code class="email">&lt;<a class="email" href="mailto:neilc@samurai.com">neilc@samurai.com</a>&gt;</code></p><p>Советы по отладке: Том Лейн <code class="email">&lt;<a class="email" href="mailto:tgl@sss.pgh.pa.us">tgl@sss.pgh.pa.us</a>&gt;</code></p></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="passwordcheck.html" title="F.26. passwordcheck — проверка надёжности пароля">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="contrib.html" title="Приложение F. Дополнительно поставляемые модули и расширения">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="pgcrypto.html" title="F.28. pgcrypto — криптографические функции">След.</a></td></tr><tr><td width="40%" align="left" valign="top">F.26. passwordcheck — проверка надёжности пароля </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> F.28. pgcrypto — криптографические функции</td></tr></table></div></body></html>

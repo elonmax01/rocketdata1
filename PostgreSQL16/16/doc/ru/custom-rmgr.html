@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>Глава 66. Пользовательские менеджеры ресурсов WAL</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="generic-wal.html" title="Глава 65. Унифицированные записи WAL" /><link rel="next" href="btree.html" title="Глава 67. Индексы B-деревья" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">Глава 66. Пользовательские менеджеры ресурсов WAL</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="generic-wal.html" title="Глава 65. Унифицированные записи WAL">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="internals.html" title="Часть VII. Внутреннее устройство">Наверх</a></td><th width="60%" align="center">Часть VII. Внутреннее устройство</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="btree.html" title="Глава 67. Индексы B-деревья">След.</a></td></tr></table><hr /></div><div class="chapter" id="CUSTOM-RMGR"><div class="titlepage"><div><div><h2 class="title">Глава 66. Пользовательские менеджеры ресурсов WAL</h2></div></div></div><p>В этой главе описывается интерфейс взаимодействия ядра <span class="productname">PostgreSQL</span> с пользовательскими менеджерами ресурсов WAL, используя который расширения могут непосредственно интегрировать свои объекты в <a class="link" href="wal.html" title="Глава 30. Надёжность и журнал предзаписи"><acronym class="acronym">WAL</acronym></a>.</p><p>Расширениям, особенно реализующим <a class="link" href="tableam.html" title="Глава 63. Определение интерфейса для табличных методов доступа">табличные методы доступа</a> или <a class="link" href="indexam.html" title="Глава 64. Определение интерфейса для индексных методов доступа">индексные методы доступа</a>, может потребоваться использовать WAL для восстановления, репликации и/или <a class="link" href="logicaldecoding.html" title="Глава 49. Логическое декодирование">логического декодирования</a>. Пользовательские менеджеры ресурсов представляют собой более гибкую альтернативу <a class="link" href="generic-wal.html" title="Глава 65. Унифицированные записи WAL">унифицированным записям WAL</a> (которые игнорируются при логическом декодировании), но реализовать их в расширениях сложнее.</p><p>Чтобы создать новый пользовательский менеджер ресурсов WAL, сначала определите структуру <code class="structname">RmgrData</code> с реализациями методов менеджера ресурсов. Подробнее она описывается в <code class="filename">src/backend/access/transam/README</code> и в <code class="filename">src/include/access/xlog_internal.h</code> в исходном коде <span class="productname">PostgreSQL</span>. </p><pre class="programlisting">/*
+  * Таблица методов для менеджеров ресурсов.
+  *
+  * Эта структура должна синхронизироваться с определением PG_RMGR в
+  * файле rmgr.c.
+  *
+  * Метод rm_identify должен выдать обозначение записи для переданного xl_info
+  * (без ссылки на rmid). Например, для XLOG_BTREE_VACUUM он мог бы выдать
+  * "VACUUM". Затем может быть вызван метод rm_desc, который должен выдать
+  * дополнительные сведения о записи, если они имеются
+  * (например, последний блок).
+  *
+  * Метод rm_mask принимает на вход страницу, изменённую менеджером ресурсов, и
+  * маскирует биты, на изменение которых не должна реагировать проверка
+  * wal_consistency_checking.
+  *
+  * Индексами в RmgrTable[] являются значения RmgrId (см. rmgrlist.h). Если
+  * rm_name имеет значение NULL, соответствующая запись RmgrTable считается
+  * недействительной.
+ */
+typedef struct RmgrData
+{
+    const char *rm_name;
+    void        (*rm_redo) (XLogReaderState *record);
+    void        (*rm_desc) (StringInfo buf, XLogReaderState *record);
+    const char *(*rm_identify) (uint8 info);
+    void        (*rm_startup) (void);
+    void        (*rm_cleanup) (void);
+    void        (*rm_mask) (char *pagedata, BlockNumber blkno);
+    void        (*rm_decode) (struct LogicalDecodingContext *ctx,
+                              struct XLogRecordBuffer *buf);
+} RmgrData;</pre><p>Рабочий пример, демонстрирующий использование пользовательских менеджеров ресурсов WAL, можно найти в модуле <code class="filename">src/test/modules/test_custom_rmgrs</code>.</p><p>Затем зарегистрируйте новый менеджер ресурсов. </p><pre class="programlisting">/*
+  * Регистрация нового пользовательского менеджера ресурсов WAL.
+  *
+  * Идентификаторы менеджеров ресурсов должны быть глобально уникальными
+  * среди всех расширений. Чтобы избежать конфликтов с расширениями других
+  * разработчиков, зарезервируйте уникальный RmgrId для вашего расширения на
+  * странице https://wiki.postgresql.org/wiki/CustomWALResourceManagers.
+  * В процессе разработки следует использовать RM_EXPERIMENTAL_ID, чтобы
+  * не резервировать лишние идентификаторы.
+ */
+extern void RegisterCustomRmgr(RmgrId rmid, const RmgrData *rmgr);</pre><p> Функция <code class="function">RegisterCustomRmgr</code> должна вызываться из функции <a class="link" href="xfunc-c.html#XFUNC-C-DYNLOAD" title="38.10.1. Динамическая загрузка">_PG_init</a> модуля расширения. В процессе разработки нового расширения в качестве <em class="parameter"><code>rmid</code></em> следует использовать <code class="literal">RM_EXPERIMENTAL_ID</code>. Когда расширение для пользователей будет готово к выпуску, зарезервируйте новый идентификатор менеджера ресурсов на странице <a class="ulink" href="https://wiki.postgresql.org/wiki/CustomWALResourceManagers" target="_top">Custom WAL Resource Manager</a> (Пользовательский менеджер ресурсов WAL).</p><p>Включите модуль расширения, реализующий пользовательский менеджер ресурсов, в <a class="xref" href="runtime-config-client.html#GUC-SHARED-PRELOAD-LIBRARIES">shared_preload_libraries</a>, чтобы он загружался при запуске <span class="productname">PostgreSQL</span>.</p><div class="note"><h3 class="title">Примечание</h3><p>Расширение должно оставаться в <code class="varname">shared_preload_libraries</code> до тех пор, пока в системе могут быть какие-либо пользовательские записи WAL. В противном случае сервер <span class="productname">PostgreSQL</span> не сможет применять или декодировать пользовательские записи WAL, вследствие чего он может не запуститься.</p></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="generic-wal.html" title="Глава 65. Унифицированные записи WAL">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="internals.html" title="Часть VII. Внутреннее устройство">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="btree.html" title="Глава 67. Индексы B-деревья">След.</a></td></tr><tr><td width="40%" align="left" valign="top">Глава 65. Унифицированные записи WAL </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> Глава 67. Индексы B-деревья</td></tr></table></div></body></html>

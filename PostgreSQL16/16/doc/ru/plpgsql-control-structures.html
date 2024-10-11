@@ -1,0 +1,328 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>43.6. Управляющие структуры</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="plpgsql-statements.html" title="43.5. Основные операторы" /><link rel="next" href="plpgsql-cursors.html" title="43.7. Курсоры" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">43.6. Управляющие структуры</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="plpgsql-statements.html" title="43.5. Основные операторы">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="plpgsql.html" title="Глава 43. PL/pgSQL — процедурный язык SQL">Наверх</a></td><th width="60%" align="center">Глава 43. <span class="application">PL/pgSQL</span> — процедурный язык <acronym class="acronym">SQL</acronym></th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="plpgsql-cursors.html" title="43.7. Курсоры">След.</a></td></tr></table><hr /></div><div class="sect1" id="PLPGSQL-CONTROL-STRUCTURES"><div class="titlepage"><div><div><h2 class="title" style="clear: both">43.6. Управляющие структуры <a href="#PLPGSQL-CONTROL-STRUCTURES" class="id_link">#</a></h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="plpgsql-control-structures.html#PLPGSQL-STATEMENTS-RETURNING">43.6.1. Команды, возвращающие значения из функции</a></span></dt><dt><span class="sect2"><a href="plpgsql-control-structures.html#PLPGSQL-STATEMENTS-RETURNING-PROCEDURE">43.6.2. Завершение процедуры</a></span></dt><dt><span class="sect2"><a href="plpgsql-control-structures.html#PLPGSQL-STATEMENTS-CALLING-PROCEDURE">43.6.3. Вызов процедуры</a></span></dt><dt><span class="sect2"><a href="plpgsql-control-structures.html#PLPGSQL-CONDITIONALS">43.6.4. Условные операторы</a></span></dt><dt><span class="sect2"><a href="plpgsql-control-structures.html#PLPGSQL-CONTROL-STRUCTURES-LOOPS">43.6.5. Простые циклы</a></span></dt><dt><span class="sect2"><a href="plpgsql-control-structures.html#PLPGSQL-RECORDS-ITERATING">43.6.6. Цикл по результатам запроса</a></span></dt><dt><span class="sect2"><a href="plpgsql-control-structures.html#PLPGSQL-FOREACH-ARRAY">43.6.7. Цикл по элементам массива</a></span></dt><dt><span class="sect2"><a href="plpgsql-control-structures.html#PLPGSQL-ERROR-TRAPPING">43.6.8. Обработка ошибок</a></span></dt><dt><span class="sect2"><a href="plpgsql-control-structures.html#PLPGSQL-CALL-STACK">43.6.9. Получение информации о месте выполнения</a></span></dt></dl></div><p>Управляющие структуры, вероятно, наиболее полезная и важная часть <span class="application">PL/pgSQL</span>. С их помощью можно очень гибко и эффективно манипулировать данными <span class="productname">PostgreSQL</span>.</p><div class="sect2" id="PLPGSQL-STATEMENTS-RETURNING"><div class="titlepage"><div><div><h3 class="title">43.6.1. Команды, возвращающие значения из функции <a href="#PLPGSQL-STATEMENTS-RETURNING" class="id_link">#</a></h3></div></div></div><p>Две команды позволяют вернуть данные из функции: <code class="command">RETURN</code> и <code class="command">RETURN NEXT</code>.</p><div class="sect3" id="PLPGSQL-STATEMENTS-RETURNING-RETURN"><div class="titlepage"><div><div><h4 class="title">43.6.1.1. <code class="command">RETURN</code> <a href="#PLPGSQL-STATEMENTS-RETURNING-RETURN" class="id_link">#</a></h4></div></div></div><pre class="synopsis">RETURN <em class="replaceable"><code>выражение</code></em>;</pre><p><code class="command">RETURN</code> с последующим выражением прекращает выполнение функции и возвращает значение выражения в вызывающую программу. Эта форма используется для функций <span class="application">PL/pgSQL</span>, которые не возвращают набор строк.</p><p>В функции, возвращающей скалярный тип, результирующее выражение автоматически приводится к типу возвращаемого значения. Однако если возвращаемый тип —составной (строка), возвращаемое выражение должно в точности содержать требуемый набор столбцов. При этом может потребоваться явное приведение типов.</p><p>Для функции с выходными параметрами просто используйте <code class="command">RETURN</code> без выражения. Будут возвращены текущие значения выходных параметров.</p><p>Для функции, возвращающей <code class="type">void</code>, <code class="command">RETURN</code> можно использовать в любом месте, но без выражения после <code class="command">RETURN</code>.</p><p>Возвращаемое значение функции не может остаться не определённым. Если достигнут конец блока верхнего уровня, а оператор <code class="command">RETURN</code> так и не встретился, происходит ошибка времени выполнения. Это не касается функций с выходными параметрами и функций, возвращающих <code class="type">void</code>. Для них оператор <code class="command">RETURN</code> выполняется автоматически по окончании блока верхнего уровня.</p><p>Несколько примеров: </p><pre class="programlisting">-- Функции, возвращающие скалярный тип данных
+RETURN 1 + 2;
+RETURN scalar_var;
+
+-- Функции, возвращающие составной тип данных
+RETURN composite_type_var;
+RETURN (1, 2, 'three'::text);  -- требуется приведение типов</pre></div><div class="sect3" id="PLPGSQL-STATEMENTS-RETURNING-RETURN-NEXT"><div class="titlepage"><div><div><h4 class="title">43.6.1.2. <code class="command">RETURN NEXT</code> и <code class="command">RETURN QUERY</code> <a href="#PLPGSQL-STATEMENTS-RETURNING-RETURN-NEXT" class="id_link">#</a></h4></div></div></div><a id="id-1.8.8.8.3.4.2" class="indexterm"></a><a id="id-1.8.8.8.3.4.3" class="indexterm"></a><pre class="synopsis">RETURN NEXT <em class="replaceable"><code>выражение</code></em>;
+RETURN QUERY <em class="replaceable"><code>запрос</code></em>;
+RETURN QUERY EXECUTE <em class="replaceable"><code>строка-команды</code></em> [<span class="optional">USING <em class="replaceable"><code>выражение</code></em> [<span class="optional">, ...</span>]</span>];</pre><p>Для функций на <span class="application">PL/pgSQL</span>, возвращающих <code class="literal">SETOF <em class="replaceable"><code>некий_тип</code></em></code>, нужно действовать несколько по-иному. Отдельные элементы возвращаемого значения формируются командами <code class="command">RETURN NEXT</code> или <code class="command">RETURN QUERY</code>, а финальная команда <code class="command">RETURN</code> без аргументов завершает выполнение функции. <code class="command">RETURN NEXT</code> используется как со скалярными, так и с составными типами данных. Для составного типа результат функции возвращается в виде таблицы. <code class="command">RETURN QUERY</code> добавляет результат выполнения запроса к результату функции. <code class="command">RETURN NEXT</code> и <code class="command">RETURN QUERY</code> можно свободно смешивать в теле функции, в этом случае их результаты будут объединены.</p><p><code class="command">RETURN NEXT</code> и <code class="command">RETURN QUERY</code> не выполняют возврат из функции. Они просто добавляют строки в результирующее множество. Затем выполнение продолжается со следующего оператора в функции. Успешное выполнение <code class="command">RETURN NEXT</code> и <code class="command">RETURN QUERY</code> формирует множество строк результата. Для выхода из функции используется <code class="command">RETURN</code>, обязательно без аргументов (или можно просто дождаться окончания выполнения функции).</p><p><code class="command">RETURN QUERY</code> имеет разновидность <code class="command">RETURN QUERY EXECUTE</code>, предназначенную для динамического выполнения запроса. В текст запроса можно добавить параметры, используя <code class="literal">USING</code>, так же как и с командой <code class="command">EXECUTE</code>.</p><p>Для функции с выходными параметрами просто используйте <code class="command">RETURN NEXT</code> без аргументов. При каждом исполнении <code class="command">RETURN NEXT</code> текущие значения выходных параметров сохраняются для последующего возврата в качестве строки результата. Обратите внимание, что если функция с выходными параметрами должна возвращать множество значений, то при объявлении нужно указывать <code class="literal">RETURNS SETOF</code>. При этом если выходных параметров несколько, то используется <code class="literal">RETURNS SETOF record</code>, а если только один с типом <em class="replaceable"><code>некий_тип</code></em>, то <code class="literal">RETURNS SETOF <em class="replaceable"><code>некий_тип</code></em></code>.</p><p>Пример использования <code class="command">RETURN NEXT</code>: </p><pre class="programlisting">CREATE TABLE foo (fooid INT, foosubid INT, fooname TEXT);
+INSERT INTO foo VALUES (1, 2, 'three');
+INSERT INTO foo VALUES (4, 5, 'six');
+
+CREATE OR REPLACE FUNCTION get_all_foo() RETURNS SETOF foo AS
+$BODY$
+DECLARE
+    r foo%rowtype;
+BEGIN
+    FOR r IN
+        SELECT * FROM foo WHERE fooid &gt; 0
+    LOOP
+        -- здесь возможна обработка данных
+        RETURN NEXT r; -- возвращается текущая строка запроса
+    END LOOP;
+    RETURN;
+END;
+$BODY$
+LANGUAGE plpgsql;
+
+SELECT * FROM get_all_foo();</pre><p>Пример использования <code class="command">RETURN QUERY</code>: </p><pre class="programlisting">CREATE FUNCTION get_available_flightid(date) RETURNS SETOF integer AS
+$BODY$
+BEGIN
+    RETURN QUERY SELECT flightid
+                   FROM flight
+                  WHERE flightdate &gt;= $1
+                    AND flightdate &lt; ($1 + 1);
+
+    -- Так как выполнение ещё не закончено, можно проверить, были ли возвращены строки,
+    -- и выдать исключение, если нет.
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Нет рейсов на дату: %.', $1;
+    END IF;
+
+    RETURN;
+ END;
+$BODY$
+LANGUAGE plpgsql;
+
+-- Возвращает доступные рейсы либо вызывает исключение, если таковых нет.
+SELECT * FROM get_available_flightid(CURRENT_DATE);</pre><div class="note"><h3 class="title">Примечание</h3><p>В текущей реализации <code class="command">RETURN NEXT</code> и <code class="command">RETURN QUERY</code> результирующее множество накапливается целиком, прежде чем будет возвращено из функции. Если множество очень большое, то это может отрицательно сказаться на производительности, так как при нехватке оперативной памяти данные записываются на диск. В следующих версиях <span class="application">PL/pgSQL</span> это ограничение будет снято. В настоящее время управлять количеством оперативной памяти в подобных случаях можно параметром конфигурации <a class="xref" href="runtime-config-resource.html#GUC-WORK-MEM">work_mem</a>. При наличии свободной памяти администраторы должны рассмотреть возможность увеличения значения данного параметра.</p></div></div></div><div class="sect2" id="PLPGSQL-STATEMENTS-RETURNING-PROCEDURE"><div class="titlepage"><div><div><h3 class="title">43.6.2. Завершение процедуры <a href="#PLPGSQL-STATEMENTS-RETURNING-PROCEDURE" class="id_link">#</a></h3></div></div></div><p>Процедура не возвращает никакого значения, поэтому она может завершаться без оператора <code class="command">RETURN</code>. Если вы хотите досрочно завершить выполнение кода оператором <code class="command">RETURN</code>, напишите просто <code class="command">RETURN</code> без возвращаемого выражения.</p><p>Если у процедуры есть выходные параметры, конечные значения соответствующих им переменных будут выданы вызывающему коду.</p></div><div class="sect2" id="PLPGSQL-STATEMENTS-CALLING-PROCEDURE"><div class="titlepage"><div><div><h3 class="title">43.6.3. Вызов процедуры <a href="#PLPGSQL-STATEMENTS-CALLING-PROCEDURE" class="id_link">#</a></h3></div></div></div><p>Функция, процедура или блок <code class="command">DO</code> в <span class="application">PL/pgSQL</span> может вызвать процедуру, используя оператор <code class="command">CALL</code>. Выходные параметры при этом обрабатываются не так, как это делает <code class="command">CALL</code> в обычном SQL. Каждому параметру <code class="literal">OUT</code> или <code class="literal">INOUT</code> для процедуры должна соответствовать переменная в операторе <code class="command">CALL</code>, и этой переменной по завершении процедуры будет присвоено возвращаемое процедурой значение. Например: </p><pre class="programlisting">CREATE PROCEDURE triple(INOUT x int)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    x := x * 3;
+END;
+$$;
+
+DO $$
+DECLARE myvar int := 5;
+BEGIN
+  CALL triple(myvar);
+  RAISE NOTICE 'myvar = %', myvar;  -- выводится 15
+END;
+$$;</pre><p> Переменная, соответствующая выходному параметру, может быть простой переменной или полем переменной составного типа. В настоящее время она не может быть элементом массива.</p></div><div class="sect2" id="PLPGSQL-CONDITIONALS"><div class="titlepage"><div><div><h3 class="title">43.6.4. Условные операторы <a href="#PLPGSQL-CONDITIONALS" class="id_link">#</a></h3></div></div></div><p>Операторы <code class="command">IF</code> и <code class="command">CASE</code> позволяют выполнять команды в зависимости от определённых условий. <span class="application">PL/pgSQL</span> поддерживает три формы <code class="command">IF</code>: </p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p><code class="literal">IF ... THEN ... END IF</code></p></li><li class="listitem"><p><code class="literal">IF ... THEN ... ELSE ... END IF</code></p></li><li class="listitem"><p><code class="literal">IF ... THEN ... ELSIF ... THEN ... ELSE ... END IF</code></p></li></ul></div><p> и две формы <code class="command">CASE</code>: </p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p><code class="literal">CASE ... WHEN ... THEN ... ELSE ... END CASE</code></p></li><li class="listitem"><p><code class="literal">CASE WHEN ... THEN ... ELSE ... END CASE</code></p></li></ul></div><div class="sect3" id="PLPGSQL-CONDITIONALS-IF-THEN"><div class="titlepage"><div><div><h4 class="title">43.6.4.1. <code class="literal">IF-THEN</code> <a href="#PLPGSQL-CONDITIONALS-IF-THEN" class="id_link">#</a></h4></div></div></div><pre class="synopsis">IF <em class="replaceable"><code>логическое-выражение</code></em> THEN
+    <em class="replaceable"><code>операторы</code></em>
+END IF;</pre><p><code class="literal">IF-THEN</code> это простейшая форма <code class="literal">IF</code>. Операторы между <code class="literal">THEN</code> и <code class="literal">END IF</code> выполняются, если условие (<em class="replaceable"><code>логическое-выражение</code></em>) истинно. В противном случае они опускаются.</p><p>Пример: </p><pre class="programlisting">IF v_user_id &lt;&gt; 0 THEN
+    UPDATE users SET email = v_email WHERE user_id = v_user_id;
+END IF;</pre></div><div class="sect3" id="PLPGSQL-CONDITIONALS-IF-THEN-ELSE"><div class="titlepage"><div><div><h4 class="title">43.6.4.2. <code class="literal">IF-THEN-ELSE</code> <a href="#PLPGSQL-CONDITIONALS-IF-THEN-ELSE" class="id_link">#</a></h4></div></div></div><pre class="synopsis">IF <em class="replaceable"><code>логическое-выражение</code></em> THEN
+    <em class="replaceable"><code>операторы</code></em>
+ELSE
+    <em class="replaceable"><code>операторы</code></em>
+END IF;</pre><p><code class="literal">IF-THEN-ELSE</code> добавляет к <code class="literal">IF-THEN</code> возможность указать альтернативный набор операторов, которые будут выполнены, если условие не истинно (в том числе, если условие NULL).</p><p>Примеры: </p><pre class="programlisting">IF parentid IS NULL OR parentid = ''
+THEN
+    RETURN fullname;
+ELSE
+    RETURN hp_true_filename(parentid) || '/' || fullname;
+END IF;</pre><p> </p><pre class="programlisting">IF v_count &gt; 0 THEN
+    INSERT INTO users_count (count) VALUES (v_count);
+    RETURN 't';
+ELSE
+    RETURN 'f';
+END IF;</pre></div><div class="sect3" id="PLPGSQL-CONDITIONALS-IF-THEN-ELSIF"><div class="titlepage"><div><div><h4 class="title">43.6.4.3. <code class="literal">IF-THEN-ELSIF</code> <a href="#PLPGSQL-CONDITIONALS-IF-THEN-ELSIF" class="id_link">#</a></h4></div></div></div><pre class="synopsis">IF <em class="replaceable"><code>логическое-выражение</code></em> THEN
+    <em class="replaceable"><code>операторы</code></em>
+[<span class="optional">ELSIF <em class="replaceable"><code>логическое-выражение</code></em> THEN <em class="replaceable"><code>операторы</code></em> [<span class="optional">ELSIF <em class="replaceable"><code>логическое-выражение</code></em> THEN <em class="replaceable"><code>операторы</code></em> ...</span>]</span>]
+[<span class="optional">ELSE <em class="replaceable"><code>операторы</code></em></span>]
+END IF;</pre><p>В некоторых случаях двух альтернатив недостаточно. <code class="literal">IF-THEN-ELSIF</code> обеспечивает удобный способ проверки нескольких вариантов по очереди. Условия в <code class="literal">IF</code> последовательно проверяются до тех пор, пока не будет найдено первое истинное. После этого операторы, относящиеся к этому условию, выполняются, и управление переходит к следующей после <code class="literal">END IF</code> команде. (Все последующие условия не проверяются.) Если ни одно из условий <code class="literal">IF</code> не является истинным, то выполняется блок <code class="literal">ELSE</code> (если присутствует).</p><p>Пример: </p><pre class="programlisting">IF number = 0 THEN
+    result := 'zero';
+ELSIF number &gt; 0 THEN
+    result := 'positive';
+ELSIF number &lt; 0 THEN
+    result := 'negative';
+ELSE
+    -- остаётся только один вариант: number имеет значение NULL
+    result := 'NULL';
+END IF;</pre><p>Вместо ключевого слова <code class="literal">ELSIF</code> можно использовать <code class="literal">ELSEIF</code>.</p><p>Другой вариант сделать то же самое, это использование вложенных операторов <code class="literal">IF-THEN-ELSE</code>, как в следующем примере: </p><pre class="programlisting">IF demo_row.sex = 'm' THEN
+    pretty_sex := 'man';
+ELSE
+    IF demo_row.sex = 'f' THEN
+        pretty_sex := 'woman';
+    END IF;
+END IF;</pre><p>Однако это требует написания соответствующих <code class="literal">END IF</code> для каждого <code class="literal">IF</code>, что при наличии нескольких альтернатив делает код более громоздким, чем использование <code class="literal">ELSIF</code>.</p></div><div class="sect3" id="PLPGSQL-CONDITIONALS-SIMPLE-CASE"><div class="titlepage"><div><div><h4 class="title">43.6.4.4. Простой <code class="literal">CASE</code> <a href="#PLPGSQL-CONDITIONALS-SIMPLE-CASE" class="id_link">#</a></h4></div></div></div><pre class="synopsis">CASE <em class="replaceable"><code>выражение-поиска</code></em>
+    WHEN <em class="replaceable"><code>выражение</code></em> [<span class="optional">, <em class="replaceable"><code>выражение</code></em> [<span class="optional">...</span>]</span>] THEN
+      <em class="replaceable"><code>операторы</code></em>
+  [<span class="optional">WHEN <em class="replaceable"><code>выражение</code></em> [<span class="optional">, <em class="replaceable"><code>выражение</code></em> [<span class="optional">...</span>]</span>] THEN <em class="replaceable"><code>операторы</code></em> ...</span>]
+  [<span class="optional">ELSE <em class="replaceable"><code>операторы</code></em></span>]
+END CASE;</pre><p>Простая форма <code class="command">CASE</code> реализует условное выполнение на основе сравнения операндов. <em class="replaceable"><code>Выражение-поиска</code></em> вычисляется (один раз) и последовательно сравнивается с каждым <em class="replaceable"><code>выражением</code></em> в условиях <code class="literal">WHEN</code>. Если совпадение найдено, то выполняются соответствующие <em class="replaceable"><code>операторы</code></em> и управление переходит к следующей после <code class="literal">END CASE</code> команде. (Все последующие выражения <code class="literal">WHEN</code> не проверяются.) Если совпадение не было найдено, то выполняются <em class="replaceable"><code>операторы</code></em> в <code class="literal">ELSE</code>. Но если <code class="literal">ELSE</code> нет, то вызывается исключение <code class="literal">CASE_NOT_FOUND</code>.</p><p>Пример: </p><pre class="programlisting">CASE x
+    WHEN 1, 2 THEN
+        msg := 'один или два';
+    ELSE
+        msg := 'значение, отличное от один или два';
+END CASE;</pre></div><div class="sect3" id="PLPGSQL-CONDITIONALS-SEARCHED-CASE"><div class="titlepage"><div><div><h4 class="title">43.6.4.5. <code class="literal">CASE</code> с перебором условий <a href="#PLPGSQL-CONDITIONALS-SEARCHED-CASE" class="id_link">#</a></h4></div></div></div><pre class="synopsis">CASE
+    WHEN <em class="replaceable"><code>логическое-выражение</code></em> THEN
+      <em class="replaceable"><code>операторы</code></em>
+  [<span class="optional">WHEN <em class="replaceable"><code>логическое-выражение</code></em> THEN <em class="replaceable"><code>операторы</code></em> ...</span>]
+  [<span class="optional">ELSE <em class="replaceable"><code>операторы</code></em></span>]
+END CASE;</pre><p>Эта форма <code class="command">CASE</code> реализует условное выполнение, основываясь на истинности логических условий. Каждое <em class="replaceable"><code>логическое-выражение</code></em> в предложении <code class="literal">WHEN</code> вычисляется по порядку до тех пор, пока не будет найдено истинное. Затем выполняются соответствующие <em class="replaceable"><code>операторы</code></em> и управление переходит к следующей после <code class="literal">END CASE</code> команде. (Все последующие выражения <code class="literal">WHEN</code> не проверяются.) Если ни одно из условий не окажется истинным, то выполняются <em class="replaceable"><code>операторы</code></em> в <code class="literal">ELSE</code>. Но если <code class="literal">ELSE</code> нет, то вызывается исключение <code class="literal">CASE_NOT_FOUND</code>.</p><p>Пример: </p><pre class="programlisting">CASE
+    WHEN x BETWEEN 0 AND 10 THEN
+        msg := 'значение в диапазоне между 0 и 10';
+    WHEN x BETWEEN 11 AND 20 THEN
+        msg := 'значение в диапазоне между 11 и 20';
+END CASE;</pre><p>Эта форма <code class="command">CASE</code> полностью эквивалента <code class="literal">IF-THEN-ELSIF</code>, за исключением того, что при невыполнении всех условий и отсутствии <code class="literal">ELSE</code>, <code class="literal">IF-THEN-ELSIF</code> ничего не делает, а <code class="command">CASE</code> вызывает ошибку.</p></div></div><div class="sect2" id="PLPGSQL-CONTROL-STRUCTURES-LOOPS"><div class="titlepage"><div><div><h3 class="title">43.6.5. Простые циклы <a href="#PLPGSQL-CONTROL-STRUCTURES-LOOPS" class="id_link">#</a></h3></div></div></div><a id="id-1.8.8.8.7.2" class="indexterm"></a><p>Операторы <code class="literal">LOOP</code>, <code class="literal">EXIT</code>, <code class="literal">CONTINUE</code>, <code class="literal">WHILE</code>, <code class="literal">FOR</code> и <code class="literal">FOREACH</code> позволяют повторить серию команд в функции на <span class="application">PL/pgSQL</span>.</p><div class="sect3" id="PLPGSQL-CONTROL-STRUCTURES-LOOPS-LOOP"><div class="titlepage"><div><div><h4 class="title">43.6.5.1. <code class="literal">LOOP</code> <a href="#PLPGSQL-CONTROL-STRUCTURES-LOOPS-LOOP" class="id_link">#</a></h4></div></div></div><pre class="synopsis">[<span class="optional">&lt;&lt;<em class="replaceable"><code>метка</code></em>&gt;&gt;</span>]
+LOOP
+    <em class="replaceable"><code>операторы</code></em>
+END LOOP [<span class="optional"> <em class="replaceable"><code>метка</code></em> </span>];</pre><p><code class="literal">LOOP</code> организует безусловный цикл, который повторяется до бесконечности, пока не будет прекращён операторами <code class="literal">EXIT</code> или <code class="command">RETURN</code>. Для вложенных циклов можно использовать <em class="replaceable"><code>метку</code></em> в операторах <code class="literal">EXIT</code> и <code class="literal">CONTINUE</code>, чтобы указать, к какому циклу эти операторы относятся.</p></div><div class="sect3" id="PLPGSQL-CONTROL-STRUCTURES-LOOPS-EXIT"><div class="titlepage"><div><div><h4 class="title">43.6.5.2. <code class="literal">EXIT</code> <a href="#PLPGSQL-CONTROL-STRUCTURES-LOOPS-EXIT" class="id_link">#</a></h4></div></div></div><a id="id-1.8.8.8.7.5.2" class="indexterm"></a><pre class="synopsis">EXIT [<span class="optional"> <em class="replaceable"><code>метка</code></em> </span>] [<span class="optional">WHEN <em class="replaceable"><code>логическое-выражение</code></em></span>];</pre><p>Если <em class="replaceable"><code>метка</code></em> не указана, то завершается самый внутренний цикл, далее выполняется оператор, следующий за <code class="literal">END LOOP</code>. Если <em class="replaceable"><code>метка</code></em> указана, то она должна относиться к текущему или внешнему циклу, или это может быть метка блока. При этом в именованном цикле/блоке выполнение прекращается, а управление переходит к следующему оператору после соответствующего <code class="literal">END</code>.</p><p>При наличии <code class="literal">WHEN</code> цикл прекращается, только если <em class="replaceable"><code>логическое-выражение</code></em> истинно. В противном случае управление переходит к оператору, следующему за <code class="literal">EXIT</code>.</p><p><code class="literal">EXIT</code> можно использовать со всеми типами циклов, не только с безусловным.</p><p>Когда <code class="literal">EXIT</code> используется для выхода из блока, управление переходит к следующему оператору после окончания блока. Обратите внимание, что для выхода из блока нужно обязательно указывать <em class="replaceable"><code>метку</code></em>. <code class="literal">EXIT</code> без <em class="replaceable"><code>метки</code></em> не позволяет прекратить работу блока. (Это изменение по сравнению с версиями <span class="productname">PostgreSQL</span> до 8.4, в которых разрешалось использовать <code class="literal">EXIT</code> без <em class="replaceable"><code>метки</code></em> для прекращения работы текущего блока.)</p><p>Примеры: </p><pre class="programlisting">LOOP
+    -- здесь производятся вычисления
+    IF count &gt; 0 THEN
+        EXIT;  -- выход из цикла
+    END IF;
+END LOOP;
+
+LOOP
+    -- здесь производятся вычисления
+    EXIT WHEN count &gt; 0;  -- аналогично предыдущему примеру
+END LOOP;
+
+&lt;&lt;ablock&gt;&gt;
+BEGIN
+    -- здесь производятся вычисления
+    IF stocks &gt; 100000 THEN
+        EXIT ablock;  -- выход из блока BEGIN
+    END IF;
+    -- вычисления не будут выполнены, если stocks &gt; 100000
+END;</pre></div><div class="sect3" id="PLPGSQL-CONTROL-STRUCTURES-LOOPS-CONTINUE"><div class="titlepage"><div><div><h4 class="title">43.6.5.3. <code class="literal">CONTINUE</code> <a href="#PLPGSQL-CONTROL-STRUCTURES-LOOPS-CONTINUE" class="id_link">#</a></h4></div></div></div><a id="id-1.8.8.8.7.6.2" class="indexterm"></a><pre class="synopsis">CONTINUE [<span class="optional"> <em class="replaceable"><code>метка</code></em> </span>] [<span class="optional">WHEN <em class="replaceable"><code>логическое-выражение</code></em></span>];</pre><p>Если <em class="replaceable"><code>метка</code></em> не указана, то начинается следующая итерация самого внутреннего цикла. То есть все оставшиеся в цикле операторы пропускаются, и управление переходит к управляющему выражению цикла (если есть) для определения, нужна ли ещё одна итерация цикла. Если <em class="replaceable"><code>метка</code></em> присутствует, то она указывает на метку цикла, выполнение которого будет продолжено.</p><p>При наличии <code class="literal">WHEN</code> следующая итерация цикла начинается только тогда, когда <em class="replaceable"><code>логическое-выражение</code></em> истинно. В противном случае управление переходит к оператору, следующему за <code class="literal">CONTINUE</code>.</p><p><code class="literal">CONTINUE</code> можно использовать со всеми типами циклов, не только с безусловным.</p><p>Примеры: </p><pre class="programlisting">LOOP
+    -- здесь производятся вычисления
+    EXIT WHEN count &gt; 100;
+    CONTINUE WHEN count &lt; 50;
+    -- вычисления для count в диапазоне 50 .. 100
+END LOOP;</pre></div><div class="sect3" id="PLPGSQL-CONTROL-STRUCTURES-LOOPS-WHILE"><div class="titlepage"><div><div><h4 class="title">43.6.5.4. <code class="literal">WHILE</code> <a href="#PLPGSQL-CONTROL-STRUCTURES-LOOPS-WHILE" class="id_link">#</a></h4></div></div></div><a id="id-1.8.8.8.7.7.2" class="indexterm"></a><pre class="synopsis">[<span class="optional">&lt;&lt;<em class="replaceable"><code>метка</code></em>&gt;&gt;</span>]
+WHILE <em class="replaceable"><code>логическое-выражение</code></em> LOOP
+    <em class="replaceable"><code>операторы</code></em>
+END LOOP [<span class="optional"> <em class="replaceable"><code>метка</code></em> </span>];</pre><p><code class="literal">WHILE</code> выполняет серию команд до тех пор, пока истинно <em class="replaceable"><code>логическое-выражение</code></em>. Выражение проверяется непосредственно перед каждым входом в тело цикла.</p><p>Пример: </p><pre class="programlisting">WHILE amount_owed &gt; 0 AND gift_certificate_balance &gt; 0 LOOP
+    -- здесь производятся вычисления
+END LOOP;
+
+WHILE NOT done LOOP
+    -- здесь производятся вычисления
+END LOOP;</pre></div><div class="sect3" id="PLPGSQL-INTEGER-FOR"><div class="titlepage"><div><div><h4 class="title">43.6.5.5. <code class="literal">FOR</code> (целочисленный вариант) <a href="#PLPGSQL-INTEGER-FOR" class="id_link">#</a></h4></div></div></div><pre class="synopsis">[<span class="optional">&lt;&lt;<em class="replaceable"><code>метка</code></em>&gt;&gt;</span>]
+FOR <em class="replaceable"><code>имя</code></em> IN [<span class="optional">REVERSE</span>] <em class="replaceable"><code>выражение</code></em> .. <em class="replaceable"><code>выражение</code></em> [<span class="optional">BY <em class="replaceable"><code>выражение</code></em></span>] LOOP
+    <em class="replaceable"><code>операторы</code></em>
+END LOOP [<span class="optional"> <em class="replaceable"><code>метка</code></em> </span>];</pre><p>В этой форме цикла <code class="literal">FOR</code> итерации выполняются по диапазону целых чисел. Переменная <em class="replaceable"><code>имя</code></em> автоматически определяется с типом <code class="type">integer</code> и существует только внутри цикла (если уже существует переменная с таким именем, то внутри цикла она будет игнорироваться). Выражения для нижней и верхней границы диапазона чисел вычисляются один раз при входе в цикл. Если не указано <code class="literal">BY</code>, то шаг итерации 1, в противном случае используется значение в <code class="literal">BY</code>, которое вычисляется, опять же, один раз при входе в цикл. Если указано <code class="literal">REVERSE</code>, то после каждой итерации величина шага вычитается, а не добавляется.</p><p>Примеры целочисленного <code class="literal">FOR</code>: </p><pre class="programlisting">FOR i IN 1..10 LOOP
+    -- внутри цикла переменная i будет иметь значения 1,2,3,4,5,6,7,8,9,10
+END LOOP;
+
+FOR i IN REVERSE 10..1 LOOP
+    -- внутри цикла переменная i будет иметь значения 10,9,8,7,6,5,4,3,2,1
+END LOOP;
+
+FOR i IN REVERSE 10..1 BY 2 LOOP
+    -- внутри цикла переменная i будет иметь значения 10,8,6,4,2
+END LOOP;</pre><p>Если нижняя граница цикла больше верхней границы (или меньше, в случае <code class="literal">REVERSE</code>), то тело цикла не выполняется вообще. При этом ошибка не возникает.</p><p>Если с циклом <code class="literal">FOR</code> связана <em class="replaceable"><code>метка</code></em>, к целочисленной переменной цикла можно обращаться по имени, указывая эту <em class="replaceable"><code>метку</code></em>.</p></div></div><div class="sect2" id="PLPGSQL-RECORDS-ITERATING"><div class="titlepage"><div><div><h3 class="title">43.6.6. Цикл по результатам запроса <a href="#PLPGSQL-RECORDS-ITERATING" class="id_link">#</a></h3></div></div></div><p>Другой вариант <code class="literal">FOR</code> позволяет организовать цикл по результатам запроса. Синтаксис: </p><pre class="synopsis">
+[<span class="optional"> &lt;&lt;<em class="replaceable"><code>метка</code></em>&gt;&gt; </span>]
+FOR <em class="replaceable"><code>цель</code></em> IN <em class="replaceable"><code>запрос</code></em> LOOP
+    <em class="replaceable"><code>операторы</code></em>
+END LOOP [<span class="optional"> <em class="replaceable"><code>метка</code></em> </span>];
+</pre><p> Переменная <em class="replaceable"><code>цель</code></em> может быть переменной-кортежем, переменной типа <code class="type">record</code> или разделённым запятыми списком скалярных переменных. Переменной <em class="replaceable"><code>цель</code></em> последовательно присваиваются строки результата запроса, и для каждой строки выполняется тело цикла. Пример: </p><pre class="programlisting">CREATE FUNCTION refresh_mviews() RETURNS integer AS $$
+DECLARE
+    mviews RECORD;
+BEGIN
+    RAISE NOTICE 'Refreshing all materialized views...';
+
+    FOR mviews IN
+       SELECT n.nspname AS mv_schema,
+              c.relname AS mv_name,
+              pg_catalog.pg_get_userbyid(c.relowner) AS owner
+         FROM pg_catalog.pg_class c
+    LEFT JOIN pg_catalog.pg_namespace n ON (n.oid = c.relnamespace)
+        WHERE c.relkind = 'm'
+     ORDER BY 1
+    LOOP
+
+        -- Здесь "mviews" содержит одну запись с информацией о матпредставлении
+
+        RAISE NOTICE 'Refreshing materialized view %.% (owner: %)...',
+                     quote_ident(mviews.mv_schema),
+                     quote_ident(mviews.mv_name),
+                     quote_ident(mviews.owner);
+        EXECUTE format('REFRESH MATERIALIZED VIEW %I.%I', mviews.mv_schema, mviews.mv_name);
+    END LOOP;
+
+    RAISE NOTICE 'Done refreshing materialized views.';
+    RETURN 1;
+END;
+$$ LANGUAGE plpgsql;</pre><p> Если цикл завершается по команде <code class="literal">EXIT</code>, то последняя присвоенная строка доступна и после цикла.</p><p>В качестве <em class="replaceable"><code>запроса</code></em> в этом типе оператора <code class="literal">FOR</code> может задаваться любая команда SQL, возвращающая строки. Чаще всего это <code class="command">SELECT</code>, но также можно использовать и <code class="command">INSERT</code>, <code class="command">UPDATE</code> или <code class="command">DELETE</code> с предложением <code class="literal">RETURNING</code>. Кроме того, возможно применение и некоторых служебных команд, например <code class="command">EXPLAIN</code>.</p><p>Для переменных <span class="application">PL/pgSQL</span> в тексте запроса выполняется подстановка параметров запроса, план запроса кешируется для возможного повторного использования, как подробно описано в <a class="xref" href="plpgsql-implementation.html#PLPGSQL-VAR-SUBST" title="43.11.1. Подстановка переменных">Подразделе 43.11.1</a> и <a class="xref" href="plpgsql-implementation.html#PLPGSQL-PLAN-CACHING" title="43.11.2. Кеширование плана">Подразделе 43.11.2</a>.</p><p>Ещё одна разновидность этого типа цикла <code class="literal">FOR-IN-EXECUTE</code>: </p><pre class="synopsis">
+[<span class="optional"> &lt;&lt;<em class="replaceable"><code>метка</code></em>&gt;&gt; </span>]
+FOR <em class="replaceable"><code>цель</code></em> IN EXECUTE <em class="replaceable"><code>выражение_проверки</code></em> [<span class="optional"> USING <em class="replaceable"><code>выражение</code></em> [<span class="optional">, ... </span>] </span>] LOOP
+    <em class="replaceable"><code>операторы</code></em>
+END LOOP [<span class="optional"> <em class="replaceable"><code>метка</code></em> </span>];
+</pre><p> Она похожа на предыдущую форму, за исключением того, что текст запроса указывается в виде строкового выражения. Текст запроса формируется и для него строится план выполнения при каждом входе в цикл. Это даёт программисту выбор между скоростью предварительно разобранного запроса и гибкостью динамического запроса, так же, как и в случае с обычным оператором <code class="command">EXECUTE</code>. Как и в <code class="command">EXECUTE</code>, значения параметров могут быть добавлены в команду с использованием <code class="literal">USING</code>.</p><p>Ещё один способ организовать цикл по результатам запроса это объявить курсор. Описание в <a class="xref" href="plpgsql-cursors.html#PLPGSQL-CURSOR-FOR-LOOP" title="43.7.4. Обработка курсора в цикле">Подразделе 43.7.4</a>.</p></div><div class="sect2" id="PLPGSQL-FOREACH-ARRAY"><div class="titlepage"><div><div><h3 class="title">43.6.7. Цикл по элементам массива <a href="#PLPGSQL-FOREACH-ARRAY" class="id_link">#</a></h3></div></div></div><p>Цикл <code class="literal">FOREACH</code> очень похож на <code class="literal">FOR</code>. Отличие в том, что вместо перебора строк SQL-запроса происходит перебор элементов массива. (В целом, <code class="literal">FOREACH</code> предназначен для перебора выражений составного типа. Варианты реализации цикла для работы с прочими составными выражениями помимо массивов могут быть добавлены в будущем.) Синтаксис цикла <code class="literal">FOREACH</code>: </p><pre class="synopsis">
+[<span class="optional"> &lt;&lt;<em class="replaceable"><code>метка</code></em>&gt;&gt; </span>]
+FOREACH <em class="replaceable"><code>цель</code></em> [<span class="optional"> SLICE <em class="replaceable"><code>число</code></em> </span>] IN ARRAY <em class="replaceable"><code>выражение</code></em> LOOP
+    <em class="replaceable"><code>операторы</code></em>
+END LOOP [<span class="optional"> <em class="replaceable"><code>метка</code></em> </span>];
+</pre><p>Без указания <code class="literal">SLICE</code>, или если <code class="literal">SLICE</code> равен 0, цикл выполняется по всем элементам массива, полученного из <em class="replaceable"><code>выражения</code></em>. Переменной <em class="replaceable"><code>цель</code></em> последовательно присваивается каждый элемент массива и для него выполняется тело цикла. Пример цикла по элементам целочисленного массива: </p><pre class="programlisting">CREATE FUNCTION sum(int[]) RETURNS int8 AS $$
+DECLARE
+  s int8 := 0;
+  x int;
+BEGIN
+  FOREACH x IN ARRAY $1
+  LOOP
+    s := s + x;
+  END LOOP;
+  RETURN s;
+END;
+$$ LANGUAGE plpgsql;</pre><p> Обход элементов проводится в том порядке, в котором они сохранялись, независимо от размерности массива. Как правило, <em class="replaceable"><code>цель</code></em> это одиночная переменная, но может быть и списком переменных, когда элементы массива имеют составной тип (записи). В этом случае переменным присваиваются значения из последовательных столбцов составного элемента массива.</p><p>При положительном значении <code class="literal">SLICE</code> <code class="literal">FOREACH</code> выполняет итерации по срезам массива, а не по отдельным элементам. Значение <code class="literal">SLICE</code> должно быть целым числом, не превышающим размерности массива. Переменная <em class="replaceable"><code>цель</code></em> должна быть массивом, который получает последовательные срезы исходного массива, где размерность каждого среза задаётся значением <code class="literal">SLICE</code>. Пример цикла по одномерным срезам: </p><pre class="programlisting">CREATE FUNCTION scan_rows(int[]) RETURNS void AS $$
+DECLARE
+  x int[];
+BEGIN
+  FOREACH x SLICE 1 IN ARRAY $1
+  LOOP
+    RAISE NOTICE 'row = %', x;
+  END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT scan_rows(ARRAY[[1,2,3],[4,5,6],[7,8,9],[10,11,12]]);
+
+NOTICE:  row = {1,2,3}
+NOTICE:  row = {4,5,6}
+NOTICE:  row = {7,8,9}
+NOTICE:  row = {10,11,12}</pre></div><div class="sect2" id="PLPGSQL-ERROR-TRAPPING"><div class="titlepage"><div><div><h3 class="title">43.6.8. Обработка ошибок <a href="#PLPGSQL-ERROR-TRAPPING" class="id_link">#</a></h3></div></div></div><a id="id-1.8.8.8.10.2" class="indexterm"></a><p>По умолчанию любая возникающая ошибка прерывает выполнение функции на <span class="application">PL/pgSQL</span> и транзакцию, в которой она выполняется. Использование в блоке секции <code class="literal">EXCEPTION</code> позволяет перехватывать и обрабатывать ошибки. Синтаксис секции <code class="literal">EXCEPTION</code> расширяет синтаксис обычного блока: </p><pre class="synopsis">
+[<span class="optional"> &lt;&lt;<em class="replaceable"><code>метка</code></em>&gt;&gt; </span>]
+[<span class="optional"> DECLARE
+    <em class="replaceable"><code>объявления</code></em> </span>]
+BEGIN
+    <em class="replaceable"><code>операторы</code></em>
+EXCEPTION
+    WHEN <em class="replaceable"><code>условие</code></em> [<span class="optional"> OR <em class="replaceable"><code>условие</code></em> ... </span>] THEN
+        <em class="replaceable"><code>операторы_обработчика</code></em>
+    [<span class="optional"> WHEN <em class="replaceable"><code>условие</code></em> [<span class="optional"> OR <em class="replaceable"><code>условие</code></em> ... </span>] THEN
+          <em class="replaceable"><code>операторы_обработчика</code></em>
+      ... </span>]
+END;
+</pre><p>Если ошибок не было, то выполняются все <em class="replaceable"><code>операторы</code></em> блока и управление переходит к следующему оператору после <code class="literal">END</code>. Но если при выполнении <em class="replaceable"><code>оператора</code></em> происходит ошибка, то дальнейшая обработка прекращается и управление переходит к списку исключений в секции <code class="literal">EXCEPTION</code>. В этом списке ищется первое исключение, условие которого соответствует ошибке. Если исключение найдено, то выполняются соответствующие <em class="replaceable"><code>операторы_обработчика</code></em> и управление переходит к следующему оператору после <code class="literal">END</code>. Если исключение не найдено, то ошибка передаётся наружу, как будто секции <code class="literal">EXCEPTION</code> не было. При этом ошибку можно перехватить в секции <code class="literal">EXCEPTION</code> внешнего блока. Если ошибка так и не была перехвачена, то обработка функции прекращается.</p><p>В качестве <em class="replaceable"><code>условия</code></em> может задаваться одно из имён, перечисленных в <a class="xref" href="errcodes-appendix.html" title="Приложение A. Коды ошибок PostgreSQL">Приложении A</a>. Если задаётся имя категории, ему соответствуют все ошибки в данной категории. Специальному имени условия <code class="literal">OTHERS</code> (другие) соответствуют все типы ошибок, кроме <code class="literal">QUERY_CANCELED</code> и <code class="literal">ASSERT_FAILURE</code>. (И эти два типа ошибок можно перехватить по имени, но часто это неразумно.) Имена условий воспринимаются без учёта регистра. Условие ошибки также можно задать кодом <code class="literal">SQLSTATE</code>; например, эти два варианта равнозначны: </p><pre class="programlisting">WHEN division_by_zero THEN ...
+WHEN SQLSTATE '22012' THEN ...</pre><p>Если при выполнении <em class="replaceable"><code>операторов_обработчика</code></em> возникнет новая ошибка, то она не может быть перехвачена в этой секции <code class="literal">EXCEPTION</code>. Ошибка передаётся наружу и её можно перехватить в секции <code class="literal">EXCEPTION</code> внешнего блока.</p><p>При выполнении команд в секции <code class="literal">EXCEPTION</code> локальные переменные функции на <span class="application">PL/pgSQL</span> сохраняют те значения, которые были на момент возникновения ошибки. Однако все изменения в базе данных, выполненные в блоке, будут отменены. В качестве примера рассмотрим следующий фрагмент: </p><pre class="programlisting">INSERT INTO mytab(firstname, lastname) VALUES('Tom', 'Jones');
+BEGIN
+    UPDATE mytab SET firstname = 'Joe' WHERE lastname = 'Jones';
+    x := x + 1;
+    y := x / 0;
+EXCEPTION
+    WHEN division_by_zero THEN
+        RAISE NOTICE 'перехватили ошибку division_by_zero';
+        RETURN x;
+END;</pre><p> При присваивании значения переменной <code class="literal">y</code> произойдёт ошибка <code class="literal">division_by_zero</code>. Она будет перехвачена в секции <code class="literal">EXCEPTION</code>. Оператор <code class="command">RETURN</code> вернёт значение <code class="literal">x</code>, увеличенное на единицу, но изменения сделанные командой <code class="command">UPDATE</code> будут отменены. Изменения, выполненные командой <code class="command">INSERT</code>, которая предшествует блоку, не будут отменены. В результате, база данных будет содержать <code class="literal">Tom Jones</code>, а не <code class="literal">Joe Jones</code>.</p><div class="tip"><h3 class="title">Подсказка</h3><p>Наличие секции <code class="literal">EXCEPTION</code> значительно увеличивает накладные расходы на вход/выход из блока, поэтому не используйте <code class="literal">EXCEPTION</code> без надобности.</p></div><div class="example" id="PLPGSQL-UPSERT-EXAMPLE"><p class="title"><strong>Пример 43.2. Обработка исключений для команд <code class="command">UPDATE</code>/<code class="command">INSERT</code></strong></p><div class="example-contents"><p>В этом примере обработка исключений помогает выполнить либо команду <code class="command">UPDATE</code>, либо <code class="command">INSERT</code>, в зависимости от ситуации. Однако в современных приложениях вместо этого приёма рекомендуется использовать <code class="command">INSERT</code> с <code class="literal">ON CONFLICT DO UPDATE</code>. Данный пример предназначен в первую очередь для демонстрации управления выполнением <span class="application">PL/pgSQL</span>: </p><pre class="programlisting">CREATE TABLE db (a INT PRIMARY KEY, b TEXT);
+
+CREATE FUNCTION merge_db(key INT, data TEXT) RETURNS VOID AS
+$$
+BEGIN
+    LOOP
+        -- сначала попытаться изменить запись по ключу
+        UPDATE db SET b = data WHERE a = key;
+        IF found THEN
+            RETURN;
+        END IF;
+        -- записи с таким ключом нет, поэтому её нужно добавить
+        -- если параллельно будет вставлена запись с таким же ключом,
+        -- произойдёт ошибка уникальности
+        BEGIN
+            INSERT INTO db(a,b) VALUES (key, data);
+            RETURN;
+        EXCEPTION WHEN unique_violation THEN
+            -- здесь не нужно ничего делать,
+            -- просто продолжить цикл, чтобы повторить UPDATE.
+        END;
+    END LOOP;
+END;
+$$
+LANGUAGE plpgsql;
+
+SELECT merge_db(1, 'david');
+SELECT merge_db(1, 'dennis');</pre><p> В этом коде предполагается, что ошибка <code class="literal">unique_violation</code> вызывается самой командой <code class="command">INSERT</code>, а не, скажем, внутренним оператором <code class="command">INSERT</code> в функции триггера для этой таблицы. Некорректное поведение также возможно, если в таблице будет несколько уникальных индексов; тогда операция будет повторяться вне зависимости от того, нарушение какого индекса вызвало ошибку. Используя средства, рассмотренные далее, можно сделать код более надёжным, проверяя, что перехвачена именно ожидаемая ошибка.</p></div></div><br class="example-break" /><div class="sect3" id="PLPGSQL-EXCEPTION-DIAGNOSTICS"><div class="titlepage"><div><div><h4 class="title">43.6.8.1. Получение информации об ошибке <a href="#PLPGSQL-EXCEPTION-DIAGNOSTICS" class="id_link">#</a></h4></div></div></div><p>При обработке исключений часто бывает необходимым получить детальную информацию о произошедшей ошибке. Для этого в <span class="application">PL/pgSQL</span> есть два способа: использование специальных переменных и команда <code class="command">GET STACKED DIAGNOSTICS</code>.</p><p>Внутри секции <code class="literal">EXCEPTION</code> специальная переменная <code class="varname">SQLSTATE</code> содержит код ошибки, для которой было вызвано исключение (список возможных кодов ошибок приведён в <a class="xref" href="errcodes-appendix.html#ERRCODES-TABLE" title="Таблица A.1. Коды ошибок PostgreSQL">Таблице A.1</a>). Специальная переменная <code class="varname">SQLERRM</code> содержит сообщение об ошибке, связанное с исключением. Эти переменные являются неопределёнными вне секции <code class="literal">EXCEPTION</code>.</p><p>Также в обработчике исключения можно получить информацию о текущем исключении командой <code class="command">GET STACKED DIAGNOSTICS</code>, которая имеет вид: </p><pre class="synopsis">
+GET STACKED DIAGNOSTICS <em class="replaceable"><code>переменная</code></em> { = | := } <em class="replaceable"><code>элемент</code></em> [<span class="optional"> , ... </span>];
+</pre><p> Каждый <em class="replaceable"><code>элемент</code></em> представляется ключевым словом, указывающим, какое значение состояния нужно присвоить заданной <em class="replaceable"><code>переменной</code></em> (она должна иметь подходящий тип данных, чтобы принять его). Доступные в настоящее время элементы состояния показаны в <a class="xref" href="plpgsql-control-structures.html#PLPGSQL-EXCEPTION-DIAGNOSTICS-VALUES" title="Таблица 43.2. Элементы диагностики ошибок">Таблице 43.2</a>.</p><div class="table" id="PLPGSQL-EXCEPTION-DIAGNOSTICS-VALUES"><p class="title"><strong>Таблица 43.2. Элементы диагностики ошибок</strong></p><div class="table-contents"><table class="table" summary="Элементы диагностики ошибок" border="1"><colgroup><col class="col1" /><col class="col2" /><col class="col3" /></colgroup><thead><tr><th>Name</th><th>Тип</th><th>Описание</th></tr></thead><tbody><tr><td><code class="literal">RETURNED_SQLSTATE</code></td><td><code class="type">text</code></td><td>код исключения, возвращаемый SQLSTATE</td></tr><tr><td><code class="literal">COLUMN_NAME</code></td><td><code class="type">text</code></td><td>имя столбца, относящегося к исключению</td></tr><tr><td><code class="literal">CONSTRAINT_NAME</code></td><td><code class="type">text</code></td><td>имя ограничения целостности, относящегося к исключению</td></tr><tr><td><code class="literal">PG_DATATYPE_NAME</code></td><td><code class="type">text</code></td><td>имя типа данных, относящегося к исключению</td></tr><tr><td><code class="literal">MESSAGE_TEXT</code></td><td><code class="type">text</code></td><td>текст основного сообщения исключения</td></tr><tr><td><code class="literal">TABLE_NAME</code></td><td><code class="type">text</code></td><td>имя таблицы, относящейся к исключению</td></tr><tr><td><code class="literal">SCHEMA_NAME</code></td><td><code class="type">text</code></td><td>имя схемы, относящейся к исключению</td></tr><tr><td><code class="literal">PG_EXCEPTION_DETAIL</code></td><td><code class="type">text</code></td><td>текст детального сообщения исключения (если есть)</td></tr><tr><td><code class="literal">PG_EXCEPTION_HINT</code></td><td><code class="type">text</code></td><td>текст подсказки к исключению (если есть)</td></tr><tr><td><code class="literal">PG_EXCEPTION_CONTEXT</code></td><td><code class="type">text</code></td><td>строки текста, описывающие стек вызовов в момент исключения (см. <a class="xref" href="plpgsql-control-structures.html#PLPGSQL-CALL-STACK" title="43.6.9. Получение информации о месте выполнения">Подраздел 43.6.9</a>)</td></tr></tbody></table></div></div><br class="table-break" /><p>Если исключение не устанавливает значение для идентификатора, то возвращается пустая строка.</p><p>Пример: </p><pre class="programlisting">DECLARE
+  text_var1 text;
+  text_var2 text;
+  text_var3 text;
+BEGIN
+  -- здесь происходит обработка, которая может вызвать исключение
+  ...
+EXCEPTION WHEN OTHERS THEN
+  GET STACKED DIAGNOSTICS text_var1 = MESSAGE_TEXT,
+                          text_var2 = PG_EXCEPTION_DETAIL,
+                          text_var3 = PG_EXCEPTION_HINT;
+END;</pre></div></div><div class="sect2" id="PLPGSQL-CALL-STACK"><div class="titlepage"><div><div><h3 class="title">43.6.9. Получение информации о месте выполнения <a href="#PLPGSQL-CALL-STACK" class="id_link">#</a></h3></div></div></div><p>Команда <code class="command">GET DIAGNOSTICS</code>, ранее описанная в <a class="xref" href="plpgsql-statements.html#PLPGSQL-STATEMENTS-DIAGNOSTICS" title="43.5.5. Статус выполнения команды">Подразделе 43.5.5</a>, получает информацию о текущем состоянии выполнения кода (тогда как команда <code class="command">GET STACKED DIAGNOSTICS</code>, рассмотренная ранее, выдаёт информацию о состоянии выполнения в момент предыдущей ошибки). Её элемент состояния <code class="literal">PG_CONTEXT</code> позволяет определить текущее место выполнения кода. <code class="literal">PG_CONTEXT</code> возвращает текст с несколькими строками, описывающий стек вызова. В первой строке отмечается текущая функция и выполняемая в данный момент команда <code class="command">GET DIAGNOSTICS</code>, а во второй и последующих строках отмечаются функции выше по стеку вызовов. Например: </p><pre class="programlisting">CREATE OR REPLACE FUNCTION outer_func() RETURNS integer AS $$
+BEGIN
+  RETURN inner_func();
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION inner_func() RETURNS integer AS $$
+DECLARE
+  stack text;
+BEGIN
+  GET DIAGNOSTICS stack = PG_CONTEXT;
+  RAISE NOTICE E'--- Стек вызова ---\n%', stack;
+  RETURN 1;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT outer_func();
+
+NOTICE:  --- Стек вызова ---
+PL/pgSQL function inner_func() line 5 at GET DIAGNOSTICS
+PL/pgSQL function outer_func() line 3 at RETURN
+CONTEXT:  PL/pgSQL function outer_func() line 3 at RETURN
+ outer_func
+ ------------
+           1
+(1 row)</pre><p><code class="literal">GET STACKED DIAGNOSTICS ... PG_EXCEPTION_CONTEXT</code> возвращает похожий стек вызовов, но описывает не текущее место, а место, в котором произошла ошибка.</p></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="plpgsql-statements.html" title="43.5. Основные операторы">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="plpgsql.html" title="Глава 43. PL/pgSQL — процедурный язык SQL">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="plpgsql-cursors.html" title="43.7. Курсоры">След.</a></td></tr><tr><td width="40%" align="left" valign="top">43.5. Основные операторы </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 43.7. Курсоры</td></tr></table></div></body></html>

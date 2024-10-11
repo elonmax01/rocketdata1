@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>34.14. Система событий</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="libpq-notice-processing.html" title="34.13. Обработка замечаний" /><link rel="next" href="libpq-envars.html" title="34.15. Переменные окружения" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">34.14. Система событий</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="libpq-notice-processing.html" title="34.13. Обработка замечаний">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="libpq.html" title="Глава 34. libpq — библиотека для языка C">Наверх</a></td><th width="60%" align="center">Глава 34. <span class="application">libpq</span> — библиотека для языка C</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="libpq-envars.html" title="34.15. Переменные окружения">След.</a></td></tr></table><hr /></div><div class="sect1" id="LIBPQ-EVENTS"><div class="titlepage"><div><div><h2 class="title" style="clear: both">34.14. Система событий <a href="#LIBPQ-EVENTS" class="id_link">#</a></h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="libpq-events.html#LIBPQ-EVENTS-TYPES">34.14.1. Типы событий</a></span></dt><dt><span class="sect2"><a href="libpq-events.html#LIBPQ-EVENTS-PROC">34.14.2. Процедура обработки событий</a></span></dt><dt><span class="sect2"><a href="libpq-events.html#LIBPQ-EVENTS-FUNCS">34.14.3. Функции поддержки событий</a></span></dt><dt><span class="sect2"><a href="libpq-events.html#LIBPQ-EVENTS-EXAMPLE">34.14.4. Пример обработки событий</a></span></dt></dl></div><p>Система событий <span class="application">libpq</span> разработана для уведомления функций-обработчиков об интересных событиях <span class="application">libpq</span>, например, о создании и уничтожении объектов <code class="structname">PGconn</code> и <code class="structname">PGresult</code>. Основное их предназначение в том, чтобы позволить приложениям связать собственные данные с объектами <code class="structname">PGconn</code> и <code class="structname">PGresult</code> и обеспечить их освобождение в нужное время.</p><p>Каждый зарегистрированный обработчик событий связывается с двумя элементами данных, которые известны <span class="application">libpq</span> только как скрытые указатели <code class="literal">void *</code>. Первый <em class="firstterm">сквозной</em> указатель передаётся приложением, когда обработчик событий регистрируется в <code class="structname">PGconn</code>. Этот указатель никогда не меняется на протяжении жизни <code class="structname">PGconn</code> и все объекты <code class="structname">PGresult</code> создаются с ним; поэтому, если он используется, он должен указывать на долгоживущие данные. В дополнение к нему имеется указатель <em class="firstterm">данных экземпляра</em>, который изначально равен <code class="symbol">NULL</code> во всех объектах <code class="structname">PGconn</code> и <code class="structname">PGresult</code>. Этим указателем можно управлять с помощью функций <a class="xref" href="libpq-events.html#LIBPQ-PQINSTANCEDATA"><code class="function">PQinstanceData</code></a>, <a class="xref" href="libpq-events.html#LIBPQ-PQSETINSTANCEDATA"><code class="function">PQsetInstanceData</code></a>, <a class="xref" href="libpq-events.html#LIBPQ-PQRESULTINSTANCEDATA"><code class="function">PQresultInstanceData</code></a> и <a class="xref" href="libpq-events.html#LIBPQ-PQRESULTSETINSTANCEDATA"><code class="function">PQresultSetInstanceData</code></a>. Заметьте, что в отличие от сквозного указателя, данные экземпляра <code class="structname">PGconn</code> автоматически не наследуются объектами <code class="structname">PGresult</code>, создаваемыми из него. Библиотека <span class="application">libpq</span> не знает, на что указывают сквозной указатель и указатель данных экземпляра (если они ненулевые), и никогда не будет пытаться освобождать их — за это отвечает обработчик событий.</p><div class="sect2" id="LIBPQ-EVENTS-TYPES"><div class="titlepage"><div><div><h3 class="title">34.14.1. Типы событий <a href="#LIBPQ-EVENTS-TYPES" class="id_link">#</a></h3></div></div></div><p>Перечисление <code class="literal">PGEventId</code> описывает типы событий, обрабатываемых системой событий. Имена всех их значений начинаются с <code class="literal">PGEVT</code>. Для каждого типа событий имеется соответствующая структура информации о событии, содержащая параметры, передаваемые обработчикам событий. Определены следующие типы событий:</p><div class="variablelist"><dl class="variablelist"><dt id="LIBPQ-PGEVT-REGISTER"><span class="term"><code class="literal">PGEVT_REGISTER</code></span> <a href="#LIBPQ-PGEVT-REGISTER" class="id_link">#</a></dt><dd><p>Событие регистрации происходит, когда вызывается <a class="xref" href="libpq-events.html#LIBPQ-PQREGISTEREVENTPROC"><code class="function">PQregisterEventProc</code></a>. Это подходящий момент для инициализации данных экземпляра (<code class="literal">instanceData</code>), которые могут понадобиться процедуре событий. Для каждого обработчика событий в рамках соединения будет выдаваться только одно событие регистрации. Если обработка события завершается ошибкой (возвращается ноль), регистрация отменяется. </p><pre class="synopsis">
+typedef struct
+{
+    PGconn *conn;
+} PGEventRegister;
+</pre><p> При поступлении события <code class="literal">PGEVT_REGISTER</code> указатель <em class="parameter"><code>evtInfo</code></em> следует привести к <code class="structname">PGEventRegister *</code>. Эта структура содержит объект <code class="structname">PGconn</code>, который должен быть в состоянии <code class="literal">CONNECTION_OK</code>; это гарантируется, если <a class="xref" href="libpq-events.html#LIBPQ-PQREGISTEREVENTPROC"><code class="function">PQregisterEventProc</code></a> вызывается сразу после получения рабочего объекта <code class="structname">PGconn</code>. В случае выдачи кода ошибки всю очистку необходимо провести самостоятельно, так как событие <code class="literal">PGEVT_CONNDESTROY</code> не поступит.</p></dd><dt id="LIBPQ-PGEVT-CONNRESET"><span class="term"><code class="literal">PGEVT_CONNRESET</code></span> <a href="#LIBPQ-PGEVT-CONNRESET" class="id_link">#</a></dt><dd><p>Событие сброса соединения происходит при завершении <a class="xref" href="libpq-connect.html#LIBPQ-PQRESET"><code class="function">PQreset</code></a> или <code class="function">PQresetPoll</code>. В обоих случаях это событие вызывается, только если сброс был успешным. Значение, возвращаемое процедурой события, в <span class="productname">PostgreSQL</span> v15 и более поздних версиях игнорируется. Однако с более ранними версиями важно возвращать успешный результат (отличный от нуля), иначе соединение будет прервано. </p><pre class="synopsis">
+typedef struct
+{
+    PGconn *conn;
+} PGEventConnReset;
+</pre><p> При поступлении события <code class="literal">PGEVT_CONNRESET</code> указатель <em class="parameter"><code>evtInfo</code></em> следует привести к <code class="structname">PGEventConnReset *</code>. Хотя переданный объект <code class="structname">PGconn</code> был только что сброшен, все данные события остаются неизменными. При поступлении этого события должны быть сброшены/перезагружены/вновь запрошены все сопутствующие данные <code class="literal">instanceData</code>. Заметьте, что даже если обработчик события выдаст ошибку при обработке <code class="literal">PGEVT_CONNRESET</code>, событие <code class="literal">PGEVT_CONNDESTROY</code> всё равно поступит при закрытии соединения.</p></dd><dt id="LIBPQ-PGEVT-CONNDESTROY"><span class="term"><code class="literal">PGEVT_CONNDESTROY</code></span> <a href="#LIBPQ-PGEVT-CONNDESTROY" class="id_link">#</a></dt><dd><p>Событие уничтожения соединения вызывается в ответ на вызов <a class="xref" href="libpq-connect.html#LIBPQ-PQFINISH"><code class="function">PQfinish</code></a>. Обработчик этого события отвечает за корректную очистку своих данных событий, так как libpq не может управлять его памятью. Невыполнение очистки должным образом приведёт к утечкам памяти. </p><pre class="synopsis">
+typedef struct
+{
+    PGconn *conn;
+} PGEventConnDestroy;
+</pre><p> При поступлении события <code class="literal">PGEVT_CONNDESTROY</code> указатель <em class="parameter"><code>evtInfo</code></em> следует привести к <code class="structname">PGEventConnDestroy *</code>. Это событие происходит перед тем, как <a class="xref" href="libpq-connect.html#LIBPQ-PQFINISH"><code class="function">PQfinish</code></a> производит всю остальную очистку. Значение, возвращаемое обработчиком событий, игнорируется, так как из <a class="xref" href="libpq-connect.html#LIBPQ-PQFINISH"><code class="function">PQfinish</code></a> никак нельзя сообщить об ошибке. Кроме того, ошибка в обработчике событий не должна прерывать процесс очистки ставшей ненужной памяти.</p></dd><dt id="LIBPQ-PGEVT-RESULTCREATE"><span class="term"><code class="literal">PGEVT_RESULTCREATE</code></span> <a href="#LIBPQ-PGEVT-RESULTCREATE" class="id_link">#</a></dt><dd><p>Событие создания объекта результата происходит при завершении любой функции, выполняющей запрос и получающей результат, включая <a class="xref" href="libpq-async.html#LIBPQ-PQGETRESULT"><code class="function">PQgetResult</code></a>. Это событие происходит только после того, как результат был успешно создан. </p><pre class="synopsis">
+typedef struct
+{
+    PGconn *conn;
+    PGresult *result;
+} PGEventResultCreate;
+</pre><p> При поступлении события <code class="literal">PGEVT_RESULTCREATE</code> указатель <em class="parameter"><code>evtInfo</code></em> следует привести к <code class="structname">PGEventResultCreate *</code>. В <em class="parameter"><code>conn</code></em> передаётся соединение, для которого сформирован результат. Это подходящее место для инициализации любых данных <code class="literal">instanceData</code>, которые нужно связать с результатом. Если процедура события завершится ошибкой (возвратит ноль), она будет игнорироваться для данного результата, пока он будет существовать; то есть эта процедура не будет получать события <code class="literal">PGEVT_RESULTCOPY</code> и <code class="literal">PGEVT_RESULTDESTROY</code> для него и для результатов, скопированных из него.</p></dd><dt id="LIBPQ-PGEVT-RESULTCOPY"><span class="term"><code class="literal">PGEVT_RESULTCOPY</code></span> <a href="#LIBPQ-PGEVT-RESULTCOPY" class="id_link">#</a></dt><dd><p>Событие копирования объекта результата происходит при выполнении функции <a class="xref" href="libpq-misc.html#LIBPQ-PQCOPYRESULT"><code class="function">PQcopyResult</code></a>. Это событие происходит только после завершения копирования. Только те процедуры событий, которые успешно обработали событие <code class="literal">PGEVT_RESULTCREATE</code> или <code class="literal">PGEVT_RESULTCOPY</code> для исходного результата, получат событие <code class="literal">PGEVT_RESULTCOPY</code>. </p><pre class="synopsis">
+typedef struct
+{
+    const PGresult *src;
+    PGresult *dest;
+} PGEventResultCopy;
+</pre><p> При поступлении события <code class="literal">PGEVT_RESULTCOPY</code> указатель <em class="parameter"><code>evtInfo</code></em> следует привести к <code class="structname">PGEventResultCopy *</code>. Поле <em class="parameter"><code>src</code></em> указывает на объект результата, который копируется, а <em class="parameter"><code>dest</code></em> — на целевой объект. Это событие может применяться для реализации внутреннего копирования <code class="literal">instanceData</code>, так как сама функция <code class="literal">PQcopyResult</code> не может это сделать. Если процедура события завершится ошибкой (возвратит ноль), она будет игнорироваться для данного результата, пока он будет существовать; то есть эта процедура не будет получать события <code class="literal">PGEVT_RESULTCOPY</code> или <code class="literal">PGEVT_RESULTDESTROY</code> для него или для результатов, скопированных из него.</p></dd><dt id="LIBPQ-PGEVT-RESULTDESTROY"><span class="term"><code class="literal">PGEVT_RESULTDESTROY</code></span> <a href="#LIBPQ-PGEVT-RESULTDESTROY" class="id_link">#</a></dt><dd><p>Событие уничтожения объекта результата происходит при выполнении <a class="xref" href="libpq-exec.html#LIBPQ-PQCLEAR"><code class="function">PQclear</code></a>. Обработчик этого события отвечает за корректную очистку своих данных событий, так как libpq не может управлять его памятью. Невыполнение очистки должным образом приведёт к утечкам памяти. </p><pre class="synopsis">
+typedef struct
+{
+    PGresult *result;
+} PGEventResultDestroy;
+</pre><p> При поступлении события <code class="literal">PGEVT_RESULTDESTROY</code> указатель <em class="parameter"><code>evtInfo</code></em> следует привести к <code class="structname">PGEventResultDestroy *</code>. Это событие происходит перед тем, как <a class="xref" href="libpq-exec.html#LIBPQ-PQCLEAR"><code class="function">PQclear</code></a> производит всю остальную очистку. Значение, возвращаемое обработчиком событий, игнорируется, так как из <a class="xref" href="libpq-exec.html#LIBPQ-PQCLEAR"><code class="function">PQclear</code></a> никак нельзя сообщить об ошибке. Кроме того, ошибка в обработчике событий не должна прерывать процесс очистки ставшей ненужной памяти.</p></dd></dl></div></div><div class="sect2" id="LIBPQ-EVENTS-PROC"><div class="titlepage"><div><div><h3 class="title">34.14.2. Процедура обработки событий <a href="#LIBPQ-EVENTS-PROC" class="id_link">#</a></h3></div></div></div><div class="variablelist"><dl class="variablelist"><dt id="LIBPQ-PGEVENTPROC"><span class="term"><code class="literal">PGEventProc</code><a id="id-1.7.3.21.5.2.1.1.2" class="indexterm"></a></span> <a href="#LIBPQ-PGEVENTPROC" class="id_link">#</a></dt><dd><p><code class="literal">PGEventProc</code> — это определение типа для указателя на обработчик событий, то есть функцию обратного вызова, получающую события от libpq. Обработчик событий должен иметь такую сигнатуру: </p><pre class="synopsis">
+int eventproc(PGEventId evtId, void *evtInfo, void *passThrough)
+</pre><p> Параметр <em class="parameter"><code>evtId</code></em> говорит, какое событие <code class="literal">PGEVT</code> произошло. Указатель <em class="parameter"><code>evtInfo</code></em> должен приводиться к типу определённой структуры для получения дополнительной информации о событии. В параметре <em class="parameter"><code>passThrough</code></em> передаётся сквозной указатель, поступивший в <a class="xref" href="libpq-events.html#LIBPQ-PQREGISTEREVENTPROC"><code class="function">PQregisterEventProc</code></a> при регистрации обработчика события. Эта функция должна вернуть ненулевое значение в случае успеха или ноль в противном случае.</p><p>Обработчик определённого события может быть зарегистрирован в любом <code class="structname">PGconn</code> только раз. Это связано с тем, что адрес обработчика используется как ключ для выбора связанных данных экземпляра.</p><div class="caution"><h3 class="title">Внимание</h3><p>В Windows функции могут иметь два разных адреса: один, видимый снаружи DLL, и второй, видимый внутри DLL. Учитывая это, надо позаботиться о том, чтобы только один из адресов использовался с функциями обработки событий <span class="application">libpq</span>, иначе возникнет путаница. Самый простой способ написать код, который будет работать — всегда помечать обработчик событий как <code class="literal">static</code>. Если адрес обработчика нужно получить вне его исходного файла, экспортируйте отдельную функцию, которая будет возвращать этот адрес.</p></div></dd></dl></div></div><div class="sect2" id="LIBPQ-EVENTS-FUNCS"><div class="titlepage"><div><div><h3 class="title">34.14.3. Функции поддержки событий <a href="#LIBPQ-EVENTS-FUNCS" class="id_link">#</a></h3></div></div></div><div class="variablelist"><dl class="variablelist"><dt id="LIBPQ-PQREGISTEREVENTPROC"><span class="term"><code class="function">PQregisterEventProc</code><a id="id-1.7.3.21.6.2.1.1.2" class="indexterm"></a></span> <a href="#LIBPQ-PQREGISTEREVENTPROC" class="id_link">#</a></dt><dd><p>Регистрирует обработчик событий в libpq. </p><pre class="synopsis">
+int PQregisterEventProc(PGconn *conn, PGEventProc proc,
+                        const char *name, void *passThrough);
+</pre><p>Обработчик событий должен быть зарегистрирован один раз для каждого соединения <code class="structname">PGconn</code>, события которого представляют интерес. Число обработчиков событий, которые можно зарегистрировать для соединения, не ограничивается ничем, кроме объёма памяти. Эта функция возвращает ненулевое значение в случае успеха или ноль в противном случае.</p><p>Процедура, переданная в аргументе <em class="parameter"><code>proc</code></em>, будет вызываться, когда произойдёт событие libpq. Её адрес в памяти также применяется для поиска данных <code class="literal">instanceData</code>. Аргумент <em class="parameter"><code>name</code></em> используется при упоминании обработчика событий в сообщениях об ошибках. Это значение не может быть равно <code class="symbol">NULL</code> или указывать на строку нулевой длины. Эта строка имени копируется в <code class="structname">PGconn</code>, так что переданная строка может быть временной. Сквозной указатель (<em class="parameter"><code>passThrough</code></em>) будет передаваться обработчику <em class="parameter"><code>proc</code></em> при каждом вызове события. Этот аргумент может равняться <code class="symbol">NULL</code>.</p></dd><dt id="LIBPQ-PQSETINSTANCEDATA"><span class="term"><code class="function">PQsetInstanceData</code><a id="id-1.7.3.21.6.2.2.1.2" class="indexterm"></a></span> <a href="#LIBPQ-PQSETINSTANCEDATA" class="id_link">#</a></dt><dd><p>Устанавливает для подключения <em class="parameter"><code>conn</code></em> указатель <code class="literal">instanceData</code> для обработчика <em class="parameter"><code>proc</code></em> равным <em class="parameter"><code>data</code></em>. Эта функция возвращает ненулевое значение в случае успеха или ноль в противном случае. (Ошибка возможна, только если обработчик <em class="parameter"><code>proc</code></em> не был корректно зарегистрирован для соединения <em class="parameter"><code>conn</code></em>.) </p><pre class="synopsis">
+int PQsetInstanceData(PGconn *conn, PGEventProc proc, void *data);
+</pre></dd><dt id="LIBPQ-PQINSTANCEDATA"><span class="term"><code class="function">PQinstanceData</code><a id="id-1.7.3.21.6.2.3.1.2" class="indexterm"></a></span> <a href="#LIBPQ-PQINSTANCEDATA" class="id_link">#</a></dt><dd><p>Возвращает для соединения <em class="parameter"><code>conn</code></em> указатель на <code class="literal">instanceData</code>, связанный с обработчиком <em class="parameter"><code>proc</code></em>, либо <code class="symbol">NULL</code>, если такого обработчика нет. </p><pre class="synopsis">
+void *PQinstanceData(const PGconn *conn, PGEventProc proc);
+</pre></dd><dt id="LIBPQ-PQRESULTSETINSTANCEDATA"><span class="term"><code class="function">PQresultSetInstanceData</code><a id="id-1.7.3.21.6.2.4.1.2" class="indexterm"></a></span> <a href="#LIBPQ-PQRESULTSETINSTANCEDATA" class="id_link">#</a></dt><dd><p>Устанавливает для объекта результата (<em class="parameter"><code>res</code></em>) указатель <code class="literal">instanceData</code> для обработчика <em class="parameter"><code>proc</code></em> равным <em class="parameter"><code>data</code></em>. Эта функция возвращает ненулевое значение в случае успеха или ноль в противном случае. (Ошибка возможна, только если обработчик <em class="parameter"><code>proc</code></em> не был корректно зарегистрирован для объекта результата.) </p><pre class="synopsis">
+int PQresultSetInstanceData(PGresult *res, PGEventProc proc, void *data);
+</pre><p>Имейте в виду, что память, представленная параметром <em class="parameter"><code>data</code></em>, не будет учитываться в <a class="xref" href="libpq-misc.html#LIBPQ-PQRESULTMEMORYSIZE"><code class="function">PQresultMemorySize</code></a>, если только она не была выделена функцией <a class="xref" href="libpq-misc.html#LIBPQ-PQRESULTALLOC"><code class="function">PQresultAlloc</code></a>. (Этой функцией рекомендуется пользоваться, так как это избавляет от необходимости явно освобождать память после уничтожения результата.)</p></dd><dt id="LIBPQ-PQRESULTINSTANCEDATA"><span class="term"><code class="function">PQresultInstanceData</code><a id="id-1.7.3.21.6.2.5.1.2" class="indexterm"></a></span> <a href="#LIBPQ-PQRESULTINSTANCEDATA" class="id_link">#</a></dt><dd><p>Возвращает для объекта результата (<em class="parameter"><code>res</code></em>) указатель на <code class="literal">instanceData</code>, связанный с обработчиком <em class="parameter"><code>proc</code></em>, либо <code class="symbol">NULL</code>, если такого обработчика нет. </p><pre class="synopsis">
+void *PQresultInstanceData(const PGresult *res, PGEventProc proc);
+</pre></dd></dl></div></div><div class="sect2" id="LIBPQ-EVENTS-EXAMPLE"><div class="titlepage"><div><div><h3 class="title">34.14.4. Пример обработки событий <a href="#LIBPQ-EVENTS-EXAMPLE" class="id_link">#</a></h3></div></div></div><p>Ниже показан схематичный пример управления внутренними данными, связанными с подключениями и результатами libpq.</p><pre class="programlisting">
+
+/* required header for libpq events (note: includes libpq-fe.h) */
+#include &lt;libpq-events.h&gt;
+
+/* The instanceData */
+typedef struct
+{
+    int n;
+    char *str;
+} mydata;
+
+/* PGEventProc */
+static int myEventProc(PGEventId evtId, void *evtInfo, void *passThrough);
+
+int
+main(void)
+{
+    mydata *data;
+    PGresult *res;
+    PGconn *conn =
+        PQconnectdb("dbname=postgres options=-csearch_path=");
+
+    if (PQstatus(conn) != CONNECTION_OK)
+    {
+        /* PQerrorMessage's result includes a trailing newline */
+        fprintf(stderr, "%s", PQerrorMessage(conn));
+        PQfinish(conn);
+        return 1;
+    }
+
+    /* called once on any connection that should receive events.
+     * Sends a PGEVT_REGISTER to myEventProc.
+     */
+    if (!PQregisterEventProc(conn, myEventProc, "mydata_proc", NULL))
+    {
+        fprintf(stderr, "Cannot register PGEventProc\n");
+        PQfinish(conn);
+        return 1;
+    }
+
+    /* conn instanceData is available */
+    data = PQinstanceData(conn, myEventProc);
+
+    /* Sends a PGEVT_RESULTCREATE to myEventProc */
+    res = PQexec(conn, "SELECT 1 + 1");
+
+    /* result instanceData is available */
+    data = PQresultInstanceData(res, myEventProc);
+
+    /* If PG_COPYRES_EVENTS is used, sends a PGEVT_RESULTCOPY to myEventProc */
+    res_copy = PQcopyResult(res, PG_COPYRES_TUPLES | PG_COPYRES_EVENTS);
+
+    /* result instanceData is available if PG_COPYRES_EVENTS was
+     * used during the PQcopyResult call.
+     */
+    data = PQresultInstanceData(res_copy, myEventProc);
+
+    /* Both clears send a PGEVT_RESULTDESTROY to myEventProc */
+    PQclear(res);
+    PQclear(res_copy);
+
+    /* Sends a PGEVT_CONNDESTROY to myEventProc */
+    PQfinish(conn);
+
+    return 0;
+}
+
+static int
+myEventProc(PGEventId evtId, void *evtInfo, void *passThrough)
+{
+    switch (evtId)
+    {
+        case PGEVT_REGISTER:
+        {
+            PGEventRegister *e = (PGEventRegister *)evtInfo;
+            mydata *data = get_mydata(e-&gt;conn);
+
+            /* associate app specific data with connection */
+            PQsetInstanceData(e-&gt;conn, myEventProc, data);
+            break;
+        }
+
+        case PGEVT_CONNRESET:
+        {
+            PGEventConnReset *e = (PGEventConnReset *)evtInfo;
+            mydata *data = PQinstanceData(e-&gt;conn, myEventProc);
+
+            if (data)
+              memset(data, 0, sizeof(mydata));
+            break;
+        }
+
+        case PGEVT_CONNDESTROY:
+        {
+            PGEventConnDestroy *e = (PGEventConnDestroy *)evtInfo;
+            mydata *data = PQinstanceData(e-&gt;conn, myEventProc);
+
+            /* free instance data because the conn is being destroyed */
+            if (data)
+              free_mydata(data);
+            break;
+        }
+
+        case PGEVT_RESULTCREATE:
+        {
+            PGEventResultCreate *e = (PGEventResultCreate *)evtInfo;
+            mydata *conn_data = PQinstanceData(e-&gt;conn, myEventProc);
+            mydata *res_data = dup_mydata(conn_data);
+
+            /* associate app specific data with result (copy it from conn) */
+            PQresultSetInstanceData(e-&gt;result, myEventProc, res_data);
+            break;
+        }
+
+        case PGEVT_RESULTCOPY:
+        {
+            PGEventResultCopy *e = (PGEventResultCopy *)evtInfo;
+            mydata *src_data = PQresultInstanceData(e-&gt;src, myEventProc);
+            mydata *dest_data = dup_mydata(src_data);
+
+            /* associate app specific data with result (copy it from a result) */
+            PQresultSetInstanceData(e-&gt;dest, myEventProc, dest_data);
+            break;
+        }
+
+        case PGEVT_RESULTDESTROY:
+        {
+            PGEventResultDestroy *e = (PGEventResultDestroy *)evtInfo;
+            mydata *data = PQresultInstanceData(e-&gt;result, myEventProc);
+
+            /* free instance data because the result is being destroyed */
+            if (data)
+              free_mydata(data);
+            break;
+        }
+
+        /* unknown event ID, just return true. */
+        default:
+            break;
+    }
+
+    return true; /* event processing succeeded */
+}
+
+</pre></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="libpq-notice-processing.html" title="34.13. Обработка замечаний">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="libpq.html" title="Глава 34. libpq — библиотека для языка C">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="libpq-envars.html" title="34.15. Переменные окружения">След.</a></td></tr><tr><td width="40%" align="left" valign="top">34.13. Обработка замечаний </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 34.15. Переменные окружения</td></tr></table></div></body></html>

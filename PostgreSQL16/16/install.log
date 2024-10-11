@@ -1,0 +1,22 @@
+Create uninstaller
+Write to register
+Create BAT files
+Create shortcuts
+Create data dir begin
+GRANT Access 
+Database initialization ...
+"C:\projects\testrocketdata\PostgreSQL16\16\bin\initdb.exe"  --pwfile "C:\projects\testrocketdata\PostgreSQL16\16\bin\nsk360.tmp"  -A md5  --encoding=UTF8 -U "postgres" -D "C:\projects\testrocketdata\PostgreSQL16\data" --data-checksums 
+Database initialization OK 
+Create postgresql.conf 
+Service postgresql-16 registration ... 
+"C:\projects\testrocketdata\PostgreSQL16\16\bin\pg_ctl.exe" register -N "postgresql-16" -U "NT AUTHORITY\NetworkService" -D "C:\projects\testrocketdata\PostgreSQL16\data" -w 
+Service registration OK 
+Start server service... 
+sc start "postgresql-16" 
+Start service OK 
+Check connection ... 
+"C:\projects\testrocketdata\PostgreSQL16\16\bin\psql.exe" -p 5432 -U "postgres" -c "SELECT 1;" postgres 
+Checking connection is OK 
+Create adminpack ... 
+"C:\projects\testrocketdata\PostgreSQL16\16\bin\psql.exe" -p 5432 -U "postgres" -c "CREATE EXTENSION adminpack;" postgres 
+Create adminpack OK 

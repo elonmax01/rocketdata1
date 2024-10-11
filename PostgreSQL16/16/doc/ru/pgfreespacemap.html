@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>F.29. pg_freespacemap — просмотр карты свободного пространства</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="pgcrypto.html" title="F.28. pgcrypto — криптографические функции" /><link rel="next" href="pgprewarm.html" title="F.30. pg_prewarm — предварительная загрузка данных отношений в кеш буферов" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">F.29. pg_freespacemap — просмотр карты свободного пространства</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="pgcrypto.html" title="F.28. pgcrypto — криптографические функции">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="contrib.html" title="Приложение F. Дополнительно поставляемые модули и расширения">Наверх</a></td><th width="60%" align="center">Приложение F. Дополнительно поставляемые модули и расширения</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="pgprewarm.html" title="F.30. pg_prewarm — предварительная загрузка данных отношений в кеш буферов">След.</a></td></tr></table><hr /></div><div class="sect1" id="PGFREESPACEMAP"><div class="titlepage"><div><div><h2 class="title" style="clear: both">F.29. pg_freespacemap — просмотр карты свободного пространства <a href="#PGFREESPACEMAP" class="id_link">#</a></h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="pgfreespacemap.html#PGFREESPACEMAP-FUNCS">F.29.1. Функции</a></span></dt><dt><span class="sect2"><a href="pgfreespacemap.html#PGFREESPACEMAP-SAMPLE-OUTPUT">F.29.2. Пример вывода</a></span></dt><dt><span class="sect2"><a href="pgfreespacemap.html#PGFREESPACEMAP-AUTHOR">F.29.3. Автор</a></span></dt></dl></div><a id="id-1.11.7.39.2" class="indexterm"></a><p>Модуль <code class="filename">pg_freespacemap</code> предоставляет средства для исследования <a class="link" href="storage-fsm.html" title="73.3. Карта свободного пространства">карты свободного пространства</a> (<acronym class="acronym">FSM</acronym>). В нём реализована функция <code class="function">pg_freespace</code>, точнее, две перегруженных функции. Эти функции показывают значение, записанное в карте свободного пространства для данной страницы, либо для всех страниц отношения.</p><p>По умолчанию его использование разрешено только суперпользователям и ролям с правами роли <code class="literal">pg_stat_scan_tables</code>. Дать доступ другим можно с помощью <code class="command">GRANT</code>.</p><div class="sect2" id="PGFREESPACEMAP-FUNCS"><div class="titlepage"><div><div><h3 class="title">F.29.1. Функции <a href="#PGFREESPACEMAP-FUNCS" class="id_link">#</a></h3></div></div></div><div class="variablelist"><dl class="variablelist"><dt><span class="term">
+     <code class="function">pg_freespace(rel regclass IN, blkno bigint IN) returns int2</code>
+     <a id="id-1.11.7.39.5.2.1.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Возвращает объём свободного пространства на странице для отношения, заданного параметром <code class="literal">blkno</code>, согласно <acronym class="acronym">FSM</acronym>.</p></dd><dt><span class="term">
+     <code class="function">pg_freespace(rel regclass IN, blkno OUT bigint, avail OUT int2)</code>
+    </span></dt><dd><p>Выдаёт объём свободного пространства на каждой странице отношения, согласно <acronym class="acronym">FSM</acronym>. Возвращается набор кортежей <code class="literal">(blkno bigint, avail int2)</code>, по одному кортежу для каждой страницы в отношении.</p></dd></dl></div><p>Значения, хранимые в карте свободного пространства, не являются точными. Они округляются до 1/256 величины <code class="symbol">BLCKSZ</code> (до 32 байт со значением <code class="symbol">BLCKSZ</code> по умолчанию) и не поддерживаются в актуальном состоянии при каждом добавлении и изменении кортежей.</p><p>Для индексов отслеживаются полностью неиспользованные страницы, а не свободное пространство в страницах. Таким образом, эти значения отражают только то, что страница занята или свободна.</p></div><div class="sect2" id="PGFREESPACEMAP-SAMPLE-OUTPUT"><div class="titlepage"><div><div><h3 class="title">F.29.2. Пример вывода <a href="#PGFREESPACEMAP-SAMPLE-OUTPUT" class="id_link">#</a></h3></div></div></div><pre class="screen">postgres=# SELECT * FROM pg_freespace('foo');
+ blkno | avail
+-------+-------
+     0 |     0
+     1 |     0
+     2 |     0
+     3 |    32
+     4 |   704
+     5 |   704
+     6 |   704
+     7 |  1216
+     8 |   704
+     9 |   704
+    10 |   704
+    11 |   704
+    12 |   704
+    13 |   704
+    14 |   704
+    15 |   704
+    16 |   704
+    17 |   704
+    18 |   704
+    19 |  3648
+(20 rows)
+
+postgres=# SELECT * FROM pg_freespace('foo', 7);
+ pg_freespace
+--------------
+         1216
+(1 row)</pre></div><div class="sect2" id="PGFREESPACEMAP-AUTHOR"><div class="titlepage"><div><div><h3 class="title">F.29.3. Автор <a href="#PGFREESPACEMAP-AUTHOR" class="id_link">#</a></h3></div></div></div><p>Исходную версию разработал Марк Кирквуд <code class="email">&lt;<a class="email" href="mailto:markir@paradise.net.nz">markir@paradise.net.nz</a>&gt;</code>. Для версии 8.4 с новой реализацией <acronym class="acronym">FSM</acronym> код адаптировал Хейкки Линнакангас <code class="email">&lt;<a class="email" href="mailto:heikki@enterprisedb.com">heikki@enterprisedb.com</a>&gt;</code></p></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="pgcrypto.html" title="F.28. pgcrypto — криптографические функции">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="contrib.html" title="Приложение F. Дополнительно поставляемые модули и расширения">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="pgprewarm.html" title="F.30. pg_prewarm — предварительная загрузка данных отношений в кеш буферов">След.</a></td></tr><tr><td width="40%" align="left" valign="top">F.28. pgcrypto — криптографические функции </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> F.30. pg_prewarm — предварительная загрузка данных отношений в кеш буферов</td></tr></table></div></body></html>

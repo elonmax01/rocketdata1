@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>ALTER DEFAULT PRIVILEGES</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="sql-alterdatabase.html" title="ALTER DATABASE" /><link rel="next" href="sql-alterdomain.html" title="ALTER DOMAIN" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">ALTER DEFAULT PRIVILEGES</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="sql-alterdatabase.html" title="ALTER DATABASE">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="sql-commands.html" title="Команды SQL">Наверх</a></td><th width="60%" align="center">Команды SQL</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="sql-alterdomain.html" title="ALTER DOMAIN">След.</a></td></tr></table><hr /></div><div class="refentry" id="SQL-ALTERDEFAULTPRIVILEGES"><div class="titlepage"></div><a id="id-1.9.3.8.1" class="indexterm"></a><div class="refnamediv"><h2><span class="refentrytitle">ALTER DEFAULT PRIVILEGES</span></h2><p>ALTER DEFAULT PRIVILEGES — определить права доступа по умолчанию</p></div><div class="refsynopsisdiv"><h2>Синтаксис</h2><pre class="synopsis">ALTER DEFAULT PRIVILEGES
+    [ FOR { ROLE | USER } <em class="replaceable"><code>целевая_роль</code></em> [, ...] ]
+    [ IN SCHEMA <em class="replaceable"><code>имя_схемы</code></em> [, ...] ]
+    <em class="replaceable"><code>предложение_GRANT_или_REVOKE</code></em>
+
+<span class="phrase">Где <em class="replaceable"><code>предложение_GRANT_или_REVOKE</code></em> может быть следующим:</span>
+
+GRANT { { SELECT | INSERT | UPDATE | DELETE | TRUNCATE | REFERENCES | TRIGGER }
+    [, ...] | ALL [ PRIVILEGES ] }
+    ON TABLES
+    TO { [ GROUP ] <em class="replaceable"><code>имя_роли</code></em> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
+
+GRANT { { USAGE | SELECT | UPDATE }
+    [, ...] | ALL [ PRIVILEGES ] }
+    ON SEQUENCES
+    TO { [ GROUP ] <em class="replaceable"><code>имя_роли</code></em> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
+
+GRANT { EXECUTE | ALL [ PRIVILEGES ] }
+    ON { FUNCTIONS | ROUTINES }
+    TO { [ GROUP ] <em class="replaceable"><code>имя_роли</code></em> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
+
+GRANT { USAGE | ALL [ PRIVILEGES ] }
+    ON TYPES
+    TO { [ GROUP ] <em class="replaceable"><code>имя_роли</code></em> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
+
+GRANT { { USAGE | CREATE }
+    [, ...] | ALL [ PRIVILEGES ] }
+    ON SCHEMAS
+    TO { [ GROUP ] <em class="replaceable"><code>имя_роли</code></em> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
+
+REVOKE [ GRANT OPTION FOR ]
+    { { SELECT | INSERT | UPDATE | DELETE | TRUNCATE | REFERENCES | TRIGGER }
+    [, ...] | ALL [ PRIVILEGES ] }
+    ON TABLES
+    FROM { [ GROUP ] <em class="replaceable"><code>имя_роли</code></em> | PUBLIC } [, ...]
+    [ CASCADE | RESTRICT ]
+
+REVOKE [ GRANT OPTION FOR ]
+    { { USAGE | SELECT | UPDATE }
+    [, ...] | ALL [ PRIVILEGES ] }
+    ON SEQUENCES
+    FROM { [ GROUP ] <em class="replaceable"><code>имя_роли</code></em> | PUBLIC } [, ...]
+    [ CASCADE | RESTRICT ]
+
+REVOKE [ GRANT OPTION FOR ]
+    { EXECUTE | ALL [ PRIVILEGES ] }
+    ON { FUNCTIONS | ROUTINES }
+    FROM { [ GROUP ] <em class="replaceable"><code>имя_роли</code></em> | PUBLIC } [, ...]
+    [ CASCADE | RESTRICT ]
+
+REVOKE [ GRANT OPTION FOR ]
+    { USAGE | ALL [ PRIVILEGES ] }
+    ON TYPES
+    FROM { [ GROUP ] <em class="replaceable"><code>имя_роли</code></em> | PUBLIC } [, ...]
+    [ CASCADE | RESTRICT ]
+
+REVOKE [ GRANT OPTION FOR ]
+    { { USAGE | CREATE }
+    [, ...] | ALL [ PRIVILEGES ] }
+    ON SCHEMAS
+    FROM { [ GROUP ] <em class="replaceable"><code>имя_роли</code></em> | PUBLIC } [, ...]
+    [ CASCADE | RESTRICT ]</pre></div><div class="refsect1" id="SQL-ALTERDEFAULTPRIVILEGES-DESCRIPTION"><h2>Описание</h2><p>Команда <code class="command">ALTER DEFAULT PRIVILEGES</code> позволяет задавать права, которые будут применяться к объектам, созданным в будущем. (Она не влияет на права, назначенные уже существующим объектам.) Права могут быть заданы глобально (т. е. для всех объектов, создаваемых в текущей базе данных) или только для объектов, создаваемых в указанных схемах.</p><p>Хотя пользователь может изменять свои права по умолчанию и права по умолчанию для ролей, членом которых он является, на права объекта при создании влияют только права по умолчанию текущей роли, и они не наследуются от любых ролей, в которые включена текущая роль.</p><p>Как объясняется в <a class="xref" href="ddl-priv.html" title="5.7. Права">Разделе 5.7</a>, права по умолчанию для объектов любого типа обычно дают все назначаемые разрешения владельцу объекта, а также могут давать некоторые разрешения роли <code class="literal">PUBLIC</code>. Однако это поведение можно поменять, изменив права по умолчанию командой <code class="command">ALTER DEFAULT PRIVILEGES</code>.</p><p>В настоящее время можно изменять права только для схем, таблиц (включая представления и сторонние таблицы), последовательностей, функций и типов (включая домены). Применительно к данной команде функциями считаются также агрегатные функции и процедуры. Слова <code class="literal">FUNCTIONS</code> и <code class="literal">ROUTINES</code> для неё считаются равнозначными. (<code class="literal">ROUTINES</code> предпочтительнее в перспективе как стандартный термин, охватывающий и функции, и процедуры. В более ранних выпусках PostgreSQL допускалось только слово <code class="literal">FUNCTIONS</code>. Задать права по умолчанию для функций и процедур по отдельности нельзя.)</p><p>Заданные на уровне схемы права по умолчанию добавляются к тем, что определены глобально для конкретного типа объекта. Это означает, что вы не можете отозвать права уровня схемы, если они назначены глобально (либо по умолчанию, либо предыдущей командой <code class="command">ALTER DEFAULT PRIVILEGES</code> без указания схемы). Команда <code class="literal">REVOKE</code> для схемы может быть полезна только для отмены действия предыдущей команды <code class="literal">GRANT</code> для этой же схемы.</p><div class="refsect2" id="id-1.9.3.8.5.7"><h3>Параметры</h3><div class="variablelist"><dl class="variablelist"><dt><span class="term"><em class="replaceable"><code>целевая_роль</code></em></span></dt><dd><p>Изменяются права по умолчанию для объектов, созданных <em class="replaceable"><code>целевой_ролью</code></em> или текущей, если целевая роль не указана.</p></dd><dt><span class="term"><em class="replaceable"><code>имя_схемы</code></em></span></dt><dd><p>Имя существующей схемы. Если указано, права по умолчанию меняются для объектов, которые будут созданы в этой схеме. Если <code class="literal">IN SCHEMA</code> опущено, меняются глобальные права по умолчанию. Указание <code class="literal">IN SCHEMA</code> не допускается при установлении прав для схем, так как схемы не могут быть вложенными.</p></dd><dt><span class="term"><em class="replaceable"><code>имя_роли</code></em></span></dt><dd><p>Имя существующей роли, для которой даются или отзываются права. Этот и все другие параметры в <em class="replaceable"><code>предложении_grant_или_revoke</code></em> действуют как описано в <a class="xref" href="sql-grant.html" title="GRANT"><span class="refentrytitle">GRANT</span></a> или <a class="xref" href="sql-revoke.html" title="REVOKE"><span class="refentrytitle">REVOKE</span></a>, за исключением того, что они распространяются не на один конкретный объект, а на целый класс объектов.</p></dd></dl></div></div></div><div class="refsect1" id="SQL-ALTERDEFAULTPRIVILEGES-NOTES"><h2>Замечания</h2><p>Чтобы узнать текущие назначенные права по умолчанию, воспользуйтесь командой <code class="command">\ddp</code> в <a class="xref" href="app-psql.html" title="psql"><span class="refentrytitle"><span class="application">psql</span></span></a>. Как интерпретировать выводимую ей информацию, рассказывается в описании команды <code class="command">\dp</code> в <a class="xref" href="ddl-priv.html" title="5.7. Права">Разделе 5.7</a>.</p><p>Если вы желаете удалить роль, права по умолчанию для которой были изменены, необходимо явно отменить изменения прав по умолчанию или воспользоваться командой <code class="command">DROP OWNED BY</code> для избавления от назначенных для этой роли прав по умолчанию.</p></div><div class="refsect1" id="SQL-ALTERDEFAULTPRIVILEGES-EXAMPLES"><h2>Примеры</h2><p>Наделение всех правом SELECT для всех таблиц (и представлений), которые будут созданы в дальнейшем в схеме <code class="literal">myschema</code>, и наделение роли <code class="literal">webuser</code> правом INSERT для этих же таблиц: </p><pre class="programlisting">ALTER DEFAULT PRIVILEGES IN SCHEMA myschema GRANT SELECT ON TABLES TO PUBLIC;
+ALTER DEFAULT PRIVILEGES IN SCHEMA myschema GRANT INSERT ON TABLES TO webuser;</pre><p>Отмена предыдущих изменений с тем, чтобы для таблиц, создаваемых в будущем, были определены только обычные права, без дополнительных: </p><pre class="programlisting">ALTER DEFAULT PRIVILEGES IN SCHEMA myschema REVOKE SELECT ON TABLES FROM PUBLIC;
+ALTER DEFAULT PRIVILEGES IN SCHEMA myschema REVOKE INSERT ON TABLES FROM webuser;</pre><p>Лишение роли public права на выполнение (EXECUTE), которое обычно даётся для функций (для всех функций, которые будут созданы ролью <code class="literal">admin</code>): </p><pre class="programlisting">ALTER DEFAULT PRIVILEGES FOR ROLE admin REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;</pre><p> Однако заметьте, что этого же эффекта <span class="emphasis"><em>нельзя</em></span> добиться с помощью команды, ограниченной одной схемой. Эта команда будет действовать, только если ей предшествовала соответствующая команда <code class="literal">GRANT</code>: </p><pre class="programlisting">ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;</pre><p> Это объясняется тем, что на уровне схемы можно только назначить права по умолчанию, которые добавятся к назначенным глобально, но нельзя отозвать последние.</p></div><div class="refsect1" id="id-1.9.3.8.8"><h2>Совместимость</h2><p>Оператор <code class="command">ALTER DEFAULT PRIVILEGES</code> отсутствует в стандарте SQL.</p></div><div class="refsect1" id="id-1.9.3.8.9"><h2>См. также</h2><span class="simplelist"><a class="xref" href="sql-grant.html" title="GRANT"><span class="refentrytitle">GRANT</span></a>, <a class="xref" href="sql-revoke.html" title="REVOKE"><span class="refentrytitle">REVOKE</span></a></span></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="sql-alterdatabase.html" title="ALTER DATABASE">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="sql-commands.html" title="Команды SQL">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="sql-alterdomain.html" title="ALTER DOMAIN">След.</a></td></tr><tr><td width="40%" align="left" valign="top">ALTER DATABASE </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> ALTER DOMAIN</td></tr></table></div></body></html>

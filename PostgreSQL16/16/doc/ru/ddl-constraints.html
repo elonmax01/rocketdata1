@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>5.4. Ограничения</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="ddl-generated-columns.html" title="5.3. Генерируемые столбцы" /><link rel="next" href="ddl-system-columns.html" title="5.5. Системные столбцы" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">5.4. Ограничения</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="ddl-generated-columns.html" title="5.3. Генерируемые столбцы">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="ddl.html" title="Глава 5. Определение данных">Наверх</a></td><th width="60%" align="center">Глава 5. Определение данных</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="ddl-system-columns.html" title="5.5. Системные столбцы">След.</a></td></tr></table><hr /></div><div class="sect1" id="DDL-CONSTRAINTS"><div class="titlepage"><div><div><h2 class="title" style="clear: both">5.4. Ограничения <a href="#DDL-CONSTRAINTS" class="id_link">#</a></h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="ddl-constraints.html#DDL-CONSTRAINTS-CHECK-CONSTRAINTS">5.4.1. Ограничения-проверки</a></span></dt><dt><span class="sect2"><a href="ddl-constraints.html#DDL-CONSTRAINTS-NOT-NULL">5.4.2. Ограничения NOT NULL</a></span></dt><dt><span class="sect2"><a href="ddl-constraints.html#DDL-CONSTRAINTS-UNIQUE-CONSTRAINTS">5.4.3. Ограничения уникальности</a></span></dt><dt><span class="sect2"><a href="ddl-constraints.html#DDL-CONSTRAINTS-PRIMARY-KEYS">5.4.4. Первичные ключи</a></span></dt><dt><span class="sect2"><a href="ddl-constraints.html#DDL-CONSTRAINTS-FK">5.4.5. Внешние ключи</a></span></dt><dt><span class="sect2"><a href="ddl-constraints.html#DDL-CONSTRAINTS-EXCLUSION">5.4.6. Ограничения-исключения</a></span></dt></dl></div><a id="id-1.5.4.6.2" class="indexterm"></a><p>Типы данных сами по себе ограничивают множество данных, которые можно сохранить в таблице. Однако для многих приложений такие ограничения слишком грубые. Например, столбец, содержащий цену продукта, должен, вероятно, принимать только положительные значения. Но такого стандартного типа данных нет. Возможно, вы также захотите ограничить данные столбца по отношению к другим столбцам или строкам. Например, в таблице с информацией о товаре должна быть только одна строка с определённым кодом товара.</p><p>Для решения подобных задач SQL позволяет вам определять ограничения для столбцов и таблиц. Ограничения дают вам возможность управлять данными в таблицах так, как вы захотите. Если пользователь попытается сохранить в столбце значение, нарушающее ограничения, возникнет ошибка. Ограничения будут действовать, даже если это значение по умолчанию.</p><div class="sect2" id="DDL-CONSTRAINTS-CHECK-CONSTRAINTS"><div class="titlepage"><div><div><h3 class="title">5.4.1. Ограничения-проверки <a href="#DDL-CONSTRAINTS-CHECK-CONSTRAINTS" class="id_link">#</a></h3></div></div></div><a id="id-1.5.4.6.5.2" class="indexterm"></a><a id="id-1.5.4.6.5.3" class="indexterm"></a><p>Ограничение-проверка — наиболее общий тип ограничений. В его определении вы можете указать, что значение данного столбца должно удовлетворять логическому выражению (проверке истинности). Например, цену товара можно ограничить положительными значениями так: </p><pre class="programlisting">CREATE TABLE products (
+    product_no integer,
+    name text,
+    price numeric <span class="emphasis"><strong>CHECK (price &gt; 0)</strong></span>
+);</pre><p>Как вы видите, ограничение определяется после типа данных, как и значение по умолчанию. Значения по умолчанию и ограничения могут указываться в любом порядке. Ограничение-проверка состоит из ключевого слова <code class="literal">CHECK</code>, за которым идёт выражение в скобках. Это выражение должно включать столбец, для которого задаётся ограничение, иначе оно не имеет большого смысла.</p><a id="id-1.5.4.6.5.6" class="indexterm"></a><p>Вы можете также присвоить ограничению отдельное имя. Это улучшит сообщения об ошибках и позволит вам ссылаться на это ограничение, когда вам понадобится изменить его. Сделать это можно так: </p><pre class="programlisting">CREATE TABLE products (
+    product_no integer,
+    name text,
+    price numeric <span class="emphasis"><strong>CONSTRAINT positive_price</strong></span> CHECK (price &gt; 0)
+);</pre><p> То есть, чтобы создать именованное ограничение, напишите ключевое слово <code class="literal">CONSTRAINT</code>, а за ним идентификатор и собственно определение ограничения. (Если вы не определите имя ограничения таким образом, система выберет для него имя за вас.)</p><p>Ограничение-проверка может также ссылаться на несколько столбцов. Например, если вы храните обычную цену и цену со скидкой, так вы можете гарантировать, что цена со скидкой будет всегда меньше обычной: </p><pre class="programlisting">CREATE TABLE products (
+    product_no integer,
+    name text,
+    price numeric CHECK (price &gt; 0),
+    discounted_price numeric CHECK (discounted_price &gt; 0),
+    <span class="emphasis"><strong>CHECK (price &gt; discounted_price)</strong></span>
+);</pre><p>Первые два ограничения определяются похожим образом, но для третьего используется новый синтаксис. Оно не связано с определённым столбцом, а представлено отдельным элементом в списке. Определения столбцов и такие определения ограничений можно переставлять в произвольном порядке.</p><p>Про первые два ограничения можно сказать, что это ограничения столбцов, тогда как третье является ограничением таблицы, так как оно написано отдельно от определений столбцов. Ограничения столбцов также можно записать в виде ограничений таблицы, тогда как обратное не всегда возможно, так как подразумевается, что ограничение столбца ссылается только на связанный столбец. (Хотя <span class="productname">PostgreSQL</span> этого не требует, но для совместимости с другими СУБД лучше следовать это правилу.) Ранее приведённый пример можно переписать и так: </p><pre class="programlisting">CREATE TABLE products (
+    product_no integer,
+    name text,
+    price numeric,
+    CHECK (price &gt; 0),
+    discounted_price numeric,
+    CHECK (discounted_price &gt; 0),
+    CHECK (price &gt; discounted_price)
+);</pre><p> Или даже так: </p><pre class="programlisting">CREATE TABLE products (
+    product_no integer,
+    name text,
+    price numeric CHECK (price &gt; 0),
+    discounted_price numeric,
+    CHECK (discounted_price &gt; 0 AND price &gt; discounted_price)
+);</pre><p> Это дело вкуса.</p><p>Ограничениям таблицы можно присваивать имена так же, как и ограничениям столбцов: </p><pre class="programlisting">CREATE TABLE products (
+    product_no integer,
+    name text,
+    price numeric,
+    CHECK (price &gt; 0),
+    discounted_price numeric,
+    CHECK (discounted_price &gt; 0),
+    <span class="emphasis"><strong>CONSTRAINT valid_discount</strong></span> CHECK (price &gt; discounted_price)
+);</pre><a id="id-1.5.4.6.5.12" class="indexterm"></a><p>Следует заметить, что ограничение-проверка удовлетворяется, если выражение принимает значение true или NULL. Так как результатом многих выражений с операндами NULL будет значение NULL, такие ограничения не будут препятствовать записи NULL в связанные столбцы. Чтобы гарантировать, что столбец не содержит значения NULL, можно использовать ограничение NOT NULL, описанное в следующем разделе.</p><div class="note"><h3 class="title">Примечание</h3><p><span class="productname">PostgreSQL</span> не поддерживает ограничения <code class="literal">CHECK</code>, которые обращаются к данным, не относящимся к новой или изменённой строке. Хотя ограничение <code class="literal">CHECK</code>, нарушающее это правило, может работать в простых случаях, в общем случае нельзя гарантировать, что база данных не придёт в состояние, когда условие ограничения окажется ложным (вследствие последующих изменений других участвующих в его вычислении строк). В результате восстановление выгруженных данных может оказаться невозможным. Во время восстановления возможен сбой, даже если полное состояние базы данных согласуется с условием ограничения, по причине того, что строки загружаются не в том порядке, в котором это условие будет соблюдаться. Поэтому для определения ограничений, затрагивающих другие строки и другие таблицы, используйте ограничения <code class="literal">UNIQUE</code>, <code class="literal">EXCLUDE</code> или <code class="literal">FOREIGN KEY</code>, если это возможно.</p><p>Если вам не нужна постоянно поддерживаемая гарантия целостности, а достаточно разовой проверки добавляемой строки по отношению к другим строкам, вы можете реализовать эту проверку в собственном <a class="link" href="triggers.html" title="Глава 39. Триггеры">триггере</a>. (Этот подход исключает вышеописанные проблемы при восстановлении, так как в выгрузке <span class="application">pg_dump</span> триггеры воссоздаются после восстановления данных, и поэтому эта проверка не будет действовать в процессе выгрузки/восстановления.)</p></div><div class="note"><h3 class="title">Примечание</h3><p>В <span class="productname">PostgreSQL</span> предполагается, что условия ограничений <code class="literal">CHECK</code> являются постоянными, то есть при одинаковых данных в строке они всегда выдают одинаковый результат. Именно этим предположением оправдывается то, что ограничения <code class="literal">CHECK</code> проверяются только при добавлении или изменении строк, а не при каждом обращении к ним. (Приведённое выше предупреждение о недопустимости обращений к другим таблицам является частным следствием этого предположения.)</p><p>Однако это предположение может нарушаться, как часто бывает, когда в выражении <code class="literal">CHECK</code> используется пользовательская функция, поведение которой впоследствии меняется. <span class="productname">PostgreSQL</span> не запрещает этого, и если строки в таблице перестанут удовлетворять ограничению <code class="literal">CHECK</code>, это останется незамеченным. В итоге при попытке загрузить выгруженные позже данные могут возникнуть проблемы. Поэтому подобные изменения рекомендуется осуществлять следующим образом: удалить ограничение (используя <code class="command">ALTER TABLE</code>), изменить определение функции, а затем пересоздать ограничение той же командой, которая при этом перепроверит все строки таблицы.</p></div></div><div class="sect2" id="DDL-CONSTRAINTS-NOT-NULL"><div class="titlepage"><div><div><h3 class="title">5.4.2. Ограничения NOT NULL <a href="#DDL-CONSTRAINTS-NOT-NULL" class="id_link">#</a></h3></div></div></div><a id="id-1.5.4.6.6.2" class="indexterm"></a><a id="id-1.5.4.6.6.3" class="indexterm"></a><p>Ограничение NOT NULL просто указывает, что столбцу нельзя присваивать значение NULL. Пример синтаксиса: </p><pre class="programlisting">CREATE TABLE products (
+    product_no integer <span class="emphasis"><strong>NOT NULL</strong></span>,
+    name text <span class="emphasis"><strong>NOT NULL</strong></span>,
+    price numeric
+);</pre><p>Ограничение NOT NULL всегда записывается как ограничение столбца и функционально эквивалентно ограничению <code class="literal">CHECK (<em class="replaceable"><code>имя_столбца</code></em> IS NOT NULL)</code>, но в <span class="productname">PostgreSQL</span> явное ограничение NOT NULL работает более эффективно. Хотя у такой записи есть недостаток — назначить имя таким ограничениям нельзя.</p><p>Естественно, для столбца можно определить больше одного ограничения. Для этого их нужно просто указать одно за другим: </p><pre class="programlisting">CREATE TABLE products (
+    product_no integer NOT NULL,
+    name text NOT NULL,
+    price numeric NOT NULL CHECK (price &gt; 0)
+);</pre><p> Порядок здесь не имеет значения, он не обязательно соответствует порядку проверки ограничений.</p><p>Для ограничения <code class="literal">NOT NULL</code> есть и обратное: ограничение <code class="literal">NULL</code>. Оно не означает, что столбец должен иметь только значение NULL, что конечно было бы бессмысленно. Суть же его в простом указании, что столбец может иметь значение NULL (это поведение по умолчанию). Ограничение <code class="literal">NULL</code> отсутствует в стандарте SQL и использовать его в переносимых приложениях не следует. (Оно было добавлено в <span class="productname">PostgreSQL</span> только для совместимости с некоторыми другими СУБД.) Однако некоторые пользователи любят его использовать, так как оно позволяет легко переключать ограничения в скрипте. Например, вы можете начать с: </p><pre class="programlisting">CREATE TABLE products (
+    product_no integer NULL,
+    name text NULL,
+    price numeric NULL
+);</pre><p> и затем вставить ключевое слово <code class="literal">NOT</code>, где потребуется.</p><div class="tip"><h3 class="title">Подсказка</h3><p>При проектировании баз данных чаще всего большинство столбцов должны быть помечены как NOT NULL.</p></div></div><div class="sect2" id="DDL-CONSTRAINTS-UNIQUE-CONSTRAINTS"><div class="titlepage"><div><div><h3 class="title">5.4.3. Ограничения уникальности <a href="#DDL-CONSTRAINTS-UNIQUE-CONSTRAINTS" class="id_link">#</a></h3></div></div></div><a id="id-1.5.4.6.7.2" class="indexterm"></a><a id="id-1.5.4.6.7.3" class="indexterm"></a><p>Ограничения уникальности гарантируют, что данные в определённом столбце или группе столбцов уникальны среди всех строк таблицы. Ограничение записывается так: </p><pre class="programlisting">CREATE TABLE products (
+    product_no integer <span class="emphasis"><strong>UNIQUE</strong></span>,
+    name text,
+    price numeric
+);</pre><p> в виде ограничения столбца и так: </p><pre class="programlisting">CREATE TABLE products (
+    product_no integer,
+    name text,
+    price numeric,
+    <span class="emphasis"><strong>UNIQUE (product_no)</strong></span>
+);</pre><p> в виде ограничения таблицы.</p><p>Чтобы определить ограничение уникальности для группы столбцов, запишите его в виде ограничения таблицы, перечислив имена столбцов через запятую: </p><pre class="programlisting">CREATE TABLE example (
+    a integer,
+    b integer,
+    c integer,
+    <span class="emphasis"><strong>UNIQUE (a, c)</strong></span>
+);</pre><p> Такое ограничение указывает, что сочетание значений перечисленных столбцов должно быть уникально во всей таблице, тогда как значения каждого столбца по отдельности не должны быть (и обычно не будут) уникальными.</p><p>Вы можете назначить уникальному ограничению имя обычным образом: </p><pre class="programlisting">CREATE TABLE products (
+    product_no integer <span class="emphasis"><strong>CONSTRAINT must_be_different</strong></span> UNIQUE,
+    name text,
+    price numeric
+);</pre><p>При добавлении ограничения уникальности будет автоматически создан уникальный индекс-B-дерево для столбца или группы столбцов, перечисленных в ограничении. Условие уникальности, распространяющееся только на некоторые строки, нельзя записать в виде ограничения уникальности, однако такое условие можно установить, создав уникальный <a class="link" href="indexes-partial.html" title="11.8. Частичные индексы">частичный индекс</a>.</p><a id="id-1.5.4.6.7.8" class="indexterm"></a><p>Вообще говоря, ограничение уникальности нарушается, если в таблице оказывается несколько строк, у которых совпадают значения всех столбцов, включённых в ограничение. По умолчанию два значения NULL при таком сравнении не считаются равными. Это означает, что даже при наличии ограничения уникальности в таблице можно сохранить строки с дублирующимися значениями, если они содержат NULL в одном или нескольких столбцах ограничения. Это поведение можно изменить, добавив предложение <code class="literal">NULLS NOT DISTINCT</code>, например </p><pre class="programlisting">CREATE TABLE products (
+    product_no integer UNIQUE <span class="emphasis"><strong>NULLS NOT DISTINCT</strong></span>,
+    name text,
+    price numeric
+);</pre><p> или </p><pre class="programlisting">CREATE TABLE products (
+    product_no integer,
+    name text,
+    price numeric,
+    UNIQUE <span class="emphasis"><strong>NULLS NOT DISTINCT</strong></span> (product_no)
+);</pre><p> Поведение по умолчанию можно выбрать явно, добавив <code class="literal">NULLS DISTINCT</code>. Согласно стандарту SQL вариант обработки значений NULL по умолчанию определяется реализацией, и в других СУБД встречается другое поведение. Это следует учитывать при разработке переносимых приложений.</p></div><div class="sect2" id="DDL-CONSTRAINTS-PRIMARY-KEYS"><div class="titlepage"><div><div><h3 class="title">5.4.4. Первичные ключи <a href="#DDL-CONSTRAINTS-PRIMARY-KEYS" class="id_link">#</a></h3></div></div></div><a id="id-1.5.4.6.8.2" class="indexterm"></a><a id="id-1.5.4.6.8.3" class="indexterm"></a><p>Ограничение первичного ключа означает, что образующий его столбец или группа столбцов может быть уникальным идентификатором строк в таблице. Для этого требуется, чтобы значения были одновременно уникальными и отличными от NULL. Таким образом, таблицы со следующими двумя определениями будут принимать одинаковые данные: </p><pre class="programlisting">CREATE TABLE products (
+    product_no integer UNIQUE NOT NULL,
+    name text,
+    price numeric
+);</pre><p> </p><pre class="programlisting">CREATE TABLE products (
+    product_no integer <span class="emphasis"><strong>PRIMARY KEY</strong></span>,
+    name text,
+    price numeric
+);</pre><p>Первичные ключи могут включать несколько столбцов; синтаксис похож на запись ограничений уникальности: </p><pre class="programlisting">CREATE TABLE example (
+    a integer,
+    b integer,
+    c integer,
+    <span class="emphasis"><strong>PRIMARY KEY (a, c)</strong></span>
+);</pre><p>При добавлении первичного ключа автоматически создаётся уникальный индекс-B-дерево для столбца или группы столбцов, перечисленных в первичном ключе, и данные столбцы помечаются как <code class="literal">NOT NULL</code>.</p><p>Таблица может иметь максимум один первичный ключ. (Ограничений уникальности и ограничений NOT NULL, которые функционально почти равнозначны первичным ключам, может быть сколько угодно, но назначить ограничением первичного ключа можно только одно.) Теория реляционных баз данных говорит, что первичный ключ должен быть в каждой таблице. В <span class="productname">PostgreSQL</span> такого жёсткого требования нет, но обычно лучше ему следовать.</p><p>Первичные ключи полезны и для документирования, и для клиентских приложений. Например, графическому приложению с возможностями редактирования содержимого таблицы, вероятно, потребуется знать первичный ключ таблицы, чтобы однозначно идентифицировать её строки. Первичные ключи находят и другое применение в СУБД; в частности, первичный ключ в таблице определяет целевые столбцы по умолчанию для сторонних ключей, ссылающихся на эту таблицу.</p></div><div class="sect2" id="DDL-CONSTRAINTS-FK"><div class="titlepage"><div><div><h3 class="title">5.4.5. Внешние ключи <a href="#DDL-CONSTRAINTS-FK" class="id_link">#</a></h3></div></div></div><a id="id-1.5.4.6.9.2" class="indexterm"></a><a id="id-1.5.4.6.9.3" class="indexterm"></a><a id="id-1.5.4.6.9.4" class="indexterm"></a><p>Ограничение внешнего ключа указывает, что значения столбца (или группы столбцов) должны соответствовать значениям в некоторой строке другой таблицы. Это называется <em class="firstterm">ссылочной целостностью</em> двух связанных таблиц.</p><p>Пусть у вас уже есть таблица продуктов, которую мы неоднократно использовали ранее: </p><pre class="programlisting">CREATE TABLE products (
+    product_no integer PRIMARY KEY,
+    name text,
+    price numeric
+);</pre><p> Давайте предположим, что у вас есть таблица с заказами этих продуктов. Мы хотим, чтобы в таблице заказов содержались только заказы действительно существующих продуктов. Поэтому мы определим в ней ограничение внешнего ключа, ссылающееся на таблицу продуктов: </p><pre class="programlisting">CREATE TABLE orders (
+    order_id integer PRIMARY KEY,
+    product_no integer <span class="emphasis"><strong>REFERENCES products (product_no)</strong></span>,
+    quantity integer
+);</pre><p> С таким ограничением создать заказ со значением <code class="structfield">product_no</code>, отсутствующим в таблице products (и не равным NULL), будет невозможно.</p><p>В такой схеме таблицу orders называют <em class="firstterm">подчинённой</em> таблицей, а products — <em class="firstterm">главной</em>. Соответственно, столбцы называют так же подчинённым и главным (или ссылающимся и целевым).</p><p>Предыдущую команду можно сократить так: </p><pre class="programlisting">CREATE TABLE orders (
+    order_id integer PRIMARY KEY,
+    product_no integer <span class="emphasis"><strong>REFERENCES products</strong></span>,
+    quantity integer
+);</pre><p> то есть, если опустить список столбцов, внешний ключ будет неявно связан с первичным ключом главной таблицы.</p><p>Ограничению внешнего ключа можно назначить имя стандартным способом.</p><p>Внешний ключ также может ссылаться на группу столбцов. В этом случае его нужно записать в виде обычного ограничения таблицы. Например: </p><pre class="programlisting">CREATE TABLE t1 (
+  a integer PRIMARY KEY,
+  b integer,
+  c integer,
+  <span class="emphasis"><strong>FOREIGN KEY (b, c) REFERENCES other_table (c1, c2)</strong></span>
+);</pre><p> Естественно, число и типы столбцов в ограничении должны соответствовать числу и типам целевых столбцов.</p><a id="id-1.5.4.6.9.11" class="indexterm"></a><p>Иногда имеет смысл задать в ограничении внешнего ключа в качестве <span class="quote">«<span class="quote">другой таблицы</span>»</span> ту же таблицу; такой внешний ключ называется <em class="firstterm">ссылающимся на себя</em>. Например, если вы хотите, чтобы строки таблицы представляли узлы древовидной структуры, вы можете написать </p><pre class="programlisting">CREATE TABLE tree (
+    node_id integer PRIMARY KEY,
+    parent_id integer REFERENCES tree,
+    name text,
+    ...
+);</pre><p> Для узла верхнего уровня <code class="structfield">parent_id</code> будет равен NULL, пока записи с отличным от NULL <code class="structfield">parent_id</code> будут ссылаться только на существующие строки таблицы.</p><p>Таблица может содержать несколько ограничений внешнего ключа. Это полезно для связи таблиц в отношении многие-ко-многим. Скажем, у вас есть таблицы продуктов и заказов, но вы хотите, чтобы один заказ мог содержать несколько продуктов (что невозможно в предыдущей схеме). Для этого вы можете использовать такую схему: </p><pre class="programlisting">CREATE TABLE products (
+    product_no integer PRIMARY KEY,
+    name text,
+    price numeric
+);
+
+CREATE TABLE orders (
+    order_id integer PRIMARY KEY,
+    shipping_address text,
+    ...
+);
+
+CREATE TABLE order_items (
+    product_no integer REFERENCES products,
+    order_id integer REFERENCES orders,
+    quantity integer,
+    PRIMARY KEY (product_no, order_id)
+);</pre><p> Заметьте, что в последней таблице первичный ключ покрывает внешние ключи.</p><a id="id-1.5.4.6.9.14" class="indexterm"></a><a id="id-1.5.4.6.9.15" class="indexterm"></a><p>Мы знаем, что внешние ключи запрещают создание заказов, не относящихся ни к одному продукту. Но что делать, если после создания заказов с определённым продуктом мы захотим удалить его? SQL справится с этой ситуацией. Интуиция подсказывает следующие варианты поведения: </p><div class="itemizedlist"><ul class="itemizedlist compact" style="list-style-type: disc; "><li class="listitem"><p>Запретить удаление продукта</p></li><li class="listitem"><p>Удалить также связанные заказы</p></li><li class="listitem"><p>Что-то ещё?</p></li></ul></div><p>Для иллюстрации давайте реализуем следующее поведение в вышеприведённом примере: при попытке удаления продукта, на который ссылаются заказы (через таблицу <code class="literal">order_items</code>), мы запрещаем эту операцию. Если же кто-то попытается удалить заказ, то удалится и его содержимое: </p><pre class="programlisting">CREATE TABLE products (
+    product_no integer PRIMARY KEY,
+    name text,
+    price numeric
+);
+
+CREATE TABLE orders (
+    order_id integer PRIMARY KEY,
+    shipping_address text,
+    ...
+);
+
+CREATE TABLE order_items (
+    product_no integer REFERENCES products <span class="emphasis"><strong>ON DELETE RESTRICT</strong></span>,
+    order_id integer REFERENCES orders <span class="emphasis"><strong>ON DELETE CASCADE</strong></span>,
+    quantity integer,
+    PRIMARY KEY (product_no, order_id)
+);</pre><p>Ограничивающие и каскадные удаления — два наиболее распространённых варианта. <code class="literal">RESTRICT</code> предотвращает удаление связанной строки. <code class="literal">NO ACTION</code> означает, что если зависимые строки продолжают существовать при проверке ограничения, возникает ошибка (это поведение по умолчанию). (Главным отличием этих двух вариантов является то, что <code class="literal">NO ACTION</code> позволяет отложить проверку в процессе транзакции, а <code class="literal">RESTRICT</code> — нет.) <code class="literal">CASCADE</code> указывает, что при удалении связанных строк зависимые от них будут так же автоматически удалены. Есть ещё два варианта: <code class="literal">SET NULL</code> и <code class="literal">SET DEFAULT</code>. При удалении связанных строк они назначают зависимым столбцам в подчинённой таблице значения NULL или значения по умолчанию, соответственно. Заметьте, что это не будет основанием для нарушения ограничений. Например, если в качестве действия задано <code class="literal">SET DEFAULT</code>, но значение по умолчанию не удовлетворяет ограничению внешнего ключа, операция закончится ошибкой.</p><p>Какой вариант действия <code class="literal">ON DELETE</code> выбрать — зависит от того, какие типы объектов представляются в связанных таблицах. Когда в подчинённой таблице представляется объект, который является составной частью сущности, представленной в главной таблице, и не может существовать независимо, уместно выбрать действие <code class="literal">CASCADE</code>. Если две таблицы представляют независимые объекты, более подходящим действием будет <code class="literal">RESTRICT</code> или <code class="literal">NO ACTION</code>; тогда приложению, которому действительно нужно удалить оба объекта, потребуется сделать это явно и выполнить две команды удаления. В приведённом выше примере позиции заказа являются частью заказа, и будет удобно, если они удалятся автоматически при удалении заказа. Но продукты и заказы — разные вещи, поэтому автоматическое удаление некоторых позиций заказов при удалении продуктов может быть неприемлемым. Если же отношение внешнего ключа представляет необязательную информацию, подходящим может быть действие <code class="literal">SET NULL</code> или <code class="literal">SET DEFAULT</code>. Например, если в таблице продуктов содержится ссылка на менеджера продукта, и запись менеджера удаляется, может быть полезным установить в поле менеджера продукта значение NULL или значение по умолчанию.</p><p>Действия <code class="literal">SET NULL</code> и <code class="literal">SET DEFAULT</code> могут принимать список столбцов, которые получат соответствующие значения. Обычно значения присваиваются всем столбцам ограничения внешнего ключа; присвоение для подмножества столбцов полезно только в некоторых особых случаях. Рассмотрите следующий пример: </p><pre class="programlisting">CREATE TABLE tenants (
+    tenant_id integer PRIMARY KEY
+);
+
+CREATE TABLE users (
+    tenant_id integer REFERENCES tenants ON DELETE CASCADE,
+    user_id integer NOT NULL,
+    PRIMARY KEY (tenant_id, user_id)
+);
+
+CREATE TABLE posts (
+    tenant_id integer REFERENCES tenants ON DELETE CASCADE,
+    post_id integer NOT NULL,
+    author_id integer,
+    PRIMARY KEY (tenant_id, post_id),
+    FOREIGN KEY (tenant_id, author_id) REFERENCES users ON DELETE SET NULL <span class="emphasis"><strong>(author_id)</strong></span>
+);</pre><p> Без указания столбца внешний ключ также установил бы значение NULL для столбца <code class="literal">tenant_id</code>, но этот столбец является частью первичного ключа.</p><p>Аналогично указанию <code class="literal">ON DELETE</code> существует <code class="literal">ON UPDATE</code>, которое срабатывает при изменении заданного столбца. При этом возможные действия те же, за исключением того, что для <code class="literal">SET NULL</code> и <code class="literal">SET DEFAULT</code> нельзя задать списки столбцов. <code class="literal">CASCADE</code> в данном случае означает, что изменённые значения связанных столбцов будут скопированы в зависимые строки.</p><p>Обычно зависимая строка не должна удовлетворять ограничению внешнего ключа, если один из связанных столбцов содержит NULL. Если в объявление внешнего ключа добавлено <code class="literal">MATCH FULL</code>, строка будет удовлетворять ограничению, только если все связанные столбцы равны NULL (то есть при разных значениях (NULL и не NULL) гарантируется невыполнение ограничения <code class="literal">MATCH FULL</code>). Если вы хотите, чтобы зависимые строки не могли избежать и этого ограничения, объявите связанные столбцы как <code class="literal">NOT NULL</code>.</p><p>Внешний ключ должен ссылаться на столбцы, либо являющиеся первичным ключом, либо образующие ограничение уникальности, либо являющиеся столбцами из нечастичного уникального индекса. Таким образом, для связанных столбцов всегда будет существовать индекс, а значит проверки наличия соответствия для связанной строки будут выполняться эффективно. Так как команды <code class="command">DELETE</code> для строк главной таблицы или <code class="command">UPDATE</code> для зависимых столбцов потребуют просканировать подчинённую таблицу и найти строки, ссылающиеся на старые значения, полезно будет иметь индекс и для подчинённых столбцов. Но это нужно не всегда, и создать соответствующий индекс можно по-разному, поэтому объявление внешнего ключа не создаёт автоматически индекс по связанным столбцам.</p><p>Подробнее об изменении и удалении данных рассказывается в <a class="xref" href="dml.html" title="Глава 6. Модификация данных">Главе 6</a>. Вы также можете подробнее узнать о синтаксисе ограничений внешнего ключа в справке <a class="xref" href="sql-createtable.html" title="CREATE TABLE"><span class="refentrytitle">CREATE TABLE</span></a>.</p></div><div class="sect2" id="DDL-CONSTRAINTS-EXCLUSION"><div class="titlepage"><div><div><h3 class="title">5.4.6. Ограничения-исключения <a href="#DDL-CONSTRAINTS-EXCLUSION" class="id_link">#</a></h3></div></div></div><a id="id-1.5.4.6.10.2" class="indexterm"></a><a id="id-1.5.4.6.10.3" class="indexterm"></a><p>Ограничения-исключения гарантируют, что при сравнении любых двух строк по указанным столбцам или выражениям с помощью заданных операторов, минимум одно из этих сравнений возвратит false или NULL. Записывается это так: </p><pre class="programlisting">CREATE TABLE circles (
+    c circle,
+    EXCLUDE USING gist (c WITH &amp;&amp;)
+);</pre><p>Подробнее об этом см. <a class="link" href="sql-createtable.html#SQL-CREATETABLE-EXCLUDE"><code class="command">CREATE TABLE ... CONSTRAINT ... EXCLUDE</code></a>.</p><p>При добавлении ограничения-исключения будет автоматически создан индекс того типа, который указан в объявлении ограничения.</p></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ddl-generated-columns.html" title="5.3. Генерируемые столбцы">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="ddl.html" title="Глава 5. Определение данных">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="ddl-system-columns.html" title="5.5. Системные столбцы">След.</a></td></tr><tr><td width="40%" align="left" valign="top">5.3. Генерируемые столбцы </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 5.5. Системные столбцы</td></tr></table></div></body></html>

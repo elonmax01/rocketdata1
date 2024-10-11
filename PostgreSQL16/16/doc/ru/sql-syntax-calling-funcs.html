@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>4.3. Вызов функций</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="sql-expressions.html" title="4.2. Выражения значения" /><link rel="next" href="ddl.html" title="Глава 5. Определение данных" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">4.3. Вызов функций</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="sql-expressions.html" title="4.2. Выражения значения">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="sql-syntax.html" title="Глава 4. Синтаксис SQL">Наверх</a></td><th width="60%" align="center">Глава 4. Синтаксис SQL</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="ddl.html" title="Глава 5. Определение данных">След.</a></td></tr></table><hr /></div><div class="sect1" id="SQL-SYNTAX-CALLING-FUNCS"><div class="titlepage"><div><div><h2 class="title" style="clear: both">4.3. Вызов функций <a href="#SQL-SYNTAX-CALLING-FUNCS" class="id_link">#</a></h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="sql-syntax-calling-funcs.html#SQL-SYNTAX-CALLING-FUNCS-POSITIONAL">4.3.1. Позиционная передача</a></span></dt><dt><span class="sect2"><a href="sql-syntax-calling-funcs.html#SQL-SYNTAX-CALLING-FUNCS-NAMED">4.3.2. Именная передача</a></span></dt><dt><span class="sect2"><a href="sql-syntax-calling-funcs.html#SQL-SYNTAX-CALLING-FUNCS-MIXED">4.3.3. Смешанная передача</a></span></dt></dl></div><a id="id-1.5.3.7.2" class="indexterm"></a><p><span class="productname">PostgreSQL</span> позволяет вызывать функции с именованными параметрами, используя запись с <em class="firstterm">позиционной</em> или <em class="firstterm">именной</em> передачей аргументов. Именная передача особенно полезна для функций со множеством параметров, так как она делает связь параметров и аргументов более явной и надёжной. В позиционной записи значения аргументов функции указываются в том же порядке, в каком они описаны в определении функции. При именной передаче аргументы сопоставляются с параметрами функции по именам и указывать их можно в любом порядке. Для каждого варианта вызова также учитывайте влияние типов аргументов функций, описанное в <a class="xref" href="typeconv-func.html" title="10.3. Функции">Разделе 10.3</a>.</p><p>При записи любым способом параметры, для которых в определении функции заданы значения по умолчанию, можно вовсе не указывать. Но это особенно полезно при именной передаче, так как опустить можно любой набор параметров, тогда как при позиционной параметры можно опускать только последовательно, справа налево.</p><p><span class="productname">PostgreSQL</span> также поддерживает <em class="firstterm">смешанную</em> передачу, когда параметры передаются и по именам, и по позиции. В этом случае позиционные параметры должны идти перед параметрами, передаваемыми по именам.</p><p>Мы рассмотрим все три варианта записи на примере следующей функции: </p><pre class="programlisting">CREATE FUNCTION concat_lower_or_upper(a text, b text,
+  uppercase boolean DEFAULT false)
+RETURNS text
+AS
+$$
+ SELECT CASE
+        WHEN $3 THEN UPPER($1 || ' ' || $2)
+        ELSE LOWER($1 || ' ' || $2)
+        END;
+$$
+LANGUAGE SQL IMMUTABLE STRICT;</pre><p> Функция <code class="function">concat_lower_or_upper</code> имеет два обязательных параметра: <code class="literal">a</code> и <code class="literal">b</code>. Кроме того, есть один необязательный параметр <code class="literal">uppercase</code>, который по умолчанию имеет значение <code class="literal">false</code>. Аргументы <code class="literal">a</code> и <code class="literal">b</code> будут сложены вместе и переведены в верхний или нижний регистр, в зависимости от параметра <code class="literal">uppercase</code>. Остальные тонкости реализации функции сейчас не важны (подробнее о них рассказано в <a class="xref" href="extend.html" title="Глава 38. Расширение SQL">Главе 38</a>).</p><div class="sect2" id="SQL-SYNTAX-CALLING-FUNCS-POSITIONAL"><div class="titlepage"><div><div><h3 class="title">4.3.1. Позиционная передача <a href="#SQL-SYNTAX-CALLING-FUNCS-POSITIONAL" class="id_link">#</a></h3></div></div></div><a id="id-1.5.3.7.7.2" class="indexterm"></a><p>Позиционная передача — это традиционный механизм передачи аргументов функции в <span class="productname">PostgreSQL</span>. Пример такой записи: </p><pre class="screen">
+SELECT concat_lower_or_upper('Hello', 'World', true);
+ concat_lower_or_upper
+-----------------------
+ HELLO WORLD
+(1 row)
+</pre><p> Все аргументы указаны в заданном порядке. Результат возвращён в верхнем регистре, так как параметр <code class="literal">uppercase</code> имеет значение <code class="literal">true</code>. Ещё один пример: </p><pre class="screen">
+SELECT concat_lower_or_upper('Hello', 'World');
+ concat_lower_or_upper 
+-----------------------
+ hello world
+(1 row)
+</pre><p> Здесь параметр <code class="literal">uppercase</code> опущен, и поэтому он принимает значение по умолчанию (<code class="literal">false</code>), и результат переводится в нижний регистр. В позиционной записи любые аргументы с определённым значением по умолчанию можно опускать справа налево.</p></div><div class="sect2" id="SQL-SYNTAX-CALLING-FUNCS-NAMED"><div class="titlepage"><div><div><h3 class="title">4.3.2. Именная передача <a href="#SQL-SYNTAX-CALLING-FUNCS-NAMED" class="id_link">#</a></h3></div></div></div><a id="id-1.5.3.7.8.2" class="indexterm"></a><p>При именной передаче для аргумента добавляется имя, которое отделяется от выражения значения знаками <code class="literal">=&gt;</code>. Например: </p><pre class="screen">
+SELECT concat_lower_or_upper(a =&gt; 'Hello', b =&gt; 'World');
+ concat_lower_or_upper
+-----------------------
+ hello world
+(1 row)
+</pre><p> Здесь аргумент <code class="literal">uppercase</code> был так же опущен, так что он неявно получил значение <code class="literal">false</code>. Преимуществом такой записи является возможность записывать аргументы в любом порядке, например: </p><pre class="screen">
+SELECT concat_lower_or_upper(a =&gt; 'Hello', b =&gt; 'World', uppercase =&gt; true);
+ concat_lower_or_upper 
+-----------------------
+ HELLO WORLD
+(1 row)
+
+SELECT concat_lower_or_upper(a =&gt; 'Hello', uppercase =&gt; true, b =&gt; 'World');
+ concat_lower_or_upper 
+-----------------------
+ HELLO WORLD
+(1 row)
+</pre><p>Для обратной совместимости поддерживается и старый синтаксис с «:=»: </p><pre class="screen">
+SELECT concat_lower_or_upper(a := 'Hello', uppercase := true, b := 'World');
+ concat_lower_or_upper
+-----------------------
+ HELLO WORLD
+(1 row)
+</pre></div><div class="sect2" id="SQL-SYNTAX-CALLING-FUNCS-MIXED"><div class="titlepage"><div><div><h3 class="title">4.3.3. Смешанная передача <a href="#SQL-SYNTAX-CALLING-FUNCS-MIXED" class="id_link">#</a></h3></div></div></div><a id="id-1.5.3.7.9.2" class="indexterm"></a><p>При смешанной передаче параметры передаются и по именам, и по позиции. Однако как уже было сказано, именованные аргументы не могут стоять перед позиционными. Например: </p><pre class="screen">
+SELECT concat_lower_or_upper('Hello', 'World', uppercase =&gt; true);
+ concat_lower_or_upper
+-----------------------
+ HELLO WORLD
+(1 row)
+</pre><p> В данном запросе аргументы <code class="literal">a</code> и <code class="literal">b</code> передаются по позиции, а <code class="literal">uppercase</code> — по имени. Единственное обоснование такого вызова здесь — он стал чуть более читаемым. Однако для более сложных функций с множеством аргументов, часть из которых имеют значения по умолчанию, именная или смешанная передача позволяют записать вызов эффективнее и уменьшить вероятность ошибок.</p><div class="note"><h3 class="title">Примечание</h3><p>Именная и смешанная передача в настоящий момент не может использоваться при вызове агрегатной функции (но они допускаются, если агрегатная функция используется в качестве оконной).</p></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="sql-expressions.html" title="4.2. Выражения значения">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="sql-syntax.html" title="Глава 4. Синтаксис SQL">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="ddl.html" title="Глава 5. Определение данных">След.</a></td></tr><tr><td width="40%" align="left" valign="top">4.2. Выражения значения </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> Глава 5. Определение данных</td></tr></table></div></body></html>

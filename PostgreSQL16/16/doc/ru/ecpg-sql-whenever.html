@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>WHENEVER</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="ecpg-sql-var.html" title="VAR" /><link rel="next" href="ecpg-informix-compat.html" title="36.15. Режим совместимости с Informix" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">WHENEVER</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="ecpg-sql-var.html" title="VAR">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="ecpg-sql-commands.html" title="36.14. Команды встраиваемого SQL">Наверх</a></td><th width="60%" align="center">36.14. Команды встраиваемого SQL</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="ecpg-informix-compat.html" title="36.15. Режим совместимости с Informix">След.</a></td></tr></table><hr /></div><div class="refentry" id="ECPG-SQL-WHENEVER"><div class="titlepage"></div><div class="refnamediv"><h2>WHENEVER</h2><p>WHENEVER — определить действие, которое должно выполняться, когда при обработке SQL-оператора возникает определённое условие</p></div><div class="refsynopsisdiv"><h2>Синтаксис</h2><pre class="synopsis">WHENEVER { NOT FOUND | SQLERROR | SQLWARNING } <em class="replaceable"><code>действие</code></em></pre></div><div class="refsect1" id="id-1.7.5.20.19.3"><h2>Описание</h2><p>Устанавливает поведение в случае определённых условий (строки не найдены, выданы предупреждения или ошибки SQL и т. д.), возникающих в ходе выполнения SQL.</p></div><div class="refsect1" id="id-1.7.5.20.19.4"><h2>Параметры</h2><p>Описание параметров приведено в <a class="xref" href="ecpg-errors.html#ECPG-WHENEVER" title="36.8.1. Установка обработчиков">Подразделе 36.8.1</a>.</p></div><div class="refsect1" id="id-1.7.5.20.19.5"><h2>Примеры</h2><pre class="programlisting">EXEC SQL WHENEVER NOT FOUND CONTINUE;
+EXEC SQL WHENEVER NOT FOUND DO BREAK;
+EXEC SQL WHENEVER NOT FOUND DO CONTINUE;
+EXEC SQL WHENEVER SQLWARNING SQLPRINT;
+EXEC SQL WHENEVER SQLWARNING DO warn();
+EXEC SQL WHENEVER SQLERROR sqlprint;
+EXEC SQL WHENEVER SQLERROR CALL print2();
+EXEC SQL WHENEVER SQLERROR DO handle_error("select");
+EXEC SQL WHENEVER SQLERROR DO sqlnotice(NULL, NONO);
+EXEC SQL WHENEVER SQLERROR DO sqlprint();
+EXEC SQL WHENEVER SQLERROR GOTO error_label;
+EXEC SQL WHENEVER SQLERROR STOP;</pre><p>Типичное применение конструкция <code class="literal">WHENEVER NOT FOUND BREAK</code> находит в обработке результатов запроса в цикле: </p><pre class="programlisting">int
+main(void)
+{
+    EXEC SQL CONNECT TO testdb AS con1;
+    EXEC SQL SELECT pg_catalog.set_config('search_path', '', false); EXEC SQL COMMIT;
+    EXEC SQL ALLOCATE DESCRIPTOR d;
+    EXEC SQL DECLARE cur CURSOR FOR SELECT current_database(), 'hoge', 256;
+    EXEC SQL OPEN cur;
+
+    /* по достижении конца набора результатов прервать цикл while */
+    EXEC SQL WHENEVER NOT FOUND DO BREAK;
+
+    while (1)
+    {
+        EXEC SQL FETCH NEXT FROM cur INTO SQL DESCRIPTOR d;
+        ...
+    }
+
+    EXEC SQL CLOSE cur;
+    EXEC SQL COMMIT;
+
+    EXEC SQL DEALLOCATE DESCRIPTOR d;
+    EXEC SQL DISCONNECT ALL;
+
+    return 0;
+}</pre></div><div class="refsect1" id="id-1.7.5.20.19.6"><h2>Совместимость</h2><p>Команда <code class="command">WHENEVER</code> описана в стандарте SQL, но большинство действий относятся к расширениям PostgreSQL.</p></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ecpg-sql-var.html" title="VAR">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="ecpg-sql-commands.html" title="36.14. Команды встраиваемого SQL">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="ecpg-informix-compat.html" title="36.15. Режим совместимости с Informix">След.</a></td></tr><tr><td width="40%" align="left" valign="top">VAR </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 36.15. Режим совместимости с <span class="productname">Informix</span></td></tr></table></div></body></html>

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>3.6. Наследование</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="tutorial-window.html" title="3.5. Оконные функции" /><link rel="next" href="tutorial-conclusion.html" title="3.7. Заключение" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">3.6. Наследование</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="tutorial-window.html" title="3.5. Оконные функции">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="tutorial-advanced.html" title="Глава 3. Расширенные возможности">Наверх</a></td><th width="60%" align="center">Глава 3. Расширенные возможности</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="tutorial-conclusion.html" title="3.7. Заключение">След.</a></td></tr></table><hr /></div><div class="sect1" id="TUTORIAL-INHERITANCE"><div class="titlepage"><div><div><h2 class="title" style="clear: both">3.6. Наследование <a href="#TUTORIAL-INHERITANCE" class="id_link">#</a></h2></div></div></div><a id="id-1.4.5.7.2" class="indexterm"></a><p>Наследование — это концепция, взятая из объектно-ориентированных баз данных. Она открывает множество интересных возможностей при проектировании баз данных.</p><p>Давайте создадим две таблицы: <code class="classname">cities</code> (города) и <code class="classname">capitals</code> (столицы штатов). Естественно, столицы штатов также являются городами, поэтому нам нужно явным образом добавлять их в результат, когда мы хотим просмотреть все города. Если вы проявите смекалку, вы можете предложить, например, такое решение: </p><pre class="programlisting">CREATE TABLE capitals (
+  name       text,
+  population real,
+  elevation  int,    -- (высота в футах)
+  state      char(2)
+);
+
+CREATE TABLE non_capitals (
+  name       text,
+  population real,
+  elevation  int     -- (высота в футах)
+);
+
+CREATE VIEW cities AS
+  SELECT name, population, elevation FROM capitals
+    UNION
+  SELECT name, population, elevation FROM non_capitals;</pre><p> Оно может устраивать, пока мы извлекаем данные, но если нам потребуется изменить несколько строк, это будет выглядеть некрасиво.</p><p>Поэтому есть лучшее решение: </p><pre class="programlisting">CREATE TABLE cities (
+  name       text,
+  population real,
+  elevation  int     -- (высота в футах)
+);
+
+CREATE TABLE capitals (
+  state      char(2) UNIQUE NOT NULL
+) INHERITS (cities);</pre><p>В данном случае строка таблицы <code class="classname">capitals</code> <em class="firstterm">наследует</em> все столбцы (<code class="structfield">name</code>, <code class="structfield">population</code> и <code class="structfield">elevation</code>) от <em class="firstterm">родительской таблицы</em> <code class="classname">cities</code>. Столбец <code class="structfield">name</code> имеет тип <code class="type">text</code>, собственный тип <span class="productname">PostgreSQL</span> для текстовых строк переменной длины. А в таблицу <code class="classname">capitals</code> добавлен дополнительный столбец <code class="structfield">state</code>, в котором будет указан буквенный код штата. В <span class="productname">PostgreSQL</span> таблица может наследоваться от ноля или нескольких других таблиц.</p><p>Например, следующий запрос выведет названия всех городов, включая столицы, находящихся выше 500 футов над уровнем моря: </p><pre class="programlisting">SELECT name, elevation
+  FROM cities
+  WHERE elevation &gt; 500;</pre><p> Результат его выполнения: </p><pre class="screen">
+   name    | elevation
+-----------+----------
+ Las Vegas |     2174
+ Mariposa  |     1953
+ Madison   |      845
+(3 rows)
+</pre><p>А следующий запрос находит все города, которые не являются столицами штатов, но также находятся выше 500 футов: </p><pre class="programlisting">SELECT name, elevation
+    FROM ONLY cities
+    WHERE elevation &gt; 500;</pre><p> </p><pre class="screen">
+   name    | elevation
+-----------+----------
+ Las Vegas |     2174
+ Mariposa  |     1953
+(2 rows)
+</pre><p>Здесь слово <code class="literal">ONLY</code> перед названием таблицы <code class="literal">cities</code> указывает, что запрос следует выполнять только для строк таблицы <code class="classname">cities</code>, не включая таблицы, унаследованные от <code class="classname">cities</code>. Многие операторы, которые мы уже обсудили — <code class="command">SELECT</code>, <code class="command">UPDATE</code> и <code class="command">DELETE</code> — поддерживают указание <code class="literal">ONLY</code>.</p><div class="note"><h3 class="title">Примечание</h3><p>Хотя наследование часто бывает полезно, оно не интегрировано с ограничениями уникальности и внешними ключами, что ограничивает его применимость. Подробнее это описывается в <a class="xref" href="ddl-inherit.html" title="5.10. Наследование">Разделе 5.10</a>.</p></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="tutorial-window.html" title="3.5. Оконные функции">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="tutorial-advanced.html" title="Глава 3. Расширенные возможности">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="tutorial-conclusion.html" title="3.7. Заключение">След.</a></td></tr><tr><td width="40%" align="left" valign="top">3.5. Оконные функции </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 3.7. Заключение</td></tr></table></div></body></html>

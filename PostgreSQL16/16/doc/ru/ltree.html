@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>F.23. ltree — тип данных для представления меток данных в иерархической древовидной структуре</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="lo.html" title="F.22. lo — управление большими объектами" /><link rel="next" href="oldsnapshot.html" title="F.24. old_snapshot — чтение информации, используемой в реализации old_snapshot_threshold" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">F.23. ltree — тип данных для представления меток данных в иерархической древовидной структуре</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="lo.html" title="F.22. lo — управление большими объектами">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="contrib.html" title="Приложение F. Дополнительно поставляемые модули и расширения">Наверх</a></td><th width="60%" align="center">Приложение F. Дополнительно поставляемые модули и расширения</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="oldsnapshot.html" title="F.24. old_snapshot — чтение информации, используемой в реализации old_snapshot_threshold">След.</a></td></tr></table><hr /></div><div class="sect1" id="LTREE"><div class="titlepage"><div><div><h2 class="title" style="clear: both">F.23. ltree — тип данных для представления меток данных в иерархической древовидной структуре <a href="#LTREE" class="id_link">#</a></h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="ltree.html#LTREE-DEFINITIONS">F.23.1. Определения</a></span></dt><dt><span class="sect2"><a href="ltree.html#LTREE-OPS-FUNCS">F.23.2. Операторы и функции</a></span></dt><dt><span class="sect2"><a href="ltree.html#LTREE-INDEXES">F.23.3. Индексы</a></span></dt><dt><span class="sect2"><a href="ltree.html#LTREE-EXAMPLE">F.23.4. Пример</a></span></dt><dt><span class="sect2"><a href="ltree.html#LTREE-TRANSFORMS">F.23.5. Трансформации</a></span></dt><dt><span class="sect2"><a href="ltree.html#LTREE-AUTHORS">F.23.6. Авторы</a></span></dt></dl></div><a id="id-1.11.7.33.2" class="indexterm"></a><p>Этот модуль реализует тип данных <code class="type">ltree</code> для представления меток данных в иерархической древовидной структуре. Он также предоставляет расширенные средства для поиска в таких деревьях.</p><p>Данный модуль считается <span class="quote">«<span class="quote">доверенным</span>»</span>, то есть его могут устанавливать обычные пользователи, имеющие право <code class="literal">CREATE</code> в текущей базе данных.</p><div class="sect2" id="LTREE-DEFINITIONS"><div class="titlepage"><div><div><h3 class="title">F.23.1. Определения <a href="#LTREE-DEFINITIONS" class="id_link">#</a></h3></div></div></div><p><em class="firstterm">Метка</em> — это последовательность буквенно-цифровых символов, знаков подчёркивания и дефисов. Допустимые диапазоны буквенно-цифровых символов зависят от локали базы данных. Например, в локали C допускаются символы <code class="literal">A-Za-z0-9_-</code>. Метки должны занимать меньше 1000 символов.</p><p>Примеры: <code class="literal">42</code>, <code class="literal">Personal_Services</code></p><p><em class="firstterm">Путь метки</em> — это последовательность из нуля или нескольких разделённых точками меток (например, <code class="literal">L1.L2.L3</code>), представляющая путь от корня иерархического дерева к конкретному узлу. Путь не может содержать больше 65535 меток.</p><p>Пример: <code class="literal">Top.Countries.Europe.Russia</code></p><p>Модуль <code class="filename">ltree</code> предоставляет несколько типов данных:</p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p><code class="type">ltree</code> хранит путь метки.</p></li><li class="listitem"><p><code class="type">lquery</code> представляет напоминающий регулярные выражения запрос для поиска нужных значений <code class="type">ltree</code>. В нём простое слово выбирает соответствующую метку в заданном пути, а звёздочка (<code class="literal">*</code>) — ноль или более любых меток. Отдельные компоненты можно соединить точками и получить запрос, которому будет соответствовать весь путь с указанными метками. Например: </p><pre class="synopsis">
+foo         <em class="lineannotation"><span class="lineannotation">Выбирает путь ровно с одной меткой <code class="literal">foo</code></span></em>
+*.foo.*     <em class="lineannotation"><span class="lineannotation">Выбирает путь, содержащий метку <code class="literal">foo</code></span></em>
+*.foo       <em class="lineannotation"><span class="lineannotation">Выбирает путь с последней меткой <code class="literal">foo</code></span></em>
+</pre><p>И для звёздочки, и для простых слов можно добавить количественное значение, определяющее число меток, которые будут соответствовать этому компоненту: </p><pre class="synopsis">
+*{<em class="replaceable"><code>n</code></em>}        <em class="lineannotation"><span class="lineannotation">Выбирает ровно <em class="replaceable"><code>n</code></em> меток</span></em>
+*{<em class="replaceable"><code>n</code></em>,}       <em class="lineannotation"><span class="lineannotation">Выбирает как минимум <em class="replaceable"><code>n</code></em> меток</span></em>
+*{<em class="replaceable"><code>n</code></em>,<em class="replaceable"><code>m</code></em>}      <em class="lineannotation"><span class="lineannotation">Выбирает не меньше <em class="replaceable"><code>n</code></em>, но и не более <em class="replaceable"><code>m</code></em> меток</span></em>
+*{,<em class="replaceable"><code>m</code></em>}       <em class="lineannotation"><span class="lineannotation">Выбирает не больше <em class="replaceable"><code>m</code></em> меток — равнозначно </span></em>*{0,<em class="replaceable"><code>m</code></em>}
+foo{<em class="replaceable"><code>n</code></em>,<em class="replaceable"><code>m</code></em>}    <em class="lineannotation"><span class="lineannotation">Выбирает как минимум <em class="replaceable"><code>n</code></em>, но не больше <em class="replaceable"><code>m</code></em> вхождений <code class="literal">foo</code></span></em>
+foo{,}      <em class="lineannotation"><span class="lineannotation">Выбирает любое количество вхождений <code class="literal">foo</code>, в том числе ноль</span></em>
+</pre><p> В отсутствие явного числового ограничения символу звёздочки по умолчанию соответствует любое количество меток (то есть <code class="literal">{,}</code>), а обычному слову — ровно одно вхождение (то есть <code class="literal">{1}</code>).</p><p>После отличного от звёздочки элемента <code class="type">lquery</code> могут быть добавлены модификаторы, позволяющие выбрать не только простые совпадения: </p><pre class="synopsis">
+@           <em class="lineannotation"><span class="lineannotation">Выбирает совпадение без учёта регистра; например, запросу <code class="literal">a@</code> соответствует <code class="literal">A</code></span></em>
+*           <em class="lineannotation"><span class="lineannotation">Выбирает любую метку с заданным префиксом, например, запросу <code class="literal">foo*</code> соответствует <code class="literal">foobar</code></span></em>
+%           <em class="lineannotation"><span class="lineannotation">Выбирает в метке начальные слова, разделённые подчёркиваниями</span></em>
+</pre><p> Поведение модификатора <code class="literal">%</code> несколько нетривиальное. Он пытается найти соответствие по словам, а не по всей метке. Например, запрос <code class="literal">foo_bar%</code> выбирает <code class="literal">foo_bar_baz</code>, но не <code class="literal">foo_barbaz</code>. В сочетании с <code class="literal">*</code> сопоставление префикса применяется отдельно к каждому слову, например запрос <code class="literal">foo_bar%*</code> выбирает <code class="literal">foo1_bar2_baz</code>, но не <code class="literal">foo1_br2_baz</code>.</p><p>Также можно записать несколько различных меток, отличных от звёздочек, через знак <code class="literal">|</code> (обозначающий ИЛИ) для выбора любой из этих меток, либо добавить знак <code class="literal">!</code> (НЕ) в начале группы без звёздочки для выбора метки, не соответствующей ни одной из указанных альтернатив. Количественное ограничение, если оно требуется, задаётся в конце группы; это означает, что оно действует на всю группу в целом (то есть ограничивает число меток, соответствующих или не соответствующих одной из альтернатив).</p><p>Расширенный пример <code class="type">lquery</code>: </p><pre class="programlisting">Top.*{0,2}.sport*@.!football|tennis{1,}.Russ*|Spain
+a.  b.     c.      d.                   e.</pre><p> Этот запрос выберет путь, который:</p><div class="orderedlist"><ol class="orderedlist" type="a"><li class="listitem"><p>начинается с метки <code class="literal">Top</code></p></li><li class="listitem"><p>и затем включает от нуля до двух меток до</p></li><li class="listitem"><p>метки, начинающейся с префикса <code class="literal">sport</code> (без учёта регистра)</p></li><li class="listitem"><p>затем одну или несколько меток, отличных от <code class="literal">football</code> и <code class="literal">tennis</code></p></li><li class="listitem"><p>и заканчивается меткой, которая начинается подстрокой <code class="literal">Russ</code> или в точности равна <code class="literal">Spain</code>.</p></li></ol></div></li><li class="listitem"><p><code class="type">ltxtquery</code> представляет подобный полнотекстовому запрос поиска подходящих значений <code class="type">ltree</code>. Значение <code class="type">ltxtquery</code> содержит слова, возможно с модификаторами <code class="literal">@</code>, <code class="literal">*</code>, <code class="literal">%</code> в конце; эти модификаторы имеют то же значение, что и в <code class="type">lquery</code>. Слова можно объединять символами <code class="literal">&amp;</code> (И), <code class="literal">|</code> (ИЛИ), <code class="literal">!</code> (НЕ) и скобками. Ключевое отличие от <code class="type">lquery</code> состоит в том, что <code class="type">ltxtquery</code> выбирает слова независимо от их положения в пути метки.</p><p>Пример <code class="type">ltxtquery</code>: </p><pre class="programlisting">Europe &amp; Russia*@ &amp; !Transportation</pre><p> Этот запрос выберет пути, содержащие метку <code class="literal">Europe</code> или любую метку с начальной подстрокой <code class="literal">Russia</code> (без учёта регистра), но не пути, содержащие метку <code class="literal">Transportation</code>. Положение этих слов в пути не имеет значения. Кроме того, когда применяется <code class="literal">%</code>, слово может быть сопоставлено с любым другим отделённым подчёркиваниями словом в метке, вне зависимости от его положения.</p></li></ul></div><p>Замечание: <code class="type">ltxtquery</code> допускает пробелы между символами, а <code class="type">ltree</code> и <code class="type">lquery</code> — нет.</p></div><div class="sect2" id="LTREE-OPS-FUNCS"><div class="titlepage"><div><div><h3 class="title">F.23.2. Операторы и функции <a href="#LTREE-OPS-FUNCS" class="id_link">#</a></h3></div></div></div><p>Для типа <code class="type">ltree</code> определены обычные операторы сравнения <code class="literal">=</code>, <code class="literal">&lt;&gt;</code>, <code class="literal">&lt;</code>, <code class="literal">&gt;</code>, <code class="literal">&lt;=</code>, <code class="literal">&gt;=</code>. Сравнение сортирует пути в порядке движения по дереву, а потомки узла сортируются по тексту метки. В дополнение к ним есть и специализированные операторы, перечисленные в <a class="xref" href="ltree.html#LTREE-OP-TABLE" title="Таблица F.13. Операторы ltree">Таблице F.13</a>.</p><div class="table" id="LTREE-OP-TABLE"><p class="title"><strong>Таблица F.13. Операторы <code class="type">ltree</code></strong></p><div class="table-contents"><table class="table" summary="Операторы ltree" border="1"><colgroup><col /></colgroup><thead><tr><th class="func_table_entry"><p class="func_signature">Оператор</p>
+       <p>Описание</p></th></tr></thead><tbody><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">ltree</code> <code class="literal">@&gt;</code> <code class="type">ltree</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Левый аргумент является предком правого (или равен ему)?</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">ltree</code> <code class="literal">&lt;@</code> <code class="type">ltree</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Левый аргумент является потомком правого (или равен ему)?</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">ltree</code> <code class="literal">~</code> <code class="type">lquery</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p class="func_signature">
+        <code class="type">lquery</code> <code class="literal">~</code> <code class="type">ltree</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Значение <code class="type">ltree</code> соответствует <code class="type">lquery</code>?</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">ltree</code> <code class="literal">?</code> <code class="type">lquery[]</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p class="func_signature">
+        <code class="type">lquery[]</code> <code class="literal">?</code> <code class="type">ltree</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Значение <code class="type">ltree</code> соответствует одному из <code class="type">lquery</code> в массиве?</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">ltree</code> <code class="literal">@</code> <code class="type">ltxtquery</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p class="func_signature">
+        <code class="type">ltxtquery</code> <code class="literal">@</code> <code class="type">ltree</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Значение <code class="type">ltree</code> соответствует <code class="type">ltxtquery</code>?</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">ltree</code> <code class="literal">||</code> <code class="type">ltree</code>
+        → <code class="returnvalue">ltree</code>
+       </p>
+       <p>Соединяет два пути <code class="type">ltree</code>.</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">ltree</code> <code class="literal">||</code> <code class="type">text</code>
+        → <code class="returnvalue">ltree</code>
+       </p>
+       <p class="func_signature">
+        <code class="type">text</code> <code class="literal">||</code> <code class="type">ltree</code>
+        → <code class="returnvalue">ltree</code>
+       </p>
+       <p>Преобразует текст в <code class="type">ltree</code> и соединяет с путём.</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">ltree[]</code> <code class="literal">@&gt;</code> <code class="type">ltree</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p class="func_signature">
+        <code class="type">ltree</code> <code class="literal">&lt;@</code> <code class="type">ltree[]</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Массив содержит предка <code class="type">ltree</code>?</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">ltree[]</code> <code class="literal">&lt;@</code> <code class="type">ltree</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p class="func_signature">
+        <code class="type">ltree</code> <code class="literal">@&gt;</code> <code class="type">ltree[]</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Массив содержит потомка <code class="type">ltree</code>?</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">ltree[]</code> <code class="literal">~</code> <code class="type">lquery</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p class="func_signature">
+        <code class="type">lquery</code> <code class="literal">~</code> <code class="type">ltree[]</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Массив содержит какой-либо путь, соответствующий <code class="type">lquery</code>?</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">ltree[]</code> <code class="literal">?</code> <code class="type">lquery[]</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p class="func_signature">
+        <code class="type">lquery[]</code> <code class="literal">?</code> <code class="type">ltree[]</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Массив <code class="type">ltree</code> содержит путь, соответствующий какому-либо <code class="type">lquery</code>?</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">ltree[]</code> <code class="literal">@</code> <code class="type">ltxtquery</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p class="func_signature">
+        <code class="type">ltxtquery</code> <code class="literal">@</code> <code class="type">ltree[]</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Массив содержит путь, соответствующий <code class="type">ltxtquery</code>?</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">ltree[]</code> <code class="literal">?@&gt;</code> <code class="type">ltree</code>
+        → <code class="returnvalue">ltree</code>
+       </p>
+       <p>Выдаёт первый элемент массива, являющийся предком <code class="type">ltree</code>, или NULL, если такого элемента нет.</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">ltree[]</code> <code class="literal">?&lt;@</code> <code class="type">ltree</code>
+        → <code class="returnvalue">ltree</code>
+       </p>
+       <p>Выдаёт первый элемент массива, являющийся потомком <code class="type">ltree</code>, или NULL, если такого элемента нет.</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">ltree[]</code> <code class="literal">?~</code> <code class="type">lquery</code>
+        → <code class="returnvalue">ltree</code>
+       </p>
+       <p>Выдаёт первый элемент массива, соответствующий <code class="type">lquery</code>, или NULL, если такого элемента нет.</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">ltree[]</code> <code class="literal">?@</code> <code class="type">ltxtquery</code>
+        → <code class="returnvalue">ltree</code>
+       </p>
+       <p>Выдаёт первый элемент массива, соответствующий <code class="type">ltxtquery</code>, или NULL, если такого элемента нет.</p></td></tr></tbody></table></div></div><br class="table-break" /><p>Операторы <code class="literal">&lt;@</code>, <code class="literal">@&gt;</code>, <code class="literal">@</code> и <code class="literal">~</code> имеют аналоги в виде <code class="literal">^&lt;@</code>, <code class="literal">^@&gt;</code>, <code class="literal">^@</code>, <code class="literal">^~</code>, которые отличатся только тем, что не используют индексы. Они полезны только для тестирования.</p><p>Доступные функции перечислены в <a class="xref" href="ltree.html#LTREE-FUNC-TABLE" title="Таблица F.14. Функции ltree">Таблице F.14</a>.</p><div class="table" id="LTREE-FUNC-TABLE"><p class="title"><strong>Таблица F.14. Функции <code class="type">ltree</code></strong></p><div class="table-contents"><table class="table" summary="Функции ltree" border="1"><colgroup><col /></colgroup><thead><tr><th class="func_table_entry"><p class="func_signature">Функция</p>
+       <p>Описание</p>
+       <p>Примеры</p></th></tr></thead><tbody><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.33.6.6.2.2.1.1.1.1" class="indexterm"></a> <code class="function">subltree</code> ( <code class="type">ltree</code>, <em class="parameter"><code>start</code></em> <code class="type">integer</code>, <em class="parameter"><code>end</code></em> <code class="type">integer</code> ) → <code class="returnvalue">ltree</code></p>
+       <p>Выдаёт подпуть <code class="type">ltree</code> от позиции <em class="parameter"><code>start</code></em> до позиции <em class="parameter"><code>end</code></em>-1 (отсчитывая от 0).</p>
+       <p>
+        <code class="literal">subltree('Top.Child1.Child2', 1, 2)</code>
+        → <code class="returnvalue">Child1</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.33.6.6.2.2.2.1.1.1" class="indexterm"></a> <code class="function">subpath</code> ( <code class="type">ltree</code>, <em class="parameter"><code>offset</code></em> <code class="type">integer</code>, <em class="parameter"><code>len</code></em> <code class="type">integer</code> ) → <code class="returnvalue">ltree</code></p>
+       <p>Выдаёт подпуть <code class="type">ltree</code>, начиная с позиции <em class="parameter"><code>offset</code></em>, длиной <em class="parameter"><code>len</code></em>. Если <em class="parameter"><code>offset</code></em> меньше нуля, подпуть начинается с этого смещения от конца пути. Если <em class="parameter"><code>len</code></em> меньше нуля, будет отброшено заданное число меток с конца строки.</p>
+       <p>
+        <code class="literal">subpath('Top.Child1.Child2', 0, 2)</code>
+        → <code class="returnvalue">Top.Child1</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">subpath</code> ( <code class="type">ltree</code>, <em class="parameter"><code>offset</code></em> <code class="type">integer</code> ) → <code class="returnvalue">ltree</code></p>
+       <p>Выдаёт подпуть <code class="type">ltree</code>, начиная с позиции <em class="parameter"><code>offset</code></em> и до конца пути. Если <em class="parameter"><code>offset</code></em> меньше нуля, подпуть начинается с этого смещения от конца пути.</p>
+       <p>
+        <code class="literal">subpath('Top.Child1.Child2', 1)</code>
+        → <code class="returnvalue">Child1.Child2</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.33.6.6.2.2.4.1.1.1" class="indexterm"></a> <code class="function">nlevel</code> ( <code class="type">ltree</code> ) → <code class="returnvalue">integer</code></p>
+       <p>Выдаёт число меток в пути.</p>
+       <p>
+        <code class="literal">nlevel('Top.Child1.​Child2')</code>
+        → <code class="returnvalue">3</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.33.6.6.2.2.5.1.1.1" class="indexterm"></a> <code class="function">index</code> ( <em class="parameter"><code>a</code></em> <code class="type">ltree</code>, <em class="parameter"><code>b</code></em> <code class="type">ltree</code> ) → <code class="returnvalue">integer</code></p>
+       <p>Выдаёт позицию первого вхождения <em class="parameter"><code>b</code></em> в <em class="parameter"><code>a</code></em>; -1, если искомого вхождения нет.</p>
+       <p>
+        <code class="literal">index('0.1.2.3.5.4.5.6.8.5.6.8', '5.6')</code>
+        → <code class="returnvalue">6</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">index</code> ( <em class="parameter"><code>a</code></em> <code class="type">ltree</code>, <em class="parameter"><code>b</code></em> <code class="type">ltree</code>, <em class="parameter"><code>offset</code></em> <code class="type">integer</code> ) → <code class="returnvalue">integer</code></p>
+       <p>Выдаёт позицию первого вхождения <em class="parameter"><code>b</code></em> в <em class="parameter"><code>a</code></em> или -1, если искомого вхождения нет. Поиск начинается с позиции <em class="parameter"><code>offset</code></em>; если <em class="parameter"><code>offset</code></em> меньше 0, начальное смещение <em class="parameter"><code>-offset</code></em> отсчитывается от конца пути.</p>
+       <p>
+        <code class="literal">index('0.1.2.3.5.4.5.6.8.5.6.8', '5.6', -4)</code>
+        → <code class="returnvalue">9</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.33.6.6.2.2.7.1.1.1" class="indexterm"></a> <code class="function">text2ltree</code> ( <code class="type">text</code> ) → <code class="returnvalue">ltree</code></p>
+       <p>Приводит значение <code class="type">text</code> к типу <code class="type">ltree</code>.</p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.33.6.6.2.2.8.1.1.1" class="indexterm"></a> <code class="function">ltree2text</code> ( <code class="type">ltree</code> ) → <code class="returnvalue">text</code></p>
+       <p>Приводит <code class="type">ltree</code> к типу <code class="type">text</code>.</p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.33.6.6.2.2.9.1.1.1" class="indexterm"></a> <code class="function">lca</code> ( <code class="type">ltree</code> [<span class="optional">, <code class="type">ltree</code> [<span class="optional">, ... </span>]</span>] ) → <code class="returnvalue">ltree</code></p>
+       <p>Вычисляет наибольшего общего предка путей (принимая до 8 аргументов).</p>
+       <p>
+        <code class="literal">lca('1.2.3', '1.2.3.4.5.6')</code>
+        → <code class="returnvalue">1.2</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">lca</code> ( <code class="type">ltree[]</code> ) → <code class="returnvalue">ltree</code></p>
+       <p>Вычисляет наибольшего общего предка путей в массиве.</p>
+       <p>
+        <code class="literal">lca(array['1.2.3'::ltree,'1.2.3.4'])</code>
+        → <code class="returnvalue">1.2</code>
+       </p></td></tr></tbody></table></div></div><br class="table-break" /></div><div class="sect2" id="LTREE-INDEXES"><div class="titlepage"><div><div><h3 class="title">F.23.3. Индексы <a href="#LTREE-INDEXES" class="id_link">#</a></h3></div></div></div><p><code class="filename">ltree</code> поддерживает несколько типов индексов, которые могут ускорить означенные операции:</p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>B-дерево по значениям <code class="type">ltree</code>: <code class="literal">&lt;</code>, <code class="literal">&lt;=</code>, <code class="literal">=</code>, <code class="literal">&gt;=</code>, <code class="literal">&gt;</code></p></li><li class="listitem"><p>GiST по значениям <code class="type">ltree</code> (класс операторов <code class="literal">gist_ltree_ops</code>): <code class="literal">&lt;</code>, <code class="literal">&lt;=</code>, <code class="literal">=</code>, <code class="literal">&gt;=</code>, <code class="literal">&gt;</code>, <code class="literal">@&gt;</code>, <code class="literal">&lt;@</code>, <code class="literal">@</code>, <code class="literal">~</code>, <code class="literal">?</code></p><p>Класс операторов GiST <code class="literal">gist_ltree_ops</code> аппроксимирует набор меток пути в виде сигнатуры битовой карты. В его необязательном целочисленном параметре <code class="literal">siglen</code> можно задать размер сигнатуры в байтах. Размер сигнатуры по умолчанию — 8 байт. Параметр может принимать положительные значения до 2024, кратные выравниванию по целым (<code class="type">int</code>) (4 байта для большинства машин). При увеличении размера сигнатуры поиск работает точнее (сканируется меньшая область в индексе и меньше страниц кучи), но сам индекс становится больше.</p><p>Пример создания такого индекса с размером сигнатуры по умолчанию (8 байт):</p><pre class="programlisting">CREATE INDEX path_gist_idx ON test USING GIST (path);</pre><p>Пример создания такого индекса с длиной сигнатуры 100 байт:</p><pre class="programlisting">CREATE INDEX path_gist_idx ON test USING GIST (path gist_ltree_ops(siglen=100));</pre></li><li class="listitem"><p>GiST-индекс по массиву <code class="type">ltree[]</code> (<code class="literal">gist__ltree_ops</code> opclass): <code class="literal">ltree[] &lt;@ ltree</code>, <code class="literal">ltree @&gt; ltree[]</code>, <code class="literal">@</code>, <code class="literal">~</code>, <code class="literal">?</code></p><p>Класс операторов GiST <code class="literal">gist__ltree_ops</code> работает подобно <code class="literal">gist_ltree_ops</code> и также принимает в параметре длину сигнатуры. По умолчанию значение <code class="literal">siglen</code> в <code class="literal">gist__ltree_ops</code> составляет 28 байт.</p><p>Пример создания такого индекса с размером сигнатуры по умолчанию (28 байт):</p><pre class="programlisting">CREATE INDEX path_gist_idx ON test USING GIST (array_path);</pre><p>Пример создания такого индекса с длиной сигнатуры 100 байт:</p><pre class="programlisting">CREATE INDEX path_gist_idx ON test USING GIST (array_path gist__ltree_ops(siglen=100));</pre><p>Примечание: Индекс этого типа является неточным.</p></li></ul></div></div><div class="sect2" id="LTREE-EXAMPLE"><div class="titlepage"><div><div><h3 class="title">F.23.4. Пример <a href="#LTREE-EXAMPLE" class="id_link">#</a></h3></div></div></div><p>Для этого примера используются следующие данные (это же описание данных находится в файле <code class="filename">contrib/ltree/ltreetest.sql</code> в дистрибутиве исходного кода):</p><pre class="programlisting">CREATE TABLE test (path ltree);
+INSERT INTO test VALUES ('Top');
+INSERT INTO test VALUES ('Top.Science');
+INSERT INTO test VALUES ('Top.Science.Astronomy');
+INSERT INTO test VALUES ('Top.Science.Astronomy.Astrophysics');
+INSERT INTO test VALUES ('Top.Science.Astronomy.Cosmology');
+INSERT INTO test VALUES ('Top.Hobbies');
+INSERT INTO test VALUES ('Top.Hobbies.Amateurs_Astronomy');
+INSERT INTO test VALUES ('Top.Collections');
+INSERT INTO test VALUES ('Top.Collections.Pictures');
+INSERT INTO test VALUES ('Top.Collections.Pictures.Astronomy');
+INSERT INTO test VALUES ('Top.Collections.Pictures.Astronomy.Stars');
+INSERT INTO test VALUES ('Top.Collections.Pictures.Astronomy.Galaxies');
+INSERT INTO test VALUES ('Top.Collections.Pictures.Astronomy.Astronauts');
+CREATE INDEX path_gist_idx ON test USING GIST (path);
+CREATE INDEX path_idx ON test USING BTREE (path);</pre><p>В итоге мы получаем таблицу <code class="structname">test</code>, наполненную данными, представляющими следующую иерархию:</p><pre class="literallayout">                        Top
+                     /   |  \
+             Science Hobbies Collections
+                 /       |              \
+        Astronomy   Amateurs_Astronomy Pictures
+           /  \                            |
+Astrophysics  Cosmology                Astronomy
+                                        /  |    \
+                                 Galaxies Stars Astronauts</pre><p>Мы можем выбрать потомки в иерархии наследования: </p><pre class="screen">
+ltreetest=&gt; SELECT path FROM test WHERE path &lt;@ 'Top.Science';
+                path
+------------------------------------
+ Top.Science
+ Top.Science.Astronomy
+ Top.Science.Astronomy.Astrophysics
+ Top.Science.Astronomy.Cosmology
+(4 rows)
+</pre><p>Несколько примеров выборки по путям: </p><pre class="screen">
+ltreetest=&gt; SELECT path FROM test WHERE path ~ '*.Astronomy.*';
+                     path
+-----------------------------------------------
+ Top.Science.Astronomy
+ Top.Science.Astronomy.Astrophysics
+ Top.Science.Astronomy.Cosmology
+ Top.Collections.Pictures.Astronomy
+ Top.Collections.Pictures.Astronomy.Stars
+ Top.Collections.Pictures.Astronomy.Galaxies
+ Top.Collections.Pictures.Astronomy.Astronauts
+(7 rows)
+
+ltreetest=&gt; SELECT path FROM test WHERE path ~ '*.!pictures@.Astronomy.*';
+                path
+------------------------------------
+ Top.Science.Astronomy
+ Top.Science.Astronomy.Astrophysics
+ Top.Science.Astronomy.Cosmology
+(3 rows)
+</pre><p>Ещё несколько примеров полнотекстового поиска: </p><pre class="screen">
+ltreetest=&gt; SELECT path FROM test WHERE path @ 'Astro*% &amp; !pictures@';
+                path
+------------------------------------
+ Top.Science.Astronomy
+ Top.Science.Astronomy.Astrophysics
+ Top.Science.Astronomy.Cosmology
+ Top.Hobbies.Amateurs_Astronomy
+(4 rows)
+
+ltreetest=&gt; SELECT path FROM test WHERE path @ 'Astro* &amp; !pictures@';
+                path
+------------------------------------
+ Top.Science.Astronomy
+ Top.Science.Astronomy.Astrophysics
+ Top.Science.Astronomy.Cosmology
+(3 rows)
+</pre><p>Образование пути с помощью функций: </p><pre class="screen">
+ltreetest=&gt; SELECT subpath(path,0,2)||'Space'||subpath(path,2) FROM test WHERE path &lt;@ 'Top.Science.Astronomy';
+                 ?column?
+------------------------------------------
+ Top.Science.Space.Astronomy
+ Top.Science.Space.Astronomy.Astrophysics
+ Top.Science.Space.Astronomy.Cosmology
+(3 rows)
+</pre><p>Эту процедуру можно упростить, создав функцию SQL, вставляющую метку в определённую позицию в пути: </p><pre class="screen">
+CREATE FUNCTION ins_label(ltree, int, text) RETURNS ltree
+    AS 'select subpath($1,0,$2) || $3 || subpath($1,$2);'
+    LANGUAGE SQL IMMUTABLE;
+
+ltreetest=&gt; SELECT ins_label(path,2,'Space') FROM test WHERE path &lt;@ 'Top.Science.Astronomy';
+                ins_label
+------------------------------------------
+ Top.Science.Space.Astronomy
+ Top.Science.Space.Astronomy.Astrophysics
+ Top.Science.Space.Astronomy.Cosmology
+(3 rows)
+</pre></div><div class="sect2" id="LTREE-TRANSFORMS"><div class="titlepage"><div><div><h3 class="title">F.23.5. Трансформации <a href="#LTREE-TRANSFORMS" class="id_link">#</a></h3></div></div></div><p>Расширение <code class="literal">ltree_plpython3u</code> реализует трансформации типа <code class="type">ltree</code> для языка PL/Python. Если вы установите эти трансформации и укажете их при создании функции, значения <code class="type">ltree</code> будут отображаться в списки Python. (Однако обратное преобразование не поддерживается.)</p><div class="caution"><h3 class="title">Внимание</h3><p>Расширение, реализующее трансформации, настоятельно рекомендуется устанавливать в одну схему с <code class="filename">ltree</code>. Выбор какой-либо другой схемы, которая может содержать объекты, созданные злонамеренным пользователем, чреват угрозами безопасности во время установки расширения.</p></div></div><div class="sect2" id="LTREE-AUTHORS"><div class="titlepage"><div><div><h3 class="title">F.23.6. Авторы <a href="#LTREE-AUTHORS" class="id_link">#</a></h3></div></div></div><p>Разработку осуществили Фёдор Сигаев (<code class="email">&lt;<a class="email" href="mailto:teodor@stack.net">teodor@stack.net</a>&gt;</code>) и Олег Бартунов (<code class="email">&lt;<a class="email" href="mailto:oleg@sai.msu.su">oleg@sai.msu.su</a>&gt;</code>). Дополнительные сведения можно найти на странице <a class="ulink" href="http://www.sai.msu.su/~megera/postgres/gist/" target="_top">http://www.sai.msu.su/~megera/postgres/gist/</a>. Авторы выражают благодарность Евгению Родичеву за полезные дискуссии. Замечания и сообщения об ошибках приветствуются.</p></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="lo.html" title="F.22. lo — управление большими объектами">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="contrib.html" title="Приложение F. Дополнительно поставляемые модули и расширения">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="oldsnapshot.html" title="F.24. old_snapshot — чтение информации, используемой в реализации old_snapshot_threshold">След.</a></td></tr><tr><td width="40%" align="left" valign="top">F.22. lo — управление большими объектами </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> F.24. old_snapshot — чтение информации, используемой в реализации <code class="literal">old_snapshot_threshold</code></td></tr></table></div></body></html>

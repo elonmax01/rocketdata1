@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>9.10. Функции для перечислений</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="functions-datetime.html" title="9.9. Операторы и функции даты/времени" /><link rel="next" href="functions-geometry.html" title="9.11. Геометрические функции и операторы" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">9.10. Функции для перечислений</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="functions-datetime.html" title="9.9. Операторы и функции даты/времени">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="functions.html" title="Глава 9. Функции и операторы">Наверх</a></td><th width="60%" align="center">Глава 9. Функции и операторы</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="functions-geometry.html" title="9.11. Геометрические функции и операторы">След.</a></td></tr></table><hr /></div><div class="sect1" id="FUNCTIONS-ENUM"><div class="titlepage"><div><div><h2 class="title" style="clear: both">9.10. Функции для перечислений <a href="#FUNCTIONS-ENUM" class="id_link">#</a></h2></div></div></div><p>Для типов перечислений (описанных в <a class="xref" href="datatype-enum.html" title="8.7. Типы перечислений">Разделе 8.7</a>) предусмотрено несколько функций, которые позволяют сделать код чище, не «зашивая» в нём конкретные значения перечисления. Эти функции перечислены в <a class="xref" href="functions-enum.html#FUNCTIONS-ENUM-TABLE" title="Таблица 9.35. Функции для перечислений">Таблице 9.35</a>. В этих примерах подразумевается, что перечисление создано так: </p><pre class="programlisting">CREATE TYPE rainbow AS ENUM ('red', 'orange', 'yellow', 'green',
+ 'blue', 'purple');</pre><div class="table" id="FUNCTIONS-ENUM-TABLE"><p class="title"><strong>Таблица 9.35. Функции для перечислений</strong></p><div class="table-contents"><table class="table" summary="Функции для перечислений" border="1"><colgroup><col /></colgroup><thead><tr><th class="func_table_entry"><p class="func_signature">Функция</p>
+       <p>Описание</p>
+       <p>Пример(ы)</p></th></tr></thead><tbody><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.16.3.2.2.1.1.1.1" class="indexterm"></a> <code class="function">enum_first</code> ( <code class="type">anyenum</code> ) → <code class="returnvalue">anyenum</code></p>
+       <p>Возвращает первое значение заданного перечисления.</p>
+       <p>
+        <code class="literal">enum_first(null::rainbow)</code>
+        → <code class="returnvalue">red</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.16.3.2.2.2.1.1.1" class="indexterm"></a> <code class="function">enum_last</code> ( <code class="type">anyenum</code> ) → <code class="returnvalue">anyenum</code></p>
+       <p>Возвращает последнее значение заданного перечисления.</p>
+       <p>
+        <code class="literal">enum_last(null::rainbow)</code>
+        → <code class="returnvalue">purple</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.16.3.2.2.3.1.1.1" class="indexterm"></a> <code class="function">enum_range</code> ( <code class="type">anyenum</code> ) → <code class="returnvalue">anyarray</code></p>
+       <p>Возвращает все значения заданного перечисления в упорядоченном массиве.</p>
+       <p>
+        <code class="literal">enum_range(null::rainbow)</code>
+        → <code class="returnvalue">{red,orange,yellow,​green,blue,purple}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">enum_range</code> ( <code class="type">anyenum</code>, <code class="type">anyenum</code> ) → <code class="returnvalue">anyarray</code></p>
+       <p>Возвращает набор значений перечисления, лежащих между двумя заданными, в виде упорядоченного массива. Значения в параметрах должны принадлежать одному перечислению. Если в первом параметре передаётся NULL, результат функции начинается с первого значения перечисления, а если во втором — заканчивается последним.</p>
+       <p>
+        <code class="literal">enum_range('orange'::rainbow, 'green'::rainbow)</code>
+        → <code class="returnvalue">{orange,yellow,green}</code>
+       </p>
+       <p>
+        <code class="literal">enum_range(NULL, 'green'::rainbow)</code>
+        → <code class="returnvalue">{red,orange,​yellow,green}</code>
+       </p>
+       <p>
+        <code class="literal">enum_range('orange'::rainbow, NULL)</code>
+        → <code class="returnvalue">{orange,yellow,green,​blue,purple}</code>
+       </p></td></tr></tbody></table></div></div><br class="table-break" /><p>Заметьте, что за исключением варианта <code class="function">enum_range</code> с двумя аргументами, эти функции не обращают внимание на конкретное переданное им значение; их интересует только объявленный тип. Они возвращают один и тот же результат, когда им передаётся NULL или любое другое значение типа. Обычно эти функции применяются к столбцам таблицы или аргументам внешних функций, а не к предопределённым типам, как в этих примерах.</p></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="functions-datetime.html" title="9.9. Операторы и функции даты/времени">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="functions.html" title="Глава 9. Функции и операторы">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="functions-geometry.html" title="9.11. Геометрические функции и операторы">След.</a></td></tr><tr><td width="40%" align="left" valign="top">9.9. Операторы и функции даты/времени </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 9.11. Геометрические функции и операторы</td></tr></table></div></body></html>

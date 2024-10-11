@@ -1,0 +1,429 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>9.4. Строковые функции и операторы</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="functions-math.html" title="9.3. Математические функции и операторы" /><link rel="next" href="functions-binarystring.html" title="9.5. Функции и операторы двоичных строк" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">9.4. Строковые функции и операторы</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="functions-math.html" title="9.3. Математические функции и операторы">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="functions.html" title="Глава 9. Функции и операторы">Наверх</a></td><th width="60%" align="center">Глава 9. Функции и операторы</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="functions-binarystring.html" title="9.5. Функции и операторы двоичных строк">След.</a></td></tr></table><hr /></div><div class="sect1" id="FUNCTIONS-STRING"><div class="titlepage"><div><div><h2 class="title" style="clear: both">9.4. Строковые функции и операторы <a href="#FUNCTIONS-STRING" class="id_link">#</a></h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="functions-string.html#FUNCTIONS-STRING-FORMAT">9.4.1. <code class="function">format</code></a></span></dt></dl></div><p>В этом разделе описаны функции и операторы для работы с текстовыми строками. Под строками в данном контексте подразумеваются значения типов <code class="type">character</code>, <code class="type">character varying</code> и <code class="type">text</code>. Если не отмечено обратное, эти функции и операторы принимают и возвращают тип <code class="type">text</code>. С тем же успехом в аргументах может передаваться тип <code class="type">character varying</code>. Аргументы же типа <code class="type">character</code> до вызова оператора или функции приводятся к типу <code class="type">text</code>, вследствие чего завершающие пробелы в значении <code class="type">character</code> будут обрезаться.</p><p>В <acronym class="acronym">SQL</acronym> определены несколько строковых функций, в которых аргументы разделяются не запятыми, а ключевыми словами. Они перечислены в <a class="xref" href="functions-string.html#FUNCTIONS-STRING-SQL" title="Таблица 9.9. Строковые функции и операторы языка SQL">Таблице 9.9</a>. <span class="productname">PostgreSQL</span> также предоставляет варианты этих функций с синтаксисом, обычным для функций (см. <a class="xref" href="functions-string.html#FUNCTIONS-STRING-OTHER" title="Таблица 9.10. Другие строковые функции и операторы">Таблицу 9.10</a>).</p><div class="note"><h3 class="title">Примечание</h3><p>Оператор конкатенации строк (<code class="literal">||</code>) сможет принять нестроковый аргумент, если хотя бы один аргумент имеет строковый тип, как показано в <a class="xref" href="functions-string.html#FUNCTIONS-STRING-SQL" title="Таблица 9.9. Строковые функции и операторы языка SQL">Таблице 9.9</a>. В других случаях можно использовать явное преобразование в <code class="type">text</code>, чтобы оператор принял нестроковый аргумент.</p></div><div class="table" id="FUNCTIONS-STRING-SQL"><p class="title"><strong>Таблица 9.9. Строковые функции и операторы языка <acronym class="acronym">SQL</acronym></strong></p><div class="table-contents"><table class="table" summary="Строковые функции и операторы языка SQL" border="1"><colgroup><col /></colgroup><thead><tr><th class="func_table_entry"><p class="func_signature">Функция/оператор</p>
+       <p>Описание</p>
+       <p>Пример(ы)</p></th></tr></thead><tbody><tr><td class="func_table_entry"><p class="func_signature">
+        <a id="id-1.5.8.10.5.2.2.1.1.1.1" class="indexterm"></a>
+        <code class="type">text</code> <code class="literal">||</code> <code class="type">text</code>
+        → <code class="returnvalue">text</code>
+       </p>
+       <p>Соединяет две строки.</p>
+       <p>
+        <code class="literal">'Post' || 'greSQL'</code>
+        → <code class="returnvalue">PostgreSQL</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">text</code> <code class="literal">||</code> <code class="type">anynonarray</code>
+        → <code class="returnvalue">text</code>
+       </p>
+       <p class="func_signature">
+        <code class="type">anynonarray</code> <code class="literal">||</code> <code class="type">text</code>
+        → <code class="returnvalue">text</code>
+       </p>
+       <p>Преобразует нестроковый аргумент в текст, а затем соединяет две строки. (Нестроковый аргумент не должен быть массивом, иначе возникает неоднозначность с операторами массивов <code class="literal">||</code>. Если вы хотите соединить строку с текстовой формой массива, явно приведите его к типу <code class="type">text</code>.)</p>
+       <p>
+        <code class="literal">'Value: ' || 42</code>
+        → <code class="returnvalue">Value: 42</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.5.2.2.3.1.1.1" class="indexterm"></a> <code class="function">btrim</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code> [<span class="optional">, <em class="parameter"><code>characters</code></em> <code class="type">text</code></span>] ) → <code class="returnvalue">text</code></p>
+       <p>Удаляет наибольшую подстроку, содержащую только символы <em class="parameter"><code>characters</code></em> (по умолчанию пробел), с начала и с конца строки <em class="parameter"><code>string</code></em>.</p>
+       <p>
+        <code class="literal">btrim('xyxtrimyyx', 'xyz')</code>
+        → <code class="returnvalue">trim</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <a id="id-1.5.8.10.5.2.2.4.1.1.1" class="indexterm"></a>
+        <a id="id-1.5.8.10.5.2.2.4.1.1.2" class="indexterm"></a>
+         <code class="type">text</code> <code class="literal">IS</code> [<span class="optional"><code class="literal">NOT</code></span>] [<span class="optional"><em class="parameter"><code>form</code></em></span>] <code class="literal">NORMALIZED</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Проверяет, соответствует ли строка определённой форме нормализации Юникода. Форма указывается в необязательном ключевом слове <em class="parameter"><code>form</code></em>: <code class="literal">NFC</code> (по умолчанию), <code class="literal">NFD</code>, <code class="literal">NFKC</code> или <code class="literal">NFKD</code>. Это выражение можно использовать, только если кодировка сервера — <code class="literal">UTF8</code>. Заметьте, что проверить нормализацию с помощью этого выражения, как правило, будет быстрее, чем нормализовать уже, возможно, нормализованные строки.</p>
+       <p>
+        <code class="literal">U&amp;'\0061\0308bc' IS NFD NORMALIZED</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.5.2.2.5.1.1.1" class="indexterm"></a> <code class="function">bit_length</code> ( <code class="type">text</code> ) → <code class="returnvalue">integer</code></p>
+       <p>Возвращает число бит в строке (это число в 8 раз больше <code class="function">octet_length</code>).</p>
+       <p>
+        <code class="literal">bit_length('jose')</code>
+        → <code class="returnvalue">32</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.5.2.2.6.1.1.1" class="indexterm"></a> <a id="id-1.5.8.10.5.2.2.6.1.1.2" class="indexterm"></a> <a id="id-1.5.8.10.5.2.2.6.1.1.3" class="indexterm"></a> <code class="function">char_length</code> ( <code class="type">text</code> ) → <code class="returnvalue">integer</code></p>
+       <p class="func_signature"><a id="id-1.5.8.10.5.2.2.6.1.2.1" class="indexterm"></a> <code class="function">character_length</code> ( <code class="type">text</code> ) → <code class="returnvalue">integer</code></p>
+       <p>Возвращает число символов в строке.</p>
+       <p>
+        <code class="literal">char_length('josé')</code>
+        → <code class="returnvalue">4</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.5.2.2.7.1.1.1" class="indexterm"></a> <code class="function">lower</code> ( <code class="type">text</code> ) → <code class="returnvalue">text</code></p>
+       <p>Переводит символы строки в нижний регистр в соответствии с правилами локали базы данных.</p>
+       <p>
+        <code class="literal">lower('TOM')</code>
+        → <code class="returnvalue">tom</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.5.2.2.8.1.1.1" class="indexterm"></a> <code class="function">lpad</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code>, <em class="parameter"><code>length</code></em> <code class="type">integer</code> [<span class="optional">, <em class="parameter"><code>fill</code></em> <code class="type">text</code></span>] ) → <code class="returnvalue">text</code></p>
+       <p>Дополняет строку <em class="parameter"><code>string</code></em> слева до длины <em class="parameter"><code>length</code></em> символами <em class="parameter"><code>fill</code></em> (по умолчанию пробелами). Если длина строки уже больше заданной, она обрезается справа.</p>
+       <p>
+        <code class="literal">lpad('hi', 5, 'xy')</code>
+        → <code class="returnvalue">xyxhi</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.5.2.2.9.1.1.1" class="indexterm"></a> <code class="function">ltrim</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code> [<span class="optional">, <em class="parameter"><code>characters</code></em> <code class="type">text</code></span>] ) → <code class="returnvalue">text</code></p>
+       <p>Удаляет наибольшую подстроку, содержащую только символы <em class="parameter"><code>characters</code></em> (по умолчанию пробелы), с начала строки <em class="parameter"><code>string</code></em>.</p>
+       <p>
+        <code class="literal">ltrim('zzzytest', 'xyz')</code>
+        → <code class="returnvalue">test</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.5.2.2.10.1.1.1" class="indexterm"></a> <a id="id-1.5.8.10.5.2.2.10.1.1.2" class="indexterm"></a> <code class="function">normalize</code> ( <code class="type">text</code> [<span class="optional">, <em class="parameter"><code>form</code></em></span>] ) → <code class="returnvalue">text</code></p>
+       <p>Переводит строку в заданную форму нормализации Unicode. Форма указывается в необязательном ключевом слове <em class="parameter"><code>form</code></em>: <code class="literal">NFC</code> (по умолчанию), <code class="literal">NFD</code>, <code class="literal">NFKC</code> или <code class="literal">NFKD</code>. Эту функцию можно использовать, только если кодировка сервера — <code class="literal">UTF8</code>.</p>
+       <p>
+        <code class="literal">normalize(U&amp;'\0061\0308bc', NFC)</code>
+        → <code class="returnvalue">U&amp;'\00E4bc'</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.5.2.2.11.1.1.1" class="indexterm"></a> <code class="function">octet_length</code> ( <code class="type">text</code> ) → <code class="returnvalue">integer</code></p>
+       <p>Возвращает число байт в строке.</p>
+       <p><code class="literal">octet_length('josé')</code> → <code class="returnvalue">5</code> (если серверная кодировка — UTF8)</p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.5.2.2.12.1.1.1" class="indexterm"></a> <code class="function">octet_length</code> ( <code class="type">character</code> ) → <code class="returnvalue">integer</code></p>
+       <p>Возвращает число байт в строке. Так как эта вариация функции принимает непосредственно тип <code class="type">character</code>, завершающие строку пробелы не обрезаются.</p>
+       <p>
+        <code class="literal">octet_length('abc '::character(4))</code>
+        → <code class="returnvalue">4</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.5.2.2.13.1.1.1" class="indexterm"></a> <code class="function">overlay</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code> <code class="literal">PLACING</code> <em class="parameter"><code>newsubstring</code></em> <code class="type">text</code> <code class="literal">FROM</code> <em class="parameter"><code>start</code></em> <code class="type">integer</code> [<span class="optional"><code class="literal">FOR</code> <em class="parameter"><code>count</code></em> <code class="type">integer</code></span>] ) → <code class="returnvalue">text</code></p>
+       <p>Заменяет подстроку в <em class="parameter"><code>string</code></em>, начиная с символа с номером <em class="parameter"><code>start</code></em>, длиной <em class="parameter"><code>count</code></em> символов, на подстроку <em class="parameter"><code>newsubstring</code></em>. В отсутствие параметра <em class="parameter"><code>count</code></em> количество заменяемых символов определяется длиной <em class="parameter"><code>newsubstring</code></em>.</p>
+       <p>
+        <code class="literal">overlay('Txxxxas' placing 'hom' from 2 for 4)</code>
+        → <code class="returnvalue">Thomas</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.5.2.2.14.1.1.1" class="indexterm"></a> <code class="function">position</code> ( <em class="parameter"><code>substring</code></em> <code class="type">text</code> <code class="literal">IN</code> <em class="parameter"><code>string</code></em> <code class="type">text</code> ) → <code class="returnvalue">integer</code></p>
+       <p>Возвращает начальную позицию первого вхождения <em class="parameter"><code>substring</code></em> в строке <em class="parameter"><code>string</code></em> либо 0, если такого вхождения нет.</p>
+       <p>
+        <code class="literal">position('om' in 'Thomas')</code>
+        → <code class="returnvalue">3</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.5.2.2.15.1.1.1" class="indexterm"></a> <code class="function">rpad</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code>, <em class="parameter"><code>length</code></em> <code class="type">integer</code> [<span class="optional">, <em class="parameter"><code>fill</code></em> <code class="type">text</code></span>] ) → <code class="returnvalue">text</code></p>
+       <p>Дополняет строку <em class="parameter"><code>string</code></em> справа до длины <em class="parameter"><code>length</code></em> символами <em class="parameter"><code>fill</code></em> (по умолчанию пробелами). Если длина строки уже больше заданной, она обрезается.</p>
+       <p>
+        <code class="literal">rpad('hi', 5, 'xy')</code>
+        → <code class="returnvalue">hixyx</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.5.2.2.16.1.1.1" class="indexterm"></a> <code class="function">rtrim</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code> [<span class="optional">, <em class="parameter"><code>characters</code></em> <code class="type">text</code></span>] ) → <code class="returnvalue">text</code></p>
+       <p>Удаляет наибольшую подстроку, содержащую только символы <em class="parameter"><code>characters</code></em> (по умолчанию пробелы), с конца строки <em class="parameter"><code>string</code></em>.</p>
+       <p>
+        <code class="literal">rtrim('testxxzx', 'xyz')</code>
+        → <code class="returnvalue">test</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.5.2.2.17.1.1.1" class="indexterm"></a> <code class="function">substring</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code> [<span class="optional"><code class="literal">FROM</code> <em class="parameter"><code>start</code></em> <code class="type">integer</code></span>] [<span class="optional"><code class="literal">FOR</code> <em class="parameter"><code>count</code></em> <code class="type">integer</code></span>] ) → <code class="returnvalue">text</code></p>
+       <p>Извлекает из <em class="parameter"><code>string</code></em> подстроку, начиная с позиции <em class="parameter"><code>start</code></em> (если она указана), длиной до <em class="parameter"><code>count</code></em> символов (если она указана). Параметры <em class="parameter"><code>start</code></em> и <em class="parameter"><code>count</code></em> могут опускаться, но не оба сразу.</p>
+       <p>
+        <code class="literal">substring('Thomas' from 2 for 3)</code>
+        → <code class="returnvalue">hom</code>
+       </p>
+       <p>
+        <code class="literal">substring('Thomas' from 3)</code>
+        → <code class="returnvalue">omas</code>
+       </p>
+       <p>
+        <code class="literal">substring('Thomas' for 2)</code>
+        → <code class="returnvalue">Th</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">substring</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code> <code class="literal">FROM</code> <em class="parameter"><code>pattern</code></em> <code class="type">text</code> ) → <code class="returnvalue">text</code></p>
+       <p>Извлекает первую подстроку, соответствующую регулярному выражению в стиле POSIX; см. <a class="xref" href="functions-matching.html#FUNCTIONS-POSIX-REGEXP" title="9.7.3. Регулярные выражения POSIX">Подраздел 9.7.3</a>.</p>
+       <p>
+        <code class="literal">substring('Thomas' from '...$')</code>
+        → <code class="returnvalue">mas</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">substring</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code> <code class="literal">SIMILAR</code> <em class="parameter"><code>pattern</code></em> <code class="type">text</code> <code class="literal">ESCAPE</code> <em class="parameter"><code>escape</code></em> <code class="type">text</code> ) → <code class="returnvalue">text</code></p>
+       <p class="func_signature"><code class="function">substring</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code> <code class="literal">FROM</code> <em class="parameter"><code>pattern</code></em> <code class="type">text</code> <code class="literal">FOR</code> <em class="parameter"><code>escape</code></em> <code class="type">text</code> ) → <code class="returnvalue">text</code></p>
+       <p>Извлекает первую подстроку, соответствующую регулярному выражению в стиле <acronym class="acronym">SQL</acronym>; см. <a class="xref" href="functions-matching.html#FUNCTIONS-SIMILARTO-REGEXP" title="9.7.2. Регулярные выражения SIMILAR TO">Подраздел 9.7.2</a>. Первая форма определена в стандарте, начиная с SQL:2003, а вторая существовала только в стандарте SQL:1999 и её следует считать устаревшей.</p>
+       <p>
+        <code class="literal">substring('Thomas' similar '%#"o_a#"_' escape '#')</code>
+        → <code class="returnvalue">oma</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.5.2.2.20.1.1.1" class="indexterm"></a> <code class="function">trim</code> ( [<span class="optional"><code class="literal">LEADING</code> | <code class="literal">TRAILING</code> | <code class="literal">BOTH</code></span>] [<span class="optional"><em class="parameter"><code>characters</code></em> <code class="type">text</code></span>] <code class="literal">FROM</code> <em class="parameter"><code>string</code></em> <code class="type">text</code> ) → <code class="returnvalue">text</code></p>
+       <p>Удаляет наибольшую подстроку, содержащую только символы <em class="parameter"><code>characters</code></em> (по умолчанию пробелы), с начала, с конца или с обеих сторон (<code class="literal">BOTH</code>, по умолчанию) строки <em class="parameter"><code>string</code></em>.</p>
+       <p>
+        <code class="literal">trim(both 'xyz' from 'yxTomxx')</code>
+        → <code class="returnvalue">Tom</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">trim</code> ( [<span class="optional"><code class="literal">LEADING</code> | <code class="literal">TRAILING</code> | <code class="literal">BOTH</code></span>] [<span class="optional"><code class="literal">FROM</code></span>] <em class="parameter"><code>string</code></em> <code class="type">text</code> [<span class="optional">, <em class="parameter"><code>characters</code></em> <code class="type">text</code></span>] ) → <code class="returnvalue">text</code></p>
+       <p>Это нестандартный синтаксис вызова <code class="function">trim()</code>.</p>
+       <p>
+        <code class="literal">trim(both from 'yxTomxx', 'xyz')</code>
+        → <code class="returnvalue">Tom</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.5.2.2.22.1.1.1" class="indexterm"></a> <code class="function">upper</code> ( <code class="type">text</code> ) → <code class="returnvalue">text</code></p>
+       <p>Переводит символы строки в верхний регистр, в соответствии с правилами локали базы данных.</p>
+       <p>
+        <code class="literal">upper('tom')</code>
+        → <code class="returnvalue">TOM</code>
+       </p></td></tr></tbody></table></div></div><br class="table-break" /><p>Кроме этого, в <span class="productname">PostgreSQL</span> есть и другие функции для работы со строками, перечисленные в <a class="xref" href="functions-string.html#FUNCTIONS-STRING-OTHER" title="Таблица 9.10. Другие строковые функции и операторы">Таблице 9.10</a>. (Некоторые из них используются в качестве внутренней реализации стандартных строковых функций <acronym class="acronym">SQL</acronym>, приведённых в <a class="xref" href="functions-string.html#FUNCTIONS-STRING-SQL" title="Таблица 9.9. Строковые функции и операторы языка SQL">Таблице 9.9</a>.) Также имеются операторы сопоставления шаблонов, описанные в <a class="xref" href="functions-matching.html" title="9.7. Поиск по шаблону">Разделе 9.7</a>, и операторы полнотекстового поиска, описанные в <a class="xref" href="textsearch.html" title="Глава 12. Полнотекстовый поиск">Главе 12</a>.</p><div class="table" id="FUNCTIONS-STRING-OTHER"><p class="title"><strong>Таблица 9.10. Другие строковые функции и операторы</strong></p><div class="table-contents"><table class="table" summary="Другие строковые функции и операторы" border="1"><colgroup><col /></colgroup><thead><tr><th class="func_table_entry"><p class="func_signature">Функция/оператор</p>
+       <p>Описание</p>
+       <p>Пример(ы)</p></th></tr></thead><tbody><tr><td class="func_table_entry"><p class="func_signature">
+        <a id="id-1.5.8.10.7.2.2.1.1.1.1" class="indexterm"></a>
+        <code class="type">text</code> <code class="literal">^@</code> <code class="type">text</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Возвращает true, если первая строка начинается со второй строки (равнозначно функции <code class="function">starts_with()</code>).</p>
+       <p>
+        <code class="literal">'alphabet' ^@ 'alph'</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.2.1.1.1" class="indexterm"></a> <code class="function">ascii</code> ( <code class="type">text</code> ) → <code class="returnvalue">integer</code></p>
+       <p>Возвращает числовой код первого символа аргумента. Для <acronym class="acronym">UTF8</acronym> возвращает код символа в Unicode. Для других многобайтных кодировок аргумент должен быть <acronym class="acronym">ASCII</acronym>-символом.</p>
+       <p>
+        <code class="literal">ascii('x')</code>
+        → <code class="returnvalue">120</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.3.1.1.1" class="indexterm"></a> <code class="function">chr</code> ( <code class="type">integer</code> ) → <code class="returnvalue">text</code></p>
+       <p>Возвращает символ с данным кодом. Для <acronym class="acronym">UTF8</acronym> аргумент воспринимается как код символа Unicode, а для других кодировок он должен указывать на <acronym class="acronym">ASCII</acronym>-символ. Эта функция не может выдать <code class="literal">chr(0)</code>, так как данный символ нельзя сохранить в текстовых типах данных.</p>
+      <p>
+        <code class="literal">chr(65)</code>
+        → <code class="returnvalue">A</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.4.1.1.1" class="indexterm"></a> <code class="function">concat</code> ( <em class="parameter"><code>val1</code></em> <code class="type">"any"</code> [, <em class="parameter"><code>val2</code></em> <code class="type">"any"</code> [, ...] ] ) → <code class="returnvalue">text</code></p>
+       <p>Соединяет текстовые представления всех аргументов, игнорируя NULL.</p>
+       <p>
+        <code class="literal">concat('abcde', 2, NULL, 22)</code>
+        → <code class="returnvalue">abcde222</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.5.1.1.1" class="indexterm"></a> <code class="function">concat_ws</code> ( <em class="parameter"><code>sep</code></em> <code class="type">text</code>, <em class="parameter"><code>val1</code></em> <code class="type">"any"</code> [, <em class="parameter"><code>val2</code></em> <code class="type">"any"</code> [, ...] ] ) → <code class="returnvalue">text</code></p>
+       <p>Соединяет вместе все аргументы, кроме первого, через разделитель. Разделитель задаётся в первом аргументе и должен быть отличен от NULL. В других аргументах значение NULL игнорируется.</p>
+       <p>
+        <code class="literal">concat_ws(',', 'abcde', 2, NULL, 22)</code>
+        → <code class="returnvalue">abcde,2,22</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.6.1.1.1" class="indexterm"></a> <code class="function">format</code> ( <em class="parameter"><code>formatstr</code></em> <code class="type">text</code> [, <em class="parameter"><code>formatarg</code></em> <code class="type">"any"</code> [, ...] ] ) → <code class="returnvalue">text</code></p>
+       <p>Форматирует аргументы в соответствии со строкой формата; см. <a class="xref" href="functions-string.html#FUNCTIONS-STRING-FORMAT" title="9.4.1. format">Подраздел 9.4.1</a>. Эта функция работает подобно <code class="function">sprintf</code> в языке C.</p>
+       <p>
+        <code class="literal">format('Hello %s, %1$s', 'World')</code>
+        → <code class="returnvalue">Hello World, World</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.7.1.1.1" class="indexterm"></a> <code class="function">initcap</code> ( <code class="type">text</code> ) → <code class="returnvalue">text</code></p>
+       <p>Переводит первую букву каждого слова в строке в верхний регистр, а остальные — в нижний. Словами считаются последовательности алфавитно-цифровых символов, разделённые любыми другими символами.</p>
+       <p>
+        <code class="literal">initcap('hi THOMAS')</code>
+        → <code class="returnvalue">Hi Thomas</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.8.1.1.1" class="indexterm"></a> <code class="function">left</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code>, <em class="parameter"><code>n</code></em> <code class="type">integer</code> ) → <code class="returnvalue">text</code></p>
+       <p>Возвращает первые <em class="parameter"><code>n</code></em> символов в строке. Когда <em class="parameter"><code>n</code></em> меньше нуля, возвращаются все символы слева, кроме последних |<em class="parameter"><code>n</code></em>|.</p>
+       <p>
+        <code class="literal">left('abcde', 2)</code>
+        → <code class="returnvalue">ab</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.9.1.1.1" class="indexterm"></a> <code class="function">length</code> ( <code class="type">text</code> ) → <code class="returnvalue">integer</code></p>
+       <p>Возвращает число символов в строке.</p>
+       <p>
+        <code class="literal">length('jose')</code>
+        → <code class="returnvalue">4</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.10.1.1.1" class="indexterm"></a> <code class="function">md5</code> ( <code class="type">text</code> ) → <code class="returnvalue">text</code></p>
+       <p>Вычисляет <a class="link" href="functions-binarystring.html#FUNCTIONS-HASH-NOTE">MD5-хеш</a> аргумента и выдаёт результат в шестнадцатеричном виде.</p>
+       <p>
+        <code class="literal">md5('abc')</code>
+        → <code class="returnvalue">900150983cd24fb0​d6963f7d28e17f72</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.11.1.1.1" class="indexterm"></a> <code class="function">parse_ident</code> ( <em class="parameter"><code>qualified_identifier</code></em> <code class="type">text</code> [, <em class="parameter"><code>strict_mode</code></em> <code class="type">boolean</code> <code class="literal">DEFAULT</code> <code class="literal">true</code> ] ) → <code class="returnvalue">text[]</code></p>
+       <p>Раскладывает полный идентификатор, задаваемый параметром <em class="parameter"><code>qualified_identifier</code></em>, на массив идентификаторов, удаляя кавычки, обрамляющие отдельные идентификаторы. По умолчанию лишние символы после последнего идентификатора вызывают ошибку, но если отключить строгий режим (передать во втором параметре <code class="literal">false</code>), такие символы игнорируются. (Это поведение полезно для разбора имён таких объектов, как функции.) Заметьте, что эта функция не усекает чрезмерно длинные идентификаторы. Если вы хотите получить усечённые имена, можно привести результат к <code class="type">name[]</code>.</p>
+       <p>
+        <code class="literal">parse_ident('"SomeSchema".someTable')</code>
+        → <code class="returnvalue">{SomeSchema,sometable}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.12.1.1.1" class="indexterm"></a> <code class="function">pg_client_encoding</code> ( ) → <code class="returnvalue">name</code></p>
+       <p>Возвращает имя текущей клиентской кодировки.</p>
+       <p>
+        <code class="literal">pg_client_encoding()</code>
+        → <code class="returnvalue">UTF8</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.13.1.1.1" class="indexterm"></a> <code class="function">quote_ident</code> ( <code class="type">text</code> ) → <code class="returnvalue">text</code></p>
+       <p>Преобразует аргумент в строку, подходящую для использования в качестве идентификатора в <acronym class="acronym">SQL</acronym>-операторе. При необходимости идентификатор заключается в кавычки (например, если он содержит символы, недопустимые в открытом виде, или буквы в разных регистрах). Если переданная строка содержит кавычки, они дублируются. См. также <a class="xref" href="plpgsql-statements.html#PLPGSQL-QUOTE-LITERAL-EXAMPLE" title="Пример 43.1. Использование кавычек в динамических запросах">Пример 43.1</a>.</p>
+       <p>
+        <code class="literal">quote_ident('Foo bar')</code>
+        → <code class="returnvalue">"Foo bar"</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.14.1.1.1" class="indexterm"></a> <code class="function">quote_literal</code> ( <code class="type">text</code> ) → <code class="returnvalue">text</code></p>
+       <p>Преобразует аргумент в строку, подходящую для использования в качестве текстовой константы в <acronym class="acronym">SQL</acronym>-операторе. Внутренние символы апостроф и обратная косая черта при этом дублируются. Заметьте, что <code class="function">quote_literal</code> возвращает NULL, когда на вход ей передаётся строка NULL; если же нужно получить представление и такого аргумента, лучше использовать <code class="function">quote_nullable</code>. См. также <a class="xref" href="plpgsql-statements.html#PLPGSQL-QUOTE-LITERAL-EXAMPLE" title="Пример 43.1. Использование кавычек в динамических запросах">Пример 43.1</a>.</p>
+       <p>
+        <code class="literal">quote_literal(E'O\'Reilly')</code>
+        → <code class="returnvalue">'O''Reilly'</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">quote_literal</code> ( <code class="type">anyelement</code> ) → <code class="returnvalue">text</code></p>
+       <p>Переводит данное значение в текстовый вид и заключает в апострофы как текстовую строку. Символы апостроф и обратная косая черта при этом дублируются.</p>
+       <p>
+        <code class="literal">quote_literal(42.5)</code>
+        → <code class="returnvalue">'42.5'</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.16.1.1.1" class="indexterm"></a> <code class="function">quote_nullable</code> ( <code class="type">text</code> ) → <code class="returnvalue">text</code></p>
+       <p>Преобразует аргумент в строку, подходящую для использования в качестве текстовой константы в <acronym class="acronym">SQL</acronym>-операторе; при этом для аргумента NULL возвращается строка <code class="literal">NULL</code>. Символы апостроф и обратная косая черта дублируются должным образом. См. также <a class="xref" href="plpgsql-statements.html#PLPGSQL-QUOTE-LITERAL-EXAMPLE" title="Пример 43.1. Использование кавычек в динамических запросах">Пример 43.1</a>.</p>
+       <p>
+        <code class="literal">quote_nullable(NULL)</code>
+        → <code class="returnvalue">NULL</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">quote_nullable</code> ( <code class="type">anyelement</code> ) → <code class="returnvalue">text</code></p>
+       <p>Переводит данное значение в текстовый вид и заключает в апострофы как текстовую строку, при этом для аргумента NULL возвращается строка <code class="literal">NULL</code>. Символы апостроф и обратная косая черта дублируются должным образом.</p>
+       <p>
+        <code class="literal">quote_nullable(42.5)</code>
+        → <code class="returnvalue">'42.5'</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.18.1.1.1" class="indexterm"></a> <code class="function">regexp_count</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code>, <em class="parameter"><code>pattern</code></em> <code class="type">text</code> [, <em class="parameter"><code>start</code></em> <code class="type">integer</code> [, <em class="parameter"><code>flags</code></em> <code class="type">text</code> ] ] ) → <code class="returnvalue">integer</code></p>
+       <p>Возвращает количество вхождений регулярного выражения POSIX <em class="parameter"><code>pattern</code></em> в строке <em class="parameter"><code>string</code></em>; см. <a class="xref" href="functions-matching.html#FUNCTIONS-POSIX-REGEXP" title="9.7.3. Регулярные выражения POSIX">Подраздел 9.7.3</a>.</p>
+       <p>
+        <code class="literal">regexp_count('123456789012', '\d\d\d', 2)</code>
+        → <code class="returnvalue">3</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.19.1.1.1" class="indexterm"></a> <code class="function">regexp_instr</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code>, <em class="parameter"><code>pattern</code></em> <code class="type">text</code> [, <em class="parameter"><code>start</code></em> <code class="type">integer</code> [, <em class="parameter"><code>N</code></em> <code class="type">integer</code> [, <em class="parameter"><code>endoption</code></em> <code class="type">integer</code> [, <em class="parameter"><code>flags</code></em> <code class="type">text</code> [, <em class="parameter"><code>subexpr</code></em> <code class="type">integer</code> ] ] ] ] ] ) → <code class="returnvalue">integer</code></p>
+       <p>Возвращает позицию в строке <em class="parameter"><code>string</code></em> <em class="parameter"><code>N</code></em>-го вхождения шаблона <em class="parameter"><code>pattern</code></em>, содержащего регулярное выражение POSIX, или ноль, если такого вхождения нет; см. <a class="xref" href="functions-matching.html#FUNCTIONS-POSIX-REGEXP" title="9.7.3. Регулярные выражения POSIX">Подраздел 9.7.3</a>.</p>
+       <p>
+        <code class="literal">regexp_instr('ABCDEF', 'c(.)(..)', 1, 1, 0, 'i')</code>
+        → <code class="returnvalue">3</code>
+       </p>
+       <p>
+        <code class="literal">regexp_instr('ABCDEF', 'c(.)(..)', 1, 1, 0, 'i', 2)</code>
+        → <code class="returnvalue">5</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.20.1.1.1" class="indexterm"></a> <code class="function">regexp_like</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code>, <em class="parameter"><code>pattern</code></em> <code class="type">text</code> [, <em class="parameter"><code>flags</code></em> <code class="type">text</code> ] ) → <code class="returnvalue">boolean</code></p>
+       <p>Проверяет, есть ли в строке <em class="parameter"><code>string</code></em> вхождение регулярного выражения POSIX <em class="parameter"><code>pattern</code></em>; см. <a class="xref" href="functions-matching.html#FUNCTIONS-POSIX-REGEXP" title="9.7.3. Регулярные выражения POSIX">Подраздел 9.7.3</a>.</p>
+       <p>
+        <code class="literal">regexp_like('Hello World', 'world$', 'i')</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.21.1.1.1" class="indexterm"></a> <code class="function">regexp_match</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code>, <em class="parameter"><code>pattern</code></em> <code class="type">text</code> [, <em class="parameter"><code>flags</code></em> <code class="type">text</code> ] ) → <code class="returnvalue">text[]</code></p>
+       <p>Возвращает подстроки из первого вхождения регулярного выражения POSIX <em class="parameter"><code>pattern</code></em> в строке <em class="parameter"><code>string</code></em>; см. <a class="xref" href="functions-matching.html#FUNCTIONS-POSIX-REGEXP" title="9.7.3. Регулярные выражения POSIX">Подраздел 9.7.3</a>.</p>
+       <p>
+        <code class="literal">regexp_match('foobar​bequebaz', '(bar)(beque)')</code>
+        → <code class="returnvalue">{bar,beque}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.22.1.1.1" class="indexterm"></a> <code class="function">regexp_matches</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code>, <em class="parameter"><code>pattern</code></em> <code class="type">text</code> [, <em class="parameter"><code>flags</code></em> <code class="type">text</code> ] ) → <code class="returnvalue">setof text[]</code></p>
+       <p>Возвращает подстроки из первого вхождения регулярного выражения POSIX <em class="parameter"><code>pattern</code></em> в строке <em class="parameter"><code>string</code></em> или подстроки из всех таких вхождений, если используется флаг <code class="literal">g</code>; см. <a class="xref" href="functions-matching.html#FUNCTIONS-POSIX-REGEXP" title="9.7.3. Регулярные выражения POSIX">Подраздел 9.7.3</a>.</p>
+       <p>
+        <code class="literal">regexp_matches('foobar​bequebaz', 'ba.', 'g')</code>
+        → <code class="returnvalue"></code>
+</p><pre class="programlisting"> {bar}
+ {baz}</pre><p>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.23.1.1.1" class="indexterm"></a> <code class="function">regexp_replace</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code>, <em class="parameter"><code>pattern</code></em> <code class="type">text</code>, <em class="parameter"><code>replacement</code></em> <code class="type">text</code> [, <em class="parameter"><code>start</code></em> <code class="type">integer</code> ] [, <em class="parameter"><code>flags</code></em> <code class="type">text</code> ] ) → <code class="returnvalue">text</code></p>
+       <p>Заменяет подстроку первого вхождения регулярного выражения POSIX <em class="parameter"><code>pattern</code></em> или подстроки всех таких вхождений, если использован флаг <code class="literal">g</code>; см. <a class="xref" href="functions-matching.html#FUNCTIONS-POSIX-REGEXP" title="9.7.3. Регулярные выражения POSIX">Подраздел 9.7.3</a>.</p>
+       <p>
+        <code class="literal">regexp_replace('Thomas', '.[mN]a.', 'M')</code>
+        → <code class="returnvalue">ThM</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">regexp_replace</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code>, <em class="parameter"><code>pattern</code></em> <code class="type">text</code>, <em class="parameter"><code>replacement</code></em> <code class="type">text</code>, <em class="parameter"><code>start</code></em> <code class="type">integer</code>, <em class="parameter"><code>N</code></em> <code class="type">integer</code> [, <em class="parameter"><code>flags</code></em> <code class="type">text</code> ] ) → <code class="returnvalue">text</code></p>
+       <p>Заменяет подстроку <em class="parameter"><code>N</code></em>-го вхождения регулярного выражения POSIX <em class="parameter"><code>pattern</code></em> в строке <em class="parameter"><code>string</code></em> или подстроки всех таких вхождений, если <em class="parameter"><code>N</code></em> равен нулю; см. <a class="xref" href="functions-matching.html#FUNCTIONS-POSIX-REGEXP" title="9.7.3. Регулярные выражения POSIX">Подраздел 9.7.3</a>.</p>
+       <p>
+        <code class="literal">regexp_replace('Thomas', '.', 'X', 3, 2)</code>
+        → <code class="returnvalue">ThoXas</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.25.1.1.1" class="indexterm"></a> <code class="function">regexp_split_to_array</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code>, <em class="parameter"><code>pattern</code></em> <code class="type">text</code> [, <em class="parameter"><code>flags</code></em> <code class="type">text</code> ] ) → <code class="returnvalue">text[]</code></p>
+       <p>Разделяет содержимое <em class="parameter"><code>string</code></em> на элементы, используя в качестве разделителя регулярное выражение POSIX, и выдаёт массив результатов; см. <a class="xref" href="functions-matching.html#FUNCTIONS-POSIX-REGEXP" title="9.7.3. Регулярные выражения POSIX">Подраздел 9.7.3</a>.</p>
+       <p>
+        <code class="literal">regexp_split_to_array('hello world', '\s+')</code>
+        → <code class="returnvalue">{hello,world}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.26.1.1.1" class="indexterm"></a> <code class="function">regexp_split_to_table</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code>, <em class="parameter"><code>pattern</code></em> <code class="type">text</code> [, <em class="parameter"><code>flags</code></em> <code class="type">text</code> ] ) → <code class="returnvalue">setof text</code></p>
+       <p>Разделяет содержимое <em class="parameter"><code>string</code></em> на элементы, используя в качестве разделителя регулярное выражение POSIX, и выдаёт набор результатов; см. <a class="xref" href="functions-matching.html#FUNCTIONS-POSIX-REGEXP" title="9.7.3. Регулярные выражения POSIX">Подраздел 9.7.3</a>.</p>
+       <p>
+        <code class="literal">regexp_split_to_table('hello world', '\s+')</code>
+        → <code class="returnvalue"></code>
+</p><pre class="programlisting"> hello
+ world</pre><p>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.27.1.1.1" class="indexterm"></a> <code class="function">regexp_substr</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code>, <em class="parameter"><code>pattern</code></em> <code class="type">text</code> [, <em class="parameter"><code>start</code></em> <code class="type">integer</code> [, <em class="parameter"><code>N</code></em> <code class="type">integer</code> [, <em class="parameter"><code>flags</code></em> <code class="type">text</code> [, <em class="parameter"><code>subexpr</code></em> <code class="type">integer</code> ] ] ] ] ) → <code class="returnvalue">text</code></p>
+       <p>Возвращает подстроку <em class="parameter"><code>N</code></em>-го вхождения регулярного выражения POSIX <em class="parameter"><code>pattern</code></em> в строке <em class="parameter"><code>string</code></em> или <code class="literal">NULL</code>, если таких вхождений не нашлось; см. <a class="xref" href="functions-matching.html#FUNCTIONS-POSIX-REGEXP" title="9.7.3. Регулярные выражения POSIX">Подраздел 9.7.3</a>.</p>
+       <p>
+        <code class="literal">regexp_substr('ABCDEF', 'c(.)(..)', 1, 1, 'i')</code>
+        → <code class="returnvalue">CDEF</code>
+       </p>
+       <p>
+        <code class="literal">regexp_substr('ABCDEF', 'c(.)(..)', 1, 1, 'i', 2)</code>
+        → <code class="returnvalue">EF</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.28.1.1.1" class="indexterm"></a> <code class="function">repeat</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code>, <em class="parameter"><code>number</code></em> <code class="type">integer</code> ) → <code class="returnvalue">text</code></p>
+       <p>Повторяет содержимое <em class="parameter"><code>string</code></em> указанное число (<em class="parameter"><code>number</code></em>) раз.</p>
+       <p>
+        <code class="literal">repeat('Pg', 4)</code>
+        → <code class="returnvalue">PgPgPgPg</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.29.1.1.1" class="indexterm"></a> <code class="function">replace</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code>, <em class="parameter"><code>from</code></em> <code class="type">text</code>, <em class="parameter"><code>to</code></em> <code class="type">text</code> ) → <code class="returnvalue">text</code></p>
+       <p>Заменяет все вхождения в <em class="parameter"><code>string</code></em> подстроки <em class="parameter"><code>from</code></em> подстрокой <em class="parameter"><code>to</code></em>.</p>
+       <p>
+        <code class="literal">replace('abcdefabcdef', 'cd', 'XX')</code>
+        → <code class="returnvalue">abXXefabXXef</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.30.1.1.1" class="indexterm"></a> <code class="function">reverse</code> ( <code class="type">text</code> ) → <code class="returnvalue">text</code></p>
+       <p>Переставляет символы в строке в обратном порядке.</p>
+       <p>
+        <code class="literal">reverse('abcde')</code>
+        → <code class="returnvalue">edcba</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.31.1.1.1" class="indexterm"></a> <code class="function">right</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code>, <em class="parameter"><code>n</code></em> <code class="type">integer</code> ) → <code class="returnvalue">text</code></p>
+       <p>Возвращает последние <em class="parameter"><code>n</code></em> символов в строке. Когда <em class="parameter"><code>n</code></em> меньше нуля, возвращаются все символы справа, кроме первых |<em class="parameter"><code>n</code></em>|.</p>
+       <p>
+        <code class="literal">right('abcde', 2)</code>
+        → <code class="returnvalue">de</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.32.1.1.1" class="indexterm"></a> <code class="function">split_part</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code>, <em class="parameter"><code>delimiter</code></em> <code class="type">text</code>, <em class="parameter"><code>n</code></em> <code class="type">integer</code> ) → <code class="returnvalue">text</code></p>
+       <p>Разделяет строку <em class="parameter"><code>string</code></em> по символу <em class="parameter"><code>delimiter</code></em> и выдаёт <em class="parameter"><code>n</code></em>-ый элемент (считая с 1) или <em class="parameter"><code>n</code></em>-ый с конца, если <em class="parameter"><code>n</code></em> отрицательный.</p>
+       <p>
+        <code class="literal">split_part('abc~@~def​~@~ghi', '~@~', 2)</code>
+        → <code class="returnvalue">def</code>
+       </p>
+       <p>
+        <code class="literal">split_part('abc,def,ghi,jkl', ',', -2)</code>
+        → <code class="returnvalue">ghi</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.33.1.1.1" class="indexterm"></a> <code class="function">starts_with</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code>, <em class="parameter"><code>prefix</code></em> <code class="type">text</code> ) → <code class="returnvalue">boolean</code></p>
+       <p>Возвращает <code class="literal">true</code>, если строка <em class="parameter"><code>string</code></em> начинается с подстроки <em class="parameter"><code>prefix</code></em>.</p>
+       <p>
+        <code class="literal">starts_with('alphabet', 'alph')</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="FUNCTION-STRING-TO-ARRAY" class="indexterm"></a> <code class="function">string_to_array</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code>, <em class="parameter"><code>delimiter</code></em> <code class="type">text</code> [<span class="optional">, <em class="parameter"><code>null_string</code></em> <code class="type">text</code></span>] ) → <code class="returnvalue">text[]</code></p>
+       <p>Разделяет заданную параметром <em class="parameter"><code>string</code></em> строку на поля по разделителю <em class="parameter"><code>delimiter</code></em> и формирует из полученных полей массив значений <code class="type">text</code>. Если в качестве <em class="parameter"><code>delimiter</code></em> передаётся <code class="literal">NULL</code>, каждый символ <em class="parameter"><code>string</code></em> становится отдельным элементом массива. Если в <em class="parameter"><code>delimiter</code></em> передаётся пустая строка, вся строка <em class="parameter"><code>string</code></em> воспринимается как одно поле и помещается в один элемент массива. Если в аргументе <em class="parameter"><code>null_string</code></em> передана отличная от <code class="literal">NULL</code> строка, поля, совпадающие с этой строкой, заменяются значениями <code class="literal">NULL</code>. См. также <a class="link" href="functions-array.html#FUNCTION-ARRAY-TO-STRING"><code class="function">array_to_string</code></a>.</p>
+       <p>
+        <code class="literal">string_to_array('xx~~yy~~zz', '~~', 'yy')</code>
+        → <code class="returnvalue">{xx,NULL,zz}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.35.1.1.1" class="indexterm"></a> <code class="function">string_to_table</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code>, <em class="parameter"><code>delimiter</code></em> <code class="type">text</code> [<span class="optional">, <em class="parameter"><code>null_string</code></em> <code class="type">text</code></span>] ) → <code class="returnvalue">setof text</code></p>
+       <p>Разделяет заданную параметром <em class="parameter"><code>string</code></em> строку на поля по разделителю <em class="parameter"><code>delimiter</code></em> и возвращает полученные поля как набор строк типа <code class="type">text</code>. Если в качестве <em class="parameter"><code>delimiter</code></em> передаётся <code class="literal">NULL</code>, каждый символ <em class="parameter"><code>string</code></em> становится отдельной строкой результата. Если в <em class="parameter"><code>delimiter</code></em> передаётся пустая строка, вся строка <em class="parameter"><code>string</code></em> воспринимается как одно поле. Если в аргументе <em class="parameter"><code>null_string</code></em> передана отличная от <code class="literal">NULL</code> строка, совпадающие с ней поля заменяются значениями <code class="literal">NULL</code>.</p>
+       <p>
+        <code class="literal">string_to_table('xx~^~yy~^~zz', '~^~', 'yy')</code>
+        → <code class="returnvalue"></code>
+</p><pre class="programlisting"> xx
+ NULL
+ zz</pre><p>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.36.1.1.1" class="indexterm"></a> <code class="function">strpos</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code>, <em class="parameter"><code>substring</code></em> <code class="type">text</code> ) → <code class="returnvalue">integer</code></p>
+       <p>Возвращает начальную позицию первого вхождения <em class="parameter"><code>substring</code></em> в строке <em class="parameter"><code>string</code></em> либо 0, если такого вхождения нет. (Ей подобна функция <code class="literal">position(<em class="parameter"><code>substring</code></em> in <em class="parameter"><code>string</code></em>)</code>, но обратите внимание на другой порядок аргументов.)</p>
+       <p>
+        <code class="literal">strpos('high', 'ig')</code>
+        → <code class="returnvalue">2</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.37.1.1.1" class="indexterm"></a> <code class="function">substr</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code>, <em class="parameter"><code>start</code></em> <code class="type">integer</code> [<span class="optional">, <em class="parameter"><code>count</code></em> <code class="type">integer</code></span>] ) → <code class="returnvalue">text</code></p>
+       <p>Извлекает из <em class="parameter"><code>string</code></em> подстроку, начиная с позиции <em class="parameter"><code>start</code></em>, длиной до <em class="parameter"><code>count</code></em> символов (если это значение указано). (Ей равнозначна функция <code class="literal">substring(<em class="parameter"><code>string</code></em> from <em class="parameter"><code>start</code></em> for <em class="parameter"><code>count</code></em>)</code>.)</p>
+       <p>
+        <code class="literal">substr('alphabet', 3)</code>
+        → <code class="returnvalue">phabet</code>
+       </p>
+       <p>
+        <code class="literal">substr('alphabet', 3, 2)</code>
+        → <code class="returnvalue">ph</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.38.1.1.1" class="indexterm"></a> <code class="function">to_ascii</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code> ) → <code class="returnvalue">text</code></p>
+       <p class="func_signature"><code class="function">to_ascii</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code>, <em class="parameter"><code>encoding</code></em> <code class="type">name</code> ) → <code class="returnvalue">text</code></p>
+       <p class="func_signature"><code class="function">to_ascii</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code>, <em class="parameter"><code>encoding</code></em> <code class="type">integer</code> ) → <code class="returnvalue">text</code></p>
+       <p>Преобразует <em class="parameter"><code>string</code></em> в <acronym class="acronym">ASCII</acronym> из другой кодировки, задаваемой по имени или номеру. В отсутствие указания <em class="parameter"><code>encoding</code></em> подразумевается кодировка базы данных (и на практике это единственный полезный вариант использования). В основном суть преобразования сводится к отбрасыванию диакритических знаков. Это преобразование поддерживается только для кодировок <code class="literal">LATIN1</code>, <code class="literal">LATIN2</code>, <code class="literal">LATIN9</code> и <code class="literal">WIN1250</code>. (Другое, более гибкое решение реализовано в модуле <a class="xref" href="unaccent.html" title="F.48. unaccent — словарь текстового поиска, который убирает диакритические знаки">unaccent</a>).</p>
+       <p>
+        <code class="literal">to_ascii('Karél')</code>
+        → <code class="returnvalue">Karel</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.39.1.1.1" class="indexterm"></a> <code class="function">to_hex</code> ( <code class="type">integer</code> ) → <code class="returnvalue">text</code></p>
+       <p class="func_signature"><code class="function">to_hex</code> ( <code class="type">bigint</code> ) → <code class="returnvalue">text</code></p>
+       <p>Преобразует число в шестнадцатеричное представление.</p>
+       <p>
+        <code class="literal">to_hex(2147483647)</code>
+        → <code class="returnvalue">7fffffff</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.40.1.1.1" class="indexterm"></a> <code class="function">translate</code> ( <em class="parameter"><code>string</code></em> <code class="type">text</code>, <em class="parameter"><code>from</code></em> <code class="type">text</code>, <em class="parameter"><code>to</code></em> <code class="type">text</code> ) → <code class="returnvalue">text</code></p>
+       <p>Заменяет каждый символ в <em class="parameter"><code>string</code></em>, входящий в множество <em class="parameter"><code>from</code></em>, на соответствующий символ в множестве <em class="parameter"><code>to</code></em>. Если строка <em class="parameter"><code>from</code></em> длиннее <em class="parameter"><code>to</code></em>, найденные в исходной строке лишние символы <em class="parameter"><code>from</code></em> удаляются.</p>
+       <p>
+        <code class="literal">translate('12345', '143', 'ax')</code>
+        → <code class="returnvalue">a2x5</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.10.7.2.2.41.1.1.1" class="indexterm"></a> <code class="function">unistr</code> ( <code class="type">text</code> ) → <code class="returnvalue">text</code></p>
+       <p>Преобразует спецпоследовательности Unicode в аргументе. Символы Unicode могут быть заданы как <code class="literal">\<em class="replaceable"><code>XXXX</code></em></code> (4 шестнадцатеричных цифры), <code class="literal">\+<em class="replaceable"><code>XXXXXX</code></em></code> (6 шестнадцатеричных цифр), <code class="literal">\u<em class="replaceable"><code>XXXX</code></em></code> (4 шестнадцатеричных цифры) или <code class="literal">\U<em class="replaceable"><code>XXXXXXXX</code></em></code> (8 шестнадцатеричных цифр). Чтобы указать обратную косую черту, напишите две обратные косые черты. Все остальные символы берутся буквально.</p>
+
+       <p>Когда кодировка сервера — не UTF-8, символ с кодом, заданным этой спецпоследовательностью, преобразуется в фактическую кодировку сервера; если такое преобразование невозможно, выдаётся ошибка.</p>
+
+       <p>Эта функция предоставляет (нестандартную) альтернативу строковым константам со спецпоследовательностями Unicode (см. <a class="xref" href="sql-syntax-lexical.html#SQL-SYNTAX-STRINGS-UESCAPE" title="4.1.2.3. Строковые константы со спецпоследовательностями Unicode">Подраздел 4.1.2.3</a>).</p>
+
+       <p>
+        <code class="literal">unistr('d\0061t\+000061')</code>
+        → <code class="returnvalue">data</code>
+       </p>
+       <p>
+        <code class="literal">unistr('d\u0061t\U00000061')</code>
+        → <code class="returnvalue">data</code>
+       </p></td></tr></tbody></table></div></div><br class="table-break" /><p>Функции <code class="function">concat</code>, <code class="function">concat_ws</code> и <code class="function">format</code> принимают переменное число аргументов, так что им для объединения или форматирования можно передавать значения в виде массива, помеченного ключевым словом <code class="literal">VARIADIC</code> (см. <a class="xref" href="xfunc-sql.html#XFUNC-SQL-VARIADIC-FUNCTIONS" title="38.5.6. Функции SQL с переменным числом аргументов">Подраздел 38.5.6</a>). Элементы такого массива обрабатываются, как если бы они были обычными аргументами функции. Если вместо массива в соответствующем аргументе передаётся NULL, функции <code class="function">concat</code> и <code class="function">concat_ws</code> возвращают NULL, а <code class="function">format</code> воспринимает NULL как массив нулевого размера.</p><p>Также обратите внимание на агрегатную функцию <code class="function">string_agg</code> в <a class="xref" href="functions-aggregate.html" title="9.21. Агрегатные функции">Разделе 9.21</a> и функции для преобразования текста в <code class="type">bytea</code> и наоборот в <a class="xref" href="functions-binarystring.html#FUNCTIONS-BINARYSTRING-CONVERSIONS" title="Таблица 9.13. Функции для преобразования текстовых/двоичных строк">Таблице 9.13</a>.</p><div class="sect2" id="FUNCTIONS-STRING-FORMAT"><div class="titlepage"><div><div><h3 class="title">9.4.1. <code class="function">format</code> <a href="#FUNCTIONS-STRING-FORMAT" class="id_link">#</a></h3></div></div></div><a id="id-1.5.8.10.10.2" class="indexterm"></a><p>Функция <code class="function">format</code> выдаёт текст, отформатированный в соответствии со строкой формата, подобно функции <code class="function">sprintf</code> в C.</p><pre class="synopsis">
+<code class="function">format</code>(<em class="parameter"><code>formatstr</code></em> <code class="type">text</code> [, <em class="parameter"><code>formatarg</code></em> <code class="type">"any"</code> [, ...] ])
+</pre><p> <em class="replaceable"><code>formatstr</code></em> — строка, определяющая, как будет форматироваться результат. Обычный текст в строке формата непосредственно копируется в результат, за исключением <em class="firstterm">спецификаторов формата</em>. Спецификаторы формата представляют собой местозаполнители, определяющие, как должны форматироваться и выводиться в результате аргументы функции. Каждый аргумент <em class="parameter"><code>formatarg</code></em> преобразуется в текст по правилам вывода своего типа данных, а затем форматируется и вставляется в результирующую строку согласно спецификаторам формата.</p><p>Спецификаторы формата предваряются символом <code class="literal">%</code> и имеют форму </p><pre class="synopsis">
+%[<em class="parameter"><code>position</code></em>][<em class="parameter"><code>flags</code></em>][<em class="parameter"><code>width</code></em>]<em class="parameter"><code>type</code></em>
+</pre><p> Здесь: </p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><em class="parameter"><code>position</code></em> (необязательный)</span></dt><dd><p>Строка вида <code class="literal"><em class="parameter"><code>n</code></em>$</code>, где <em class="parameter"><code>n</code></em> — индекс выводимого аргумента. Индекс, равный 1, выбирает первый аргумент после <em class="parameter"><code>formatstr</code></em>. Если <em class="parameter"><code>position</code></em> опускается, по умолчанию используется следующий аргумент по порядку.</p></dd><dt><span class="term"><em class="parameter"><code>flags</code></em> (необязательный)</span></dt><dd><p>Дополнительные флаги, управляющие форматированием данного спецификатора. В настоящее время поддерживается только знак минус (<code class="literal">-</code>), который выравнивает результат спецификатора по левому краю. Этот флаг работает, только если также определено поле <em class="parameter"><code>width</code></em>.</p></dd><dt><span class="term"><em class="parameter"><code>width</code></em> (необязательный)</span></dt><dd><p>Задаёт <span class="emphasis"><em>минимальное</em></span> число символов, которое будет занимать результат данного спецификатора. Выводимое значение выравнивается по правой или левой стороне (в зависимости от флага <code class="literal">-</code>) с дополнением необходимым числом пробелов. Если ширина слишком мала, она просто игнорируется, т. е. результат не усекается. Ширину можно обозначить положительным целым, звёздочкой (<code class="literal">*</code>), тогда ширина будет получена из следующего аргумента функции, или строкой вида <code class="literal">*<em class="parameter"><code>n</code></em>$</code>, тогда ширина будет задаваться в <em class="parameter"><code>n</code></em>-ом аргументе функции.</p><p>Если ширина передаётся в аргументе функции, этот аргумент выбирается до аргумента, используемого для спецификатора. Если аргумент ширины отрицательный, результат выравнивается по левой стороне (как если бы был указан флаг <code class="literal">-</code>) в рамках поля длины <code class="function">abs</code>(<em class="parameter"><code>width</code></em>).</p></dd><dt><span class="term"><em class="parameter"><code>type</code></em> (обязательный)</span></dt><dd><p>Тип спецификатора определяет преобразование соответствующего выводимого значения. Поддерживаются следующие типы: </p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p><code class="literal">s</code> форматирует значение аргумента как простую строку. Значение NULL представляется пустой строкой.</p></li><li class="listitem"><p><code class="literal">I</code> обрабатывает значение аргумента как SQL-идентификатор, при необходимости заключая его в кавычки. Значение NULL для такого преобразования считается ошибочным (так же, как и для <code class="function">quote_ident</code>).</p></li><li class="listitem"><p><code class="literal">L</code> заключает значение аргумента в апострофы, как строку SQL. Значение NULL выводится буквально, как <code class="literal">NULL</code>, без кавычек (так же, как и с <code class="function">quote_nullable</code>).</p></li></ul></div></dd></dl></div><p>В дополнение к спецификаторам, описанным выше, можно использовать спецпоследовательность <code class="literal">%%</code>, которая просто выведет символ <code class="literal">%</code>.</p><p>Несколько примеров простых преобразований формата: </p><pre class="screen">
+SELECT format('Hello %s', 'World');
+<em class="lineannotation"><span class="lineannotation">Результат: </span></em><code class="computeroutput">Hello World</code>
+
+SELECT format('Testing %s, %s, %s, %%', 'one', 'two', 'three');
+<em class="lineannotation"><span class="lineannotation">Результат: </span></em><code class="computeroutput">Testing one, two, three, %</code>
+
+SELECT format('INSERT INTO %I VALUES(%L)', 'Foo bar', E'O\'Reilly');
+<em class="lineannotation"><span class="lineannotation">Результат: </span></em><code class="computeroutput">INSERT INTO "Foo bar" VALUES('O''Reilly')</code>
+
+SELECT format('INSERT INTO %I VALUES(%L)', 'locations', 'C:\Program Files');
+<em class="lineannotation"><span class="lineannotation">Результат: </span></em><code class="computeroutput">INSERT INTO locations VALUES('C:\Program Files')</code>
+</pre><p>Следующие примеры иллюстрируют использование поля <em class="parameter"><code>width</code></em> и флага <code class="literal">-</code>: </p><pre class="screen">
+SELECT format('|%10s|', 'foo');
+<em class="lineannotation"><span class="lineannotation">Результат: </span></em><code class="computeroutput">|       foo|</code>
+
+SELECT format('|%-10s|', 'foo');
+<em class="lineannotation"><span class="lineannotation">Результат: </span></em><code class="computeroutput">|foo       |</code>
+
+SELECT format('|%*s|', 10, 'foo');
+<em class="lineannotation"><span class="lineannotation">Результат: </span></em><code class="computeroutput">|       foo|</code>
+
+SELECT format('|%*s|', -10, 'foo');
+<em class="lineannotation"><span class="lineannotation">Результат: </span></em><code class="computeroutput">|foo       |</code>
+
+SELECT format('|%-*s|', 10, 'foo');
+<em class="lineannotation"><span class="lineannotation">Результат: </span></em><code class="computeroutput">|foo       |</code>
+
+SELECT format('|%-*s|', -10, 'foo');
+<em class="lineannotation"><span class="lineannotation">Результат: </span></em><code class="computeroutput">|foo       |</code>
+</pre><p>Эти примеры показывают применение полей <em class="parameter"><code>position</code></em>: </p><pre class="screen">
+SELECT format('Testing %3$s, %2$s, %1$s', 'one', 'two', 'three');
+<em class="lineannotation"><span class="lineannotation">Результат: </span></em><code class="computeroutput">Testing three, two, one</code>
+
+SELECT format('|%*2$s|', 'foo', 10, 'bar');
+<em class="lineannotation"><span class="lineannotation">Результат: </span></em><code class="computeroutput">|       bar|</code>
+
+SELECT format('|%1$*2$s|', 'foo', 10, 'bar');
+<em class="lineannotation"><span class="lineannotation">Результат: </span></em><code class="computeroutput">|       foo|</code>
+</pre><p>В отличие от стандартной функции C <code class="function">sprintf</code>, функция <code class="function">format</code> в <span class="productname">PostgreSQL</span> позволяет комбинировать в одной строке спецификаторы с полями <em class="parameter"><code>position</code></em> и без них. Спецификатор формата без поля <em class="parameter"><code>position</code></em> всегда использует следующий аргумент после последнего выбранного. Кроме того, функция <code class="function">format</code> не требует, чтобы в строке формата использовались все аргументы функции. Пример этого поведения: </p><pre class="screen">
+SELECT format('Testing %3$s, %2$s, %s', 'one', 'two', 'three');
+<em class="lineannotation"><span class="lineannotation">Результат: </span></em><code class="computeroutput">Testing three, two, three</code>
+</pre><p>Спецификаторы формата <code class="literal">%I</code> и <code class="literal">%L</code> особенно полезны для безопасного составления динамических операторов SQL. См. <a class="xref" href="plpgsql-statements.html#PLPGSQL-QUOTE-LITERAL-EXAMPLE" title="Пример 43.1. Использование кавычек в динамических запросах">Пример 43.1</a>.</p></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="functions-math.html" title="9.3. Математические функции и операторы">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="functions.html" title="Глава 9. Функции и операторы">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="functions-binarystring.html" title="9.5. Функции и операторы двоичных строк">След.</a></td></tr><tr><td width="40%" align="left" valign="top">9.3. Математические функции и операторы </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 9.5. Функции и операторы двоичных строк</td></tr></table></div></body></html>

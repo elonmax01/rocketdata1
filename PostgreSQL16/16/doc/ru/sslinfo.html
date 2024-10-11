@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>F.42. sslinfo — получение информации об SSL-сертификате клиента</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="contrib-spi.html" title="F.41. spi — особенности/примеры использования интерфейса программирования сервера" /><link rel="next" href="tablefunc.html" title="F.43. tablefunc — функции, возвращающие таблицы (crosstab и не только)" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">F.42. sslinfo — получение информации об SSL-сертификате клиента</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="contrib-spi.html" title="F.41. spi — особенности/примеры использования интерфейса программирования сервера">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="contrib.html" title="Приложение F. Дополнительно поставляемые модули и расширения">Наверх</a></td><th width="60%" align="center">Приложение F. Дополнительно поставляемые модули и расширения</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="tablefunc.html" title="F.43. tablefunc — функции, возвращающие таблицы (crosstab и не только)">След.</a></td></tr></table><hr /></div><div class="sect1" id="SSLINFO"><div class="titlepage"><div><div><h2 class="title" style="clear: both">F.42. sslinfo — получение информации об SSL-сертификате клиента <a href="#SSLINFO" class="id_link">#</a></h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="sslinfo.html#SSLINFO-FUNCTIONS">F.42.1. Предоставляемые функции</a></span></dt><dt><span class="sect2"><a href="sslinfo.html#SSLINFO-AUTHOR">F.42.2. Автор</a></span></dt></dl></div><a id="id-1.11.7.52.2" class="indexterm"></a><p>Модуль <code class="filename">sslinfo</code> выдаёт информацию о SSL-сертификате, который был представлен текущим клиентом при подключении к <span class="productname">PostgreSQL</span>. Этот модуль бесполезен (большинство функций возвратят NULL), если для текущего подключения не задействуется SSL.</p><p>Часть информации, выдаваемой этим модулем, можно получить через встроенное системное представление <a class="link" href="monitoring-stats.html#MONITORING-PG-STAT-SSL-VIEW" title="28.2.10. pg_stat_ssl"><code class="structname">pg_stat_ssl</code></a>.</p><p>Это расширение не будет собираться, если конфигурация была произведена без ключа <code class="literal">--with-ssl=openssl</code>.</p><div class="sect2" id="SSLINFO-FUNCTIONS"><div class="titlepage"><div><div><h3 class="title">F.42.1. Предоставляемые функции <a href="#SSLINFO-FUNCTIONS" class="id_link">#</a></h3></div></div></div><div class="variablelist"><dl class="variablelist"><dt><span class="term">
+     <code class="function">ssl_is_used() returns boolean</code>
+     <a id="id-1.11.7.52.6.2.1.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Возвращает true, если текущее подключение использует SSL, и false в противном случае.</p></dd><dt><span class="term">
+     <code class="function">ssl_version() returns text</code>
+     <a id="id-1.11.7.52.6.2.2.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Возвращает имя протокола, по которому организовано SSL-подключение (например TLSv1.0, TLSv1.1, TLSv1.2 или TLSv1.3).</p></dd><dt><span class="term">
+     <code class="function">ssl_cipher() returns text</code>
+     <a id="id-1.11.7.52.6.2.3.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Возвращает имя шифра, используемого для SSL-подключения (например, DHE-RSA-AES256-SHA).</p></dd><dt><span class="term">
+     <code class="function">ssl_client_cert_present() returns boolean</code>
+     <a id="id-1.11.7.52.6.2.4.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Возвращает true, если текущий клиент предоставил серверу действительный клиентский SSL-сертификат, и false в противном случае. (Сервер может требовать, а может и не требовать предоставления клиентского сертификата.)</p></dd><dt><span class="term">
+     <code class="function">ssl_client_serial() returns numeric</code>
+     <a id="id-1.11.7.52.6.2.5.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Возвращает серийный номер текущего клиентского сертификата. Сочетание серийного номера сертификата с выдавшим его центром сертификации гарантирует однозначную идентификацию сертификата (но не его владелец — владелец должен регулярно менять свои ключи и получать сертификаты в центре сертификации).</p><p>Поэтому, если вы используете собственный ЦС и настроили сервер, чтобы он принимал сертификаты только от этого ЦС, серийный номер будет наиболее надёжным (хотя не очень запоминающимся) ключом идентификации пользователя.</p></dd><dt><span class="term">
+     <code class="function">ssl_client_dn() returns text</code>
+     <a id="id-1.11.7.52.6.2.6.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Возвращает полное имя субъекта из текущего клиентского сертификата, преобразуя символьные данные в кодировку текущей базы данных. Предполагается, что если в именах в сертификатах используются символы вне таблицы ASCII, то ваша база данных может представить эти символы. Если в вашей базе используется кодировка SQL_ASCII, символы вне ASCII в имени будут представлены последовательностями UTF-8.</p><p>Результат выглядит примерно так: <code class="literal">/CN=Somebody /C=Some country/O=Some organization</code>.</p></dd><dt><span class="term">
+     <code class="function">ssl_issuer_dn() returns text</code>
+     <a id="id-1.11.7.52.6.2.7.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Возвращает полное имя издателя текущего клиентского сертификата, преобразуя символьные данные в кодировку текущей базы данных. Преобразования кодировки осуществляются так же, как и в <code class="function">ssl_client_dn</code>.</p><p>Сочетание возвращаемого значения этой функции с серийным номером сертификата однозначно идентифицирует сертификат.</p><p>Эта функция полезна, только если в установленном на сервере файле с сертификатами ЦС содержатся сертификаты нескольких ЦС или если один ЦС выдаёт сертификаты для промежуточных центров сертификации.</p></dd><dt><span class="term">
+     <code class="function">ssl_client_dn_field(fieldname text) returns text</code>
+     <a id="id-1.11.7.52.6.2.8.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Эта функция возвращает значение указанного поля данных субъекта сертификата, либо NULL, если это поле отсутствует. Имена полей задаются строковыми константами, которые затем преобразуются в идентификаторы объектов ASN1, используя базу данных объектов <span class="productname">OpenSSL</span>. Принимаются следующие значения:</p><pre class="literallayout">commonName (или CN)
+surname (или SN)
+name
+givenName (или GN)
+countryName (или C)
+localityName (или L)
+stateOrProvinceName (или ST)
+organizationName (или O)
+organizationalUnitName (или OU)
+title
+description
+initials
+postalCode
+streetAddress
+generationQualifier
+description
+dnQualifier
+x500UniqueIdentifier
+pseudonym
+role
+emailAddress</pre><p>Все эти поля являются необязательными, за исключением <code class="structfield">commonName</code>. Какие из них будут включены в сертификат, а какие нет, зависит полностью от политики вашего ЦС. Значение этих полей, однако, строго определено стандартами X.500 и X.509, так что их нельзя интерпретировать произвольным образом.</p></dd><dt><span class="term">
+     <code class="function">ssl_issuer_field(fieldname text) returns text</code>
+     <a id="id-1.11.7.52.6.2.9.1.2" class="indexterm"></a>
+    </span></dt><dd><p>То же, что <code class="function">ssl_client_dn_field</code>, но для издателя, а не для субъекта сертификата.</p></dd><dt><span class="term">
+     <code class="function">ssl_extension_info() returns setof record</code>
+     <a id="id-1.11.7.52.6.2.10.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Предоставляет информацию о расширениях клиентского сертификата: имя расширения, значение расширения и является ли это расширение критическим.</p></dd></dl></div></div><div class="sect2" id="SSLINFO-AUTHOR"><div class="titlepage"><div><div><h3 class="title">F.42.2. Автор <a href="#SSLINFO-AUTHOR" class="id_link">#</a></h3></div></div></div><p>Виктор Вагнер <code class="email">&lt;<a class="email" href="mailto:vitus@cryptocom.ru">vitus@cryptocom.ru</a>&gt;</code>, ООО «Криптоком»</p><p>Дмитрий Воронин <code class="email">&lt;<a class="email" href="mailto:carriingfate92@yandex.ru">carriingfate92@yandex.ru</a>&gt;</code></p><p>Электронный адрес группы разработчиков OpenSSL в Криптокоме: <code class="email">&lt;<a class="email" href="mailto:openssl@cryptocom.ru">openssl@cryptocom.ru</a>&gt;</code></p></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="contrib-spi.html" title="F.41. spi — особенности/примеры использования интерфейса программирования сервера">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="contrib.html" title="Приложение F. Дополнительно поставляемые модули и расширения">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="tablefunc.html" title="F.43. tablefunc — функции, возвращающие таблицы (crosstab и не только)">След.</a></td></tr><tr><td width="40%" align="left" valign="top">F.41. spi — особенности/примеры использования интерфейса программирования сервера </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> F.43. tablefunc — функции, возвращающие таблицы (<code class="function">crosstab</code> и не только)</td></tr></table></div></body></html>

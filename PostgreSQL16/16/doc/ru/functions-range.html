@@ -1,0 +1,438 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>9.20. Диапазонные/мультидиапазонные функции и операторы</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="functions-array.html" title="9.19. Функции и операторы для работы с массивами" /><link rel="next" href="functions-aggregate.html" title="9.21. Агрегатные функции" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">9.20. Диапазонные/мультидиапазонные функции и операторы</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="functions-array.html" title="9.19. Функции и операторы для работы с массивами">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="functions.html" title="Глава 9. Функции и операторы">Наверх</a></td><th width="60%" align="center">Глава 9. Функции и операторы</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="functions-aggregate.html" title="9.21. Агрегатные функции">След.</a></td></tr></table><hr /></div><div class="sect1" id="FUNCTIONS-RANGE"><div class="titlepage"><div><div><h2 class="title" style="clear: both">9.20. Диапазонные/мультидиапазонные функции и операторы <a href="#FUNCTIONS-RANGE" class="id_link">#</a></h2></div></div></div><p>Диапазонные типы данных рассматриваются в <a class="xref" href="rangetypes.html" title="8.17. Диапазонные типы">Разделе 8.17</a>.</p><p>В <a class="xref" href="functions-range.html#RANGE-OPERATORS-TABLE" title="Таблица 9.55. Диапазонные операторы">Таблице 9.55</a> показаны имеющиеся специальные операторы для диапазонных типов, а в <a class="xref" href="functions-range.html#MULTIRANGE-OPERATORS-TABLE" title="Таблица 9.56. Мультидиапазонные операторы">Таблице 9.56</a> — для мультидиапазонных типов. Кроме них для диапазонов и мультидиапазонов определены обычные операторы сравнения, показанные в <a class="xref" href="functions-comparison.html#FUNCTIONS-COMPARISON-OP-TABLE" title="Таблица 9.1. Операторы сравнения">Таблице 9.1</a>. Операторы сравнения сначала сравнивают нижние границы диапазонов, и только если они равны, сравнивают верхние границы. Операторы сравнения мультидиапазонов сравнивают каждый диапазон, пока не найдут неравенство. Такие операторы сравнения обычно не помогают получить полезный в целом вариант сортировки, но позволяют строить по диапазонам уникальные индексы.</p><div class="table" id="RANGE-OPERATORS-TABLE"><p class="title"><strong>Таблица 9.55. Диапазонные операторы</strong></p><div class="table-contents"><table class="table" summary="Диапазонные операторы" border="1"><colgroup><col /></colgroup><thead><tr><th class="func_table_entry"><p class="func_signature">Оператор</p>
+       <p>Описание</p>
+       <p>Пример(ы)</p></th></tr></thead><tbody><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anyrange</code> <code class="literal">@&gt;</code> <code class="type">anyrange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Первый диапазон содержит второй?</p>
+       <p>
+        <code class="literal">int4range(2,4) @&gt; int4range(2,3)</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anyrange</code> <code class="literal">@&gt;</code> <code class="type">anyelement</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Диапазон содержит заданный элемент?</p>
+       <p>
+        <code class="literal">'[2011-01-01,2011-03-01)'::tsrange @&gt; '2011-01-10'::timestamp</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anyrange</code> <code class="literal">&lt;@</code> <code class="type">anyrange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Первый диапазон содержится во втором?</p>
+       <p>
+        <code class="literal">int4range(2,4) &lt;@ int4range(1,7)</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anyelement</code> <code class="literal">&lt;@</code> <code class="type">anyrange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Заданный элемент содержится в диапазоне?</p>
+       <p>
+        <code class="literal">42 &lt;@ int4range(1,7)</code>
+        → <code class="returnvalue">f</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anyrange</code> <code class="literal">&amp;&amp;</code> <code class="type">anyrange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Диапазоны пересекаются (у них есть общие элементы)?</p>
+       <p>
+        <code class="literal">int8range(3,7) &amp;&amp; int8range(4,12)</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anyrange</code> <code class="literal">&lt;&lt;</code> <code class="type">anyrange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Первый диапазон располагается строго слева от второго?</p>
+       <p>
+        <code class="literal">int8range(1,10) &lt;&lt; int8range(100,110)</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anyrange</code> <code class="literal">&gt;&gt;</code> <code class="type">anyrange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Первый диапазон располагается строго справа от второго?</p>
+       <p>
+        <code class="literal">int8range(50,60) &gt;&gt; int8range(20,30)</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anyrange</code> <code class="literal">&amp;&lt;</code> <code class="type">anyrange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Первый диапазон не простирается правее второго?</p>
+       <p>
+        <code class="literal">int8range(1,20) &amp;&lt; int8range(18,20)</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anyrange</code> <code class="literal">&amp;&gt;</code> <code class="type">anyrange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Первый диапазон не простирается левее второго?</p>
+       <p>
+        <code class="literal">int8range(7,20) &amp;&gt; int8range(5,10)</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anyrange</code> <code class="literal">-|-</code> <code class="type">anyrange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Диапазоны примыкают друг к другу?</p>
+       <p>
+        <code class="literal">numrange(1.1,2.2) -|- numrange(2.2,3.3)</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anyrange</code> <code class="literal">+</code> <code class="type">anyrange</code>
+        → <code class="returnvalue">anyrange</code>
+       </p>
+       <p>Вычисляет объединение диапазонов. Диапазоны должны пересекаться или касаться друг друга, чтобы их объединением был один диапазон (но см. <code class="function">range_merge()</code>).</p>
+       <p>
+        <code class="literal">numrange(5,15) + numrange(10,20)</code>
+        → <code class="returnvalue">[5,20)</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anyrange</code> <code class="literal">*</code> <code class="type">anyrange</code>
+        → <code class="returnvalue">anyrange</code>
+       </p>
+       <p>Вычисляет пересечение диапазонов.</p>
+       <p>
+        <code class="literal">int8range(5,15) * int8range(10,20)</code>
+        → <code class="returnvalue">[10,15)</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anyrange</code> <code class="literal">-</code> <code class="type">anyrange</code>
+        → <code class="returnvalue">anyrange</code>
+       </p>
+       <p>Вычисляет разность диапазонов. При этом второй диапазон, если он содержится в первом, должен располагаться так, чтобы в результате его вычитания получался один диапазон.</p>
+       <p>
+        <code class="literal">int8range(5,15) - int8range(10,20)</code>
+        → <code class="returnvalue">[5,10)</code>
+       </p></td></tr></tbody></table></div></div><br class="table-break" /><div class="table" id="MULTIRANGE-OPERATORS-TABLE"><p class="title"><strong>Таблица 9.56. Мультидиапазонные операторы</strong></p><div class="table-contents"><table class="table" summary="Мультидиапазонные операторы" border="1"><colgroup><col /></colgroup><thead><tr><th class="func_table_entry"><p class="func_signature">Оператор</p>
+       <p>Описание</p>
+       <p>Пример(ы)</p></th></tr></thead><tbody><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anymultirange</code> <code class="literal">@&gt;</code> <code class="type">anymultirange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Первый мультидиапазон содержит второй?</p>
+       <p>
+        <code class="literal">'{[2,4)}'::int4multirange @&gt; '{[2,3)}'::int4multirange</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anymultirange</code> <code class="literal">@&gt;</code> <code class="type">anyrange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Мультидиапазон содержит заданный диапазон?</p>
+       <p>
+        <code class="literal">'{[2,4)}'::int4multirange @&gt; int4range(2,3)</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anymultirange</code> <code class="literal">@&gt;</code> <code class="type">anyelement</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Мультидиапазон содержит заданный элемент?</p>
+       <p>
+        <code class="literal">'{[2011-01-01,2011-03-01)}'::tsmultirange @&gt; '2011-01-10'::timestamp</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anyrange</code> <code class="literal">@&gt;</code> <code class="type">anymultirange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Диапазон содержит заданный мультидиапазон?</p>
+       <p>
+        <code class="literal">'[2,4)'::int4range @&gt; '{[2,3)}'::int4multirange</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anymultirange</code> <code class="literal">&lt;@</code> <code class="type">anymultirange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Первый мультидиапазон содержится во втором?</p>
+       <p>
+        <code class="literal">'{[2,4)}'::int4multirange &lt;@ '{[1,7)}'::int4multirange</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anymultirange</code> <code class="literal">&lt;@</code> <code class="type">anyrange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Мультидиапазон содержится в диапазоне?</p>
+       <p>
+        <code class="literal">'{[2,4)}'::int4multirange &lt;@ int4range(1,7)</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anyrange</code> <code class="literal">&lt;@</code> <code class="type">anymultirange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Диапазон содержится в мультидиапазоне?</p>
+       <p>
+        <code class="literal">int4range(2,4) &lt;@ '{[1,7)}'::int4multirange</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anyelement</code> <code class="literal">&lt;@</code> <code class="type">anymultirange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Заданный элемент содержится в мультидиапазоне?</p>
+       <p>
+        <code class="literal">4 &lt;@ '{[1,7)}'::int4multirange</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anymultirange</code> <code class="literal">&amp;&amp;</code> <code class="type">anymultirange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Мультидиапазоны пересекаются (у них есть общие элементы)?</p>
+       <p>
+        <code class="literal">'{[3,7)}'::int8multirange &amp;&amp; '{[4,12)}'::int8multirange</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anymultirange</code> <code class="literal">&amp;&amp;</code> <code class="type">anyrange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Мультидиапазон пересекает заданный диапазон?</p>
+       <p>
+        <code class="literal">'{[3,7)}'::int8multirange &amp;&amp; int8range(4,12)</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anyrange</code> <code class="literal">&amp;&amp;</code> <code class="type">anymultirange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Диапазон пересекает заданный мультидиапазон?</p>
+       <p>
+        <code class="literal">int8range(3,7) &amp;&amp; '{[4,12)}'::int8multirange</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anymultirange</code> <code class="literal">&lt;&lt;</code> <code class="type">anymultirange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Первый мультидиапазон располагается строго слева от второго?</p>
+       <p>
+        <code class="literal">'{[1,10)}'::int8multirange &lt;&lt; '{[100,110)}'::int8multirange</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anymultirange</code> <code class="literal">&lt;&lt;</code> <code class="type">anyrange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Мультидиапазон располагается строго слева от заданного диапазона?</p>
+       <p>
+        <code class="literal">'{[1,10)}'::int8multirange &lt;&lt; int8range(100,110)</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anyrange</code> <code class="literal">&lt;&lt;</code> <code class="type">anymultirange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Диапазон располагается строго слева от заданного мультидиапазона?</p>
+       <p>
+        <code class="literal">int8range(1,10) &lt;&lt; '{[100,110)}'::int8multirange</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anymultirange</code> <code class="literal">&gt;&gt;</code> <code class="type">anymultirange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Первый мультидиапазон располагается строго справа от второго?</p>
+       <p>
+        <code class="literal">'{[50,60)}'::int8multirange &gt;&gt; '{[20,30)}'::int8multirange</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anymultirange</code> <code class="literal">&gt;&gt;</code> <code class="type">anyrange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Мультидиапазон располагается строго справа от заданного диапазона?</p>
+       <p>
+        <code class="literal">'{[50,60)}'::int8multirange &gt;&gt; int8range(20,30)</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anyrange</code> <code class="literal">&gt;&gt;</code> <code class="type">anymultirange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Диапазон располагается строго справа от заданного мультидиапазона?</p>
+       <p>
+        <code class="literal">int8range(50,60) &gt;&gt; '{[20,30)}'::int8multirange</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anymultirange</code> <code class="literal">&amp;&lt;</code> <code class="type">anymultirange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Первый мультидиапазон не простирается правее второго?</p>
+       <p>
+        <code class="literal">'{[1,20)}'::int8multirange &amp;&lt; '{[18,20)}'::int8multirange</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anymultirange</code> <code class="literal">&amp;&lt;</code> <code class="type">anyrange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Мультидиапазон не простирается правее заданного диапазона?</p>
+       <p>
+        <code class="literal">'{[1,20)}'::int8multirange &amp;&lt; int8range(18,20)</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anyrange</code> <code class="literal">&amp;&lt;</code> <code class="type">anymultirange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Диапазон не простирается правее заданного мультидиапазона?</p>
+       <p>
+        <code class="literal">int8range(1,20) &amp;&lt; '{[18,20)}'::int8multirange</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anymultirange</code> <code class="literal">&amp;&gt;</code> <code class="type">anymultirange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Первый мультидиапазон не простирается левее второго?</p>
+       <p>
+        <code class="literal">'{[7,20)}'::int8multirange &amp;&gt; '{[5,10)}'::int8multirange</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anymultirange</code> <code class="literal">&amp;&gt;</code> <code class="type">anyrange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Мультидиапазон не простирается левее заданного диапазона?</p>
+       <p>
+        <code class="literal">'{[7,20)}'::int8multirange &amp;&gt; int8range(5,10)</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anyrange</code> <code class="literal">&amp;&gt;</code> <code class="type">anymultirange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Диапазон не простирается левее заданного мультидиапазона?</p>
+       <p>
+        <code class="literal">int8range(7,20) &amp;&gt; '{[5,10)}'::int8multirange</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anymultirange</code> <code class="literal">-|-</code> <code class="type">anymultirange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Мультидиапазоны примыкают друг к другу?</p>
+       <p>
+        <code class="literal">'{[1.1,2.2)}'::nummultirange -|- '{[2.2,3.3)}'::nummultirange</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anymultirange</code> <code class="literal">-|-</code> <code class="type">anyrange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Мультидиапазон примыкает к заданному диапазону?</p>
+       <p>
+        <code class="literal">'{[1.1,2.2)}'::nummultirange -|- numrange(2.2,3.3)</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anyrange</code> <code class="literal">-|-</code> <code class="type">anymultirange</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Диапазон примыкает к заданному мультидиапазону?</p>
+       <p>
+        <code class="literal">numrange(1.1,2.2) -|- '{[2.2,3.3)}'::nummultirange</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anymultirange</code> <code class="literal">+</code> <code class="type">anymultirange</code>
+        → <code class="returnvalue">anymultirange</code>
+       </p>
+       <p>Вычисляет объединение мультидиапазонов. Мультидиапазоны могут не пересекаться и не примыкать друг к другу.</p>
+       <p>
+        <code class="literal">'{[5,10)}'::nummultirange + '{[15,20)}'::nummultirange</code>
+        → <code class="returnvalue">{[5,10), [15,20)}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anymultirange</code> <code class="literal">*</code> <code class="type">anymultirange</code>
+        → <code class="returnvalue">anymultirange</code>
+       </p>
+       <p>Вычисляет пересечение мультидиапазонов.</p>
+       <p>
+        <code class="literal">'{[5,15)}'::int8multirange * '{[10,20)}'::int8multirange</code>
+        → <code class="returnvalue">{[10,15)}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anymultirange</code> <code class="literal">-</code> <code class="type">anymultirange</code>
+        → <code class="returnvalue">anymultirange</code>
+       </p>
+       <p>Вычисляет разность мультидиапазонов.</p>
+       <p>
+        <code class="literal">'{[5,20)}'::int8multirange - '{[10,15)}'::int8multirange</code>
+        → <code class="returnvalue">{[5,10), [15,20)}</code>
+       </p></td></tr></tbody></table></div></div><br class="table-break" /><p>Операторы слева/справа/примыкает всегда возвращают false, если один из диапазонов или мультидиапазонов пуст; то есть, считается, что пустой диапазон находится не слева и не справа от какого-либо другого диапазона.</p><p>В других случаях пустые диапазоны и мультидиапазоны рассматриваются как нулевой элемент: всё, что объединяется с пустым значением, остаётся неизменным. Все, от чего отнимается пустое значение, остаётся неизменным. Пустой мультидиапазон обладает теми же свойствами, что и пустой диапазон. Каждый диапазон содержит пустой диапазон. Каждый мультидиапазон содержит сколько угодно пустых диапазонов.</p><p>При вычислении операторов объединения и вычитания диапазонов возникнет ошибка, если в результате получатся два непересекающихся поддиапазона, поскольку такой результат нельзя представить в виде диапазона. Существуют отдельные операторы для объединения и вычитания, которые принимают мультидиапазонные параметры и возвращают мультидиапазон, и они не вызовут ошибку, даже если их аргументы не пересекаются. Поэтому, если вы хотите избежать ошибок при объединении или вычитании диапазонов, когда могут получиться непересекающиеся поддиапазоны, сначала преобразуйте входные диапазоны в мультидиапазоны.</p><p>В <a class="xref" href="functions-array.html#ARRAY-FUNCTIONS-TABLE" title="Таблица 9.54. Функции для работы с массивами">Таблице 9.54</a> перечислены функции, предназначенные для работы с диапазонными типами. Функции, предназначенные для использования с мультидиапазонными типами, приведены в <a class="xref" href="functions-range.html#MULTIRANGE-FUNCTIONS-TABLE" title="Таблица 9.58. Мультидиапазонные функции">Таблице 9.58</a>.</p><div class="table" id="RANGE-FUNCTIONS-TABLE"><p class="title"><strong>Таблица 9.57. Диапазонные функции</strong></p><div class="table-contents"><table class="table" summary="Диапазонные функции" border="1"><colgroup><col /></colgroup><thead><tr><th class="func_table_entry"><p class="func_signature">Функция</p>
+       <p>Описание</p>
+       <p>Пример(ы)</p></th></tr></thead><tbody><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.26.10.2.2.1.1.1.1" class="indexterm"></a> <code class="function">lower</code> ( <code class="type">anyrange</code> ) → <code class="returnvalue">anyelement</code></p>
+       <p>Выдаёт нижнюю границу диапазона (<code class="literal">NULL</code>, если диапазон пуст или не имеет нижней границы).</p>
+       <p>
+        <code class="literal">lower(numrange(1.1, 2.2))</code>
+        → <code class="returnvalue">1.1</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.26.10.2.2.2.1.1.1" class="indexterm"></a> <code class="function">upper</code> ( <code class="type">anyrange</code> ) → <code class="returnvalue">anyelement</code></p>
+       <p>Выдаёт верхнюю границу диапазона (<code class="literal">NULL</code>, если диапазон пуст или не имеет верхней границы).</p>
+       <p>
+        <code class="literal">upper(numrange(1.1, 2.2))</code>
+        → <code class="returnvalue">2.2</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.26.10.2.2.3.1.1.1" class="indexterm"></a> <code class="function">isempty</code> ( <code class="type">anyrange</code> ) → <code class="returnvalue">boolean</code></p>
+       <p>Диапазон пуст?</p>
+       <p>
+        <code class="literal">isempty(numrange(1.1,2.2))</code>
+        → <code class="returnvalue">f</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.26.10.2.2.4.1.1.1" class="indexterm"></a> <code class="function">lower_inc</code> ( <code class="type">anyrange</code> ) → <code class="returnvalue">boolean</code></p>
+       <p>Нижняя граница диапазона включается в него?</p>
+       <p>
+        <code class="literal">lower_inc(numrange(1.1, 2.2))</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.26.10.2.2.5.1.1.1" class="indexterm"></a> <code class="function">upper_inc</code> ( <code class="type">anyrange</code> ) → <code class="returnvalue">boolean</code></p>
+       <p>Верхняя граница диапазона включается в него?</p>
+       <p>
+        <code class="literal">upper_inc(numrange(1.1, 2.2))</code>
+        → <code class="returnvalue">f</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.26.10.2.2.6.1.1.1" class="indexterm"></a> <code class="function">lower_inf</code> ( <code class="type">anyrange</code> ) → <code class="returnvalue">boolean</code></p>
+       <p>У диапазона нет нижней границы? (При указании нижней границы <code class="literal">-Infinity</code> возвращается false.)</p>
+       <p>
+        <code class="literal">lower_inf('(,)'::daterange)</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.26.10.2.2.7.1.1.1" class="indexterm"></a> <code class="function">upper_inf</code> ( <code class="type">anyrange</code> ) → <code class="returnvalue">boolean</code></p>
+       <p>У диапазона нет верхней границы? (При указании верхней границы <code class="literal">Infinity</code> возвращается false.)</p>
+       <p>
+        <code class="literal">upper_inf('(,)'::daterange)</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.26.10.2.2.8.1.1.1" class="indexterm"></a> <code class="function">range_merge</code> ( <code class="type">anyrange</code>, <code class="type">anyrange</code> ) → <code class="returnvalue">anyrange</code></p>
+       <p>Вычисляет наименьший диапазон, включающий оба заданных диапазона.</p>
+       <p>
+        <code class="literal">range_merge('[1,2)'::int4range, '[3,4)'::int4range)</code>
+        → <code class="returnvalue">[1,4)</code>
+       </p></td></tr></tbody></table></div></div><br class="table-break" /><div class="table" id="MULTIRANGE-FUNCTIONS-TABLE"><p class="title"><strong>Таблица 9.58. Мультидиапазонные функции</strong></p><div class="table-contents"><table class="table" summary="Мультидиапазонные функции" border="1"><colgroup><col /></colgroup><thead><tr><th class="func_table_entry"><p class="func_signature">Функция</p>
+       <p>Описание</p>
+       <p>Пример(ы)</p></th></tr></thead><tbody><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.26.11.2.2.1.1.1.1" class="indexterm"></a> <code class="function">lower</code> ( <code class="type">anymultirange</code> ) → <code class="returnvalue">anyelement</code></p>
+       <p>Выдаёт нижнюю границу мультидиапазона (<code class="literal">NULL</code>, если мультидиапазон пуст или не имеет нижней границы).</p>
+       <p>
+        <code class="literal">lower('{[1.1,2.2)}'::nummultirange)</code>
+        → <code class="returnvalue">1.1</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.26.11.2.2.2.1.1.1" class="indexterm"></a> <code class="function">upper</code> ( <code class="type">anymultirange</code> ) → <code class="returnvalue">anyelement</code></p>
+       <p>Выдаёт верхнюю границу мультидиапазона (<code class="literal">NULL</code>, если мультидиапазон пуст или не имеет верхней границы).</p>
+       <p>
+        <code class="literal">upper('{[1.1,2.2)}'::nummultirange)</code>
+        → <code class="returnvalue">2.2</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.26.11.2.2.3.1.1.1" class="indexterm"></a> <code class="function">isempty</code> ( <code class="type">anymultirange</code> ) → <code class="returnvalue">boolean</code></p>
+       <p>Мультидиапазон пуст?</p>
+       <p>
+        <code class="literal">isempty('{[1.1,2.2)}'::nummultirange)</code>
+        → <code class="returnvalue">f</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.26.11.2.2.4.1.1.1" class="indexterm"></a> <code class="function">lower_inc</code> ( <code class="type">anymultirange</code> ) → <code class="returnvalue">boolean</code></p>
+       <p>Нижняя граница мультидиапазона включается в него?</p>
+       <p>
+        <code class="literal">lower_inc('{[1.1,2.2)}'::nummultirange)</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.26.11.2.2.5.1.1.1" class="indexterm"></a> <code class="function">upper_inc</code> ( <code class="type">anymultirange</code> ) → <code class="returnvalue">boolean</code></p>
+       <p>Верхняя граница мультидиапазона включается в него?</p>
+       <p>
+        <code class="literal">upper_inc('{[1.1,2.2)}'::nummultirange)</code>
+        → <code class="returnvalue">f</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.26.11.2.2.6.1.1.1" class="indexterm"></a> <code class="function">lower_inf</code> ( <code class="type">anymultirange</code> ) → <code class="returnvalue">boolean</code></p>
+       <p>У мультидиапазона нет нижней границы? (При указании нижней границы <code class="literal">-Infinity</code> возвращается false.)</p>
+       <p>
+        <code class="literal">lower_inf('{(,)}'::datemultirange)</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.26.11.2.2.7.1.1.1" class="indexterm"></a> <code class="function">upper_inf</code> ( <code class="type">anymultirange</code> ) → <code class="returnvalue">boolean</code></p>
+       <p>У мультидиапазона нет верхней границы? (При указании верхней границы <code class="literal">Infinity</code> возвращается false.)</p>
+       <p>
+        <code class="literal">upper_inf('{(,)}'::datemultirange)</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.26.11.2.2.8.1.1.1" class="indexterm"></a> <code class="function">range_merge</code> ( <code class="type">anymultirange</code> ) → <code class="returnvalue">anyrange</code></p>
+       <p>Вычисляет наименьший диапазон, включающий весь заданный мультидиапазон.</p>
+       <p>
+        <code class="literal">range_merge('{[1,2), [3,4)}'::int4multirange)</code>
+        → <code class="returnvalue">[1,4)</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.26.11.2.2.9.1.1.1" class="indexterm"></a> <code class="function">multirange</code> ( <code class="type">anyrange</code> ) → <code class="returnvalue">anymultirange</code></p>
+       <p>Возвращает мультидиапазон, содержащий только заданный диапазон.</p>
+       <p>
+        <code class="literal">multirange('[1,2)'::int4range)</code>
+        → <code class="returnvalue">{[1,2)}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.26.11.2.2.10.1.1.1" class="indexterm"></a> <code class="function">unnest</code> ( <code class="type">anymultirange</code> ) → <code class="returnvalue">set of anyrange</code></p>
+       <p>Разворачивает мультидиапазон в набор диапазонов. Диапазоны прочитываются в порядке хранения (восходящем).</p>
+       <p>
+        <code class="literal">unnest('{[1,2), [3,4)}'::int4multirange)</code>
+        → <code class="returnvalue"></code>
+</p><pre class="programlisting"> [1,2)
+ [3,4)</pre><p>
+       </p></td></tr></tbody></table></div></div><br class="table-break" /><p>Если функциям <code class="function">lower_inc</code>, <code class="function">upper_inc</code>, <code class="function">lower_inf</code>, <code class="function">upper_inf</code> передаётся пустой диапазон или мультидиапазон, они возвращают false.</p></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="functions-array.html" title="9.19. Функции и операторы для работы с массивами">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="functions.html" title="Глава 9. Функции и операторы">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="functions-aggregate.html" title="9.21. Агрегатные функции">След.</a></td></tr><tr><td width="40%" align="left" valign="top">9.19. Функции и операторы для работы с массивами </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 9.21. Агрегатные функции</td></tr></table></div></body></html>

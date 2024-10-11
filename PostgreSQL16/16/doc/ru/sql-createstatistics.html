@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>CREATE STATISTICS</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="sql-createserver.html" title="CREATE SERVER" /><link rel="next" href="sql-createsubscription.html" title="CREATE SUBSCRIPTION" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">CREATE STATISTICS</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="sql-createserver.html" title="CREATE SERVER">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="sql-commands.html" title="Команды SQL">Наверх</a></td><th width="60%" align="center">Команды SQL</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="sql-createsubscription.html" title="CREATE SUBSCRIPTION">След.</a></td></tr></table><hr /></div><div class="refentry" id="SQL-CREATESTATISTICS"><div class="titlepage"></div><a id="id-1.9.3.83.1" class="indexterm"></a><div class="refnamediv"><h2><span class="refentrytitle">CREATE STATISTICS</span></h2><p>CREATE STATISTICS — создать расширенную статистику</p></div><div class="refsynopsisdiv"><h2>Синтаксис</h2><pre class="synopsis">CREATE STATISTICS [ [ IF NOT EXISTS ] <em class="replaceable"><code>имя_статистики</code></em> ]
+    ON ( <em class="replaceable"><code>выражение</code></em> )
+    FROM <em class="replaceable"><code>имя_таблицы</code></em>
+
+CREATE STATISTICS [ [ IF NOT EXISTS ] <em class="replaceable"><code>имя_статистики</code></em> ]
+    [ ( <em class="replaceable"><code>вид_статистики</code></em> [, ... ] ) ]
+    ON { <em class="replaceable"><code>имя_столбца</code></em> | ( <em class="replaceable"><code>выражение</code></em> ) }, { <em class="replaceable"><code>имя_столбца</code></em> | ( <em class="replaceable"><code>выражение</code></em> ) } [, ...]
+    FROM <em class="replaceable"><code>имя_таблицы</code></em></pre></div><div class="refsect1" id="SQL-CREATESTATISTICS-DESCRIPTION"><h2>Описание</h2><p>Команда <code class="command">CREATE STATISTICS</code> создаст новый объект расширенной статистики, отслеживающий данные определённой таблицы, сторонней таблицы или материализованного представления. Объект статистики будет создан в текущей базе данных, и его владельцем станет пользователь, выполняющий команду.</p><p>Команда <code class="command">CREATE STATISTICS</code> имеет две основные формы. Первая форма позволяет собрать одномерную статистику для одного выражения, что даёт примерно тот же положительный эффект, что и индекс по выражению, но не требует поддержания индекса. Данная форма не позволяет указать вид статистики, так как различные виды существуют только для многомерных статистик. Вторая форма позволяет собрать многомерные статистики по нескольким столбцам и/или выражениям с возможностью выбора определённых видов статистики. Эта форма также автоматически собирает одномерные статистики по всем отдельным выражениям в списке.</p><p>Если задано имя схемы (например, <code class="literal">CREATE STATISTICS myschema.mystat ...</code>), объект статистики создаётся в указанной схеме, в противном случае — в текущей. Если имя объекта статистики задано, оно должно отличаться от имён других объектов статистики в этой схеме.</p></div><div class="refsect1" id="id-1.9.3.83.6"><h2>Параметры</h2><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">IF NOT EXISTS</code></span></dt><dd><p>Не считать ошибкой, если объект статистики с таким именем уже существует. В этом случае будет выдано замечание. Заметьте, что при этом проверяется только имя объекта, а не характеристики его определения. Имя объекта статистики является обязательным, когда указывается <code class="literal">IF NOT EXISTS</code>.</p></dd><dt><span class="term"><em class="replaceable"><code>имя_статистики</code></em></span></dt><dd><p>Имя создаваемого объекта статистики (возможно, дополненное схемой). Если имя опущено, <span class="productname">PostgreSQL</span> формирует подходящее имя по имени родительской таблицы и именам столбцов и/или выражений.</p></dd><dt><span class="term"><em class="replaceable"><code>вид_статистики</code></em></span></dt><dd><p>Вид многовариантной статистики, который будет вычисляться в этом объекте. В настоящее время поддерживаются следующие виды: <code class="literal">ndistinct</code> (подсчёт числа различных значений), <code class="literal">dependencies</code> (определение функциональных зависимостей) и <code class="literal">mcv</code> (списки самых частых значений). Если это предложение опущено, в объект статистики включаются все поддерживаемые виды статистики. Одномерная статистика по выражениям собирается автоматически, если в определении статистики присутствуют сложные выражения, а не просто ссылки на столбцы. За подробностями обратитесь к <a class="xref" href="planner-stats.html#PLANNER-STATS-EXTENDED" title="14.2.2. Расширенная статистика">Подразделу 14.2.2</a> и <a class="xref" href="multivariate-statistics-examples.html" title="76.2. Примеры многовариантной статистики">Разделу 76.2</a>.</p></dd><dt><span class="term"><em class="replaceable"><code>имя_столбца</code></em></span></dt><dd><p>Имя столбца таблицы, который будет покрываться вычисляемой статистикой. Это указание принимается только формой построения многомерной статистики. Необходимо указать минимум два выражения или столбца; их порядок не имеет значения.</p></dd><dt><span class="term"><em class="replaceable"><code>выражение</code></em></span></dt><dd><p>Выражение, которое будет покрываться вычисляемой статистикой. Это указание может задаваться для построения многомерной статистики или быть частью списка столбцов и/или выражений, для которых строится многомерная статистика. В последнем случае для каждого выражения в списке автоматически строятся отдельные одномерные статистики.</p></dd><dt><span class="term"><em class="replaceable"><code>имя_таблицы</code></em></span></dt><dd><p>Имя (возможно, дополненное схемой) таблицы, содержащей столбцы, по которым создаётся статистика; об особенностях, связанных с наследованием и секционированием, рассказывается в описании <a class="xref" href="sql-analyze.html" title="ANALYZE"><span class="refentrytitle">ANALYZE</span></a>.</p></dd></dl></div></div><div class="refsect1" id="id-1.9.3.83.7"><h2>Замечания</h2><p>Чтобы создать объект статистики, читающий таблицу, необходимо быть владельцем этой таблицы. После создания объекта статистики его владелец может определяться независимо от нижележащей таблицы.</p><p>Статистики выражений рассчитываются по отдельным выражениям подобно тому, как строится индекс по выражению, но не требуют таких накладных расходов, как индексы. Статистики по выражениям строятся автоматически для каждого выражения, входящего в определение объекта статистики.</p><p>В настоящее время планировщик не использует расширенную статистику для оценок избирательности, выполненных для соединений таблиц. Это ограничение, скорее всего, будет снято в одной из следующих версий <span class="productname">PostgreSQL</span>.</p></div><div class="refsect1" id="SQL-CREATESTATISTICS-EXAMPLES"><h2>Примеры</h2><p>Создайте таблицу <code class="structname">t1</code> с двумя функционально зависимыми столбцами; то есть знания значения одного столбца достаточно, чтобы определить значение другого. Затем для этих столбцов постройте статистику функциональной зависимости: </p><pre class="programlisting">CREATE TABLE t1 (
+    a   int,
+    b   int
+);
+
+INSERT INTO t1 SELECT i/100, i/500
+                 FROM generate_series(1,1000000) s(i);
+
+ANALYZE t1;
+
+-- число совпадающих строк будет катастрофически недооценено:
+EXPLAIN ANALYZE SELECT * FROM t1 WHERE (a = 1) AND (b = 0);
+
+CREATE STATISTICS s1 (dependencies) ON a, b FROM t1;
+
+ANALYZE t1;
+
+-- теперь оценка числа строк стала точнее:
+EXPLAIN ANALYZE SELECT * FROM t1 WHERE (a = 1) AND (b = 0);</pre><p> Без статистики функциональной зависимости планировщик предположил бы, что два условия <code class="literal">WHERE</code> независимы друг от друга, и перемножил бы их оценки избирательности, что дало бы слишком заниженную оценку числа строк. Однако с созданной статистикой планировщик понимает, что условия <code class="literal">WHERE</code> избыточны, и не ошибается с этой оценкой.</p><p>Создайте таблицу <code class="structname">t2</code> с двумя идеально коррелирующими столбцами (содержащими одинаковые данные), а затем по этим столбцам постройте статистику MCV: </p><pre class="programlisting">CREATE TABLE t2 (
+    a   int,
+    b   int
+);
+
+INSERT INTO t2 SELECT mod(i,100), mod(i,100)
+                 FROM generate_series(1,1000000) s(i);
+
+CREATE STATISTICS s2 (mcv) ON a, b FROM t2;
+
+ANALYZE t2;
+
+-- подходящая комбинация (входит в MCV)
+EXPLAIN ANALYZE SELECT * FROM t2 WHERE (a = 1) AND (b = 1);
+
+-- неподходящая комбинация (не входит в MCV)
+EXPLAIN ANALYZE SELECT * FROM t2 WHERE (a = 1) AND (b = 2);</pre><p> Список значений MCV даёт планировщику более точное представление о самых частых значениях в таблице, а также верхнюю границу избирательности для комбинаций, отсутствующих в ней, благодаря чему он может выработать более точные оценки в обоих случаях.</p><p>Создайте таблицу <code class="structname">t3</code> с одним полем timestamp и выполните запросы, содержащие выражения с этим столбцом. Без расширенной статистики планировщик не имеет информации о распределении данных для этих выражений и использует оценки по умолчанию. Планировщик также не понимает, что значение даты, усечённое до месяцев, полностью определяется значением даты, усечённой до дней. Затем постройте статистики выражений и статистику ndistinct по этим выражениям: </p><pre class="programlisting">CREATE TABLE t3 (
+    a   timestamp
+);
+
+INSERT INTO t3 SELECT i FROM generate_series('2020-01-01'::timestamp,
+                                             '2020-12-31'::timestamp,
+                                             '1 minute'::interval) s(i);
+
+ANALYZE t3;
+
+-- оценки количества совпадающих строк будут существенно занижены:
+EXPLAIN ANALYZE SELECT * FROM t3
+  WHERE date_trunc('month', a) = '2020-01-01'::timestamp;
+
+EXPLAIN ANALYZE SELECT * FROM t3
+  WHERE date_trunc('day', a) BETWEEN '2020-01-01'::timestamp
+                                 AND '2020-06-30'::timestamp;
+
+EXPLAIN ANALYZE SELECT date_trunc('month', a), date_trunc('day', a)
+   FROM t3 GROUP BY 1, 2;
+
+-- построить статистику ndistinct по двум выражениям (статистика по
+-- отдельным выражениям строится автоматически)
+CREATE STATISTICS s3 (ndistinct) ON date_trunc('month', a), date_trunc('day', a) FROM t3;
+
+ANALYZE t3;
+
+-- теперь оценки количества стали более точными:
+EXPLAIN ANALYZE SELECT * FROM t3
+  WHERE date_trunc('month', a) = '2020-01-01'::timestamp;
+
+EXPLAIN ANALYZE SELECT * FROM t3
+  WHERE date_trunc('day', a) BETWEEN '2020-01-01'::timestamp
+                                 AND '2020-06-30'::timestamp;
+
+EXPLAIN ANALYZE SELECT date_trunc('month', a), date_trunc('day', a)
+   FROM t3 GROUP BY 1, 2;</pre><p> Без статистики выражений и ndistinct планировщик не имеет сведений о количестве различных значений по выражениям и поэтому должен полагаться на оценки по умолчанию. При этом предполагается, что условия равенства и вхождения в диапазон имеют избирательность 0.5%, а число различных значений в выражении предполагается таким же, как и в столбце (то есть предполагаются уникальные значения). Вследствие этого оценка количества строк в первых двух строках оказывается существенно заниженной. Более того, планировщик не имеет информации о связанности выражений и поэтому он предполагает, что условия <code class="literal">WHERE</code> и <code class="literal">GROUP BY</code> независимы, и перемножает их избирательности, что даёт значительно завышенную оценку количества групп в запросе с агрегированием. Это ещё больше усугубляется нехваткой точной статистики для выражений, вследствие чего планировщик вынужден использовать для выражения оценку ndistinct по умолчанию, полученную из статистики ndistinct для столбца. Однако с новой статистикой планировщик понимает, что условия связаны, и даёт гораздо более точные оценки.</p></div><div class="refsect1" id="id-1.9.3.83.9"><h2>Совместимость</h2><p>Команда <code class="command">CREATE STATISTICS</code> отсутствует в стандарте SQL.</p></div><div class="refsect1" id="id-1.9.3.83.10"><h2>См. также</h2><span class="simplelist"><a class="xref" href="sql-alterstatistics.html" title="ALTER STATISTICS"><span class="refentrytitle">ALTER STATISTICS</span></a>, <a class="xref" href="sql-dropstatistics.html" title="DROP STATISTICS"><span class="refentrytitle">DROP STATISTICS</span></a></span></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="sql-createserver.html" title="CREATE SERVER">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="sql-commands.html" title="Команды SQL">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="sql-createsubscription.html" title="CREATE SUBSCRIPTION">След.</a></td></tr><tr><td width="40%" align="left" valign="top">CREATE SERVER </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> CREATE SUBSCRIPTION</td></tr></table></div></body></html>

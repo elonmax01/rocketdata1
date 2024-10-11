@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>COMMENT</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="sql-cluster.html" title="CLUSTER" /><link rel="next" href="sql-commit.html" title="COMMIT" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">COMMENT</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="sql-cluster.html" title="CLUSTER">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="sql-commands.html" title="Команды SQL">Наверх</a></td><th width="60%" align="center">Команды SQL</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="sql-commit.html" title="COMMIT">След.</a></td></tr></table><hr /></div><div class="refentry" id="SQL-COMMENT"><div class="titlepage"></div><a id="id-1.9.3.52.1" class="indexterm"></a><div class="refnamediv"><h2><span class="refentrytitle">COMMENT</span></h2><p>COMMENT — задать или изменить комментарий объекта</p></div><div class="refsynopsisdiv"><h2>Синтаксис</h2><pre class="synopsis">COMMENT ON
+{
+  ACCESS METHOD <em class="replaceable"><code>имя_объекта</code></em> |
+  AGGREGATE <em class="replaceable"><code>имя_агрегатной_функции</code></em> ( <em class="replaceable"><code>сигнатура_агр_функции</code></em> ) |
+  CAST (<em class="replaceable"><code>исходный_тип</code></em> AS <em class="replaceable"><code>целевой_тип</code></em>) |
+  COLLATION <em class="replaceable"><code>имя_объекта</code></em> |
+  COLUMN <em class="replaceable"><code>имя_отношения</code></em>.<em class="replaceable"><code>имя_столбца</code></em> |
+  CONSTRAINT <em class="replaceable"><code>имя_ограничения</code></em> ON <em class="replaceable"><code>имя_таблицы</code></em> |
+  CONSTRAINT <em class="replaceable"><code>имя_ограничения</code></em> ON DOMAIN <em class="replaceable"><code>имя_домена</code></em> |
+  CONVERSION <em class="replaceable"><code>имя_объекта</code></em> |
+  DATABASE <em class="replaceable"><code>имя_объекта</code></em> |
+  DOMAIN <em class="replaceable"><code>имя_объекта</code></em> |
+  EXTENSION <em class="replaceable"><code>имя_объекта</code></em> |
+  EVENT TRIGGER <em class="replaceable"><code>имя_объекта</code></em> |
+  FOREIGN DATA WRAPPER <em class="replaceable"><code>имя_объекта</code></em> |
+  FOREIGN TABLE <em class="replaceable"><code>имя_объекта</code></em> |
+  FUNCTION <em class="replaceable"><code>имя_функции</code></em> [ ( [ [ <em class="replaceable"><code>режим_аргумента</code></em> ] [ <em class="replaceable"><code>имя_аргумента</code></em> ] <em class="replaceable"><code>тип_аргумента</code></em> [, ...] ] ) ] |
+  INDEX <em class="replaceable"><code>имя_объекта</code></em> |
+  LARGE OBJECT <em class="replaceable"><code>oid_большого_объекта</code></em> |
+  MATERIALIZED VIEW <em class="replaceable"><code>имя_объекта</code></em> |
+  OPERATOR <em class="replaceable"><code>имя_оператора</code></em> (<em class="replaceable"><code>тип_слева</code></em>, <em class="replaceable"><code>тип_справа</code></em>) |
+  OPERATOR CLASS <em class="replaceable"><code>имя_объекта</code></em> USING <em class="replaceable"><code>индексный_метод</code></em> |
+  OPERATOR FAMILY <em class="replaceable"><code>имя_объекта</code></em> USING <em class="replaceable"><code>индексный_метод</code></em> |
+  POLICY <em class="replaceable"><code>имя_политики</code></em> ON <em class="replaceable"><code>имя_таблицы</code></em> |
+  [ PROCEDURAL ] LANGUAGE <em class="replaceable"><code>имя_объекта</code></em> |
+  PROCEDURE <em class="replaceable"><code>имя_процедуры</code></em> [ ( [ [ <em class="replaceable"><code>режим_аргумента</code></em> ] [ <em class="replaceable"><code>имя_аргумента</code></em> ] <em class="replaceable"><code>тип_аргумента</code></em> [, ...] ] ) ] |
+  PUBLICATION <em class="replaceable"><code>имя_объекта</code></em> |
+  ROLE <em class="replaceable"><code>имя_объекта</code></em> |
+  ROUTINE <em class="replaceable"><code>имя_подпрограммы</code></em> [ ( [ [ <em class="replaceable"><code>режим_аргумента</code></em> ] [ <em class="replaceable"><code>имя_аргумента</code></em> ] <em class="replaceable"><code>тип_аргумента</code></em> [, ...] ] ) ] |
+  RULE <em class="replaceable"><code>имя_правила</code></em> ON <em class="replaceable"><code>имя_таблицы</code></em> |
+  SCHEMA <em class="replaceable"><code>имя_объекта</code></em> |
+  SEQUENCE <em class="replaceable"><code>имя_объекта</code></em> |
+  SERVER <em class="replaceable"><code>имя_объекта</code></em> |
+  STATISTICS <em class="replaceable"><code>имя_объекта</code></em> |
+  SUBSCRIPTION <em class="replaceable"><code>имя_объекта</code></em> |
+  TABLE <em class="replaceable"><code>имя_объекта</code></em> |
+  TABLESPACE <em class="replaceable"><code>имя_объекта</code></em> |
+  TEXT SEARCH CONFIGURATION <em class="replaceable"><code>имя_объекта</code></em> |
+  TEXT SEARCH DICTIONARY <em class="replaceable"><code>имя_объекта</code></em> |
+  TEXT SEARCH PARSER <em class="replaceable"><code>имя_объекта</code></em> |
+  TEXT SEARCH TEMPLATE <em class="replaceable"><code>имя_объекта</code></em> |
+  TRANSFORM FOR <em class="replaceable"><code>имя_типа</code></em> LANGUAGE <em class="replaceable"><code>имя_языка</code></em> |
+  TRIGGER <em class="replaceable"><code>имя_триггера</code></em> ON <em class="replaceable"><code>имя_таблицы</code></em> |
+  TYPE <em class="replaceable"><code>имя_объекта</code></em> |
+  VIEW <em class="replaceable"><code>имя_объекта</code></em>
+} IS { <em class="replaceable"><code>строковая_константа</code></em> | NULL }
+
+<span class="phrase">Здесь <em class="replaceable"><code>сигнатура_агр_функции</code></em>:</span>
+
+* |
+[ <em class="replaceable"><code>режим_аргумента</code></em> ] [ <em class="replaceable"><code>имя_аргумента</code></em> ] <em class="replaceable"><code>тип_аргумента</code></em> [ , ... ] |
+[ [ <em class="replaceable"><code>режим_аргумента</code></em> ] [ <em class="replaceable"><code>имя_аргумента</code></em> ] <em class="replaceable"><code>тип_аргумента</code></em> [ , ... ] ] ORDER BY [ <em class="replaceable"><code>режим_аргумента</code></em> ] [ <em class="replaceable"><code>имя_аргумента</code></em> ] <em class="replaceable"><code>тип_аргумента</code></em> [ , ... ]</pre></div><div class="refsect1" id="id-1.9.3.52.5"><h2>Описание</h2><p><code class="command">COMMENT</code> сохраняет комментарий об объекте базы данных.</p><p>Для каждого объекта сохраняется только одна строка, так что для изменения комментария нужно просто выполнить <code class="command">COMMENT</code> ещё раз для того же объекта. Чтобы удалить комментарий, вместо текстовой строки укажите <code class="literal">NULL</code>. При удалении объектов комментарии удаляются автоматически.</p><p>Для целевого объекта запрашивается блокировка <code class="literal">SHARE UPDATE EXCLUSIVE</code>.</p><p>Для большинства типов объектов комментарий может установить только владелец объекта. Но так как роли не имеют владельцев, <code class="literal">COMMENT ON ROLE</code> для ролей суперпользователей разрешено выполнять только суперпользователям или тем, кто имеет право <code class="literal">CREATEROLE</code> и получил право <code class="literal">ADMIN OPTION</code> для целевой роли. Так же не имеют владельцев и методы доступа; чтобы добавить комментарий для метода доступа, нужно быть суперпользователем. Разумеется, суперпользователи могут задавать комментарии для любых объектов.</p><p>Просмотреть комментарии можно в <span class="application">psql</span>, используя семейство команд <code class="command">\d</code>. Имеется возможность получать комментарии и в других пользовательских интерфейсах, используя те же встроенные функции, что использует <span class="application">psql</span>, а именно <code class="function">obj_description</code>, <code class="function">col_description</code> и <code class="function">shobj_description</code> (см. <a class="xref" href="functions-info.html#FUNCTIONS-INFO-COMMENT-TABLE" title="Таблица 9.78. Функции получения комментариев">Таблицу 9.78</a>).</p></div><div class="refsect1" id="id-1.9.3.52.6"><h2>Параметры</h2><div class="variablelist"><dl class="variablelist"><dt><span class="term"><em class="replaceable"><code>имя_объекта</code></em><br /></span><span class="term"><em class="replaceable"><code>имя_отношения</code></em>.<em class="replaceable"><code>имя_столбца</code></em><br /></span><span class="term"><em class="replaceable"><code>имя_агрегатной_функции</code></em><br /></span><span class="term"><em class="replaceable"><code>имя_ограничения</code></em><br /></span><span class="term"><em class="replaceable"><code>имя_функции</code></em><br /></span><span class="term"><em class="replaceable"><code>имя_оператора</code></em><br /></span><span class="term"><em class="replaceable"><code>имя_политики</code></em><br /></span><span class="term"><em class="replaceable"><code>имя_процедуры</code></em><br /></span><span class="term"><em class="replaceable"><code>имя_подпрограммы</code></em><br /></span><span class="term"><em class="replaceable"><code>имя_правила</code></em><br /></span><span class="term"><em class="replaceable"><code>имя_триггера</code></em></span></dt><dd><p>Имя объекта, для которого задаётся комментарий. Имена объектов, располагающихся в схемах, например, имена таблиц, функций и т. п., можно дополнить именем схемы. Когда определяется комментарий для столбца, <em class="replaceable"><code>имя_отношения</code></em> должно ссылаться на таблицу, представление, составной тип или стороннюю таблицу.</p></dd><dt><span class="term"><em class="replaceable"><code>имя_таблицы</code></em><br /></span><span class="term"><em class="replaceable"><code>имя_домена</code></em></span></dt><dd><p>При создании комментария для ограничения, триггера, правила или политики эти параметры задают имя таблицы или домена, к которым относится этот объект.</p></dd><dt><span class="term"><em class="replaceable"><code>исходный_тип</code></em></span></dt><dd><p>Имя исходного типа данных для приведения.</p></dd><dt><span class="term"><em class="replaceable"><code>целевой_тип</code></em></span></dt><dd><p>Имя целевого типа данных для приведения.</p></dd><dt><span class="term"><em class="replaceable"><code>режим_аргумента</code></em></span></dt><dd><p>Режим аргумента функции, процедуры или агрегата: <code class="literal">IN</code>, <code class="literal">OUT</code>, <code class="literal">INOUT</code> или <code class="literal">VARIADIC</code>. По умолчанию подразумевается <code class="literal">IN</code>. Заметьте, что <code class="command">COMMENT</code> не учитывает аргументы <code class="literal">OUT</code>, так как для идентификации функции нужны только типы входных аргументов. Поэтому достаточно перечислить только аргументы <code class="literal">IN</code>, <code class="literal">INOUT</code> и <code class="literal">VARIADIC</code>.</p></dd><dt><span class="term"><em class="replaceable"><code>имя_аргумента</code></em></span></dt><dd><p>Имя аргумента функции, процедуры или агрегата. Заметьте, что на самом деле <code class="command">COMMENT</code> не обращает внимание на имена аргументов, так как для однозначной идентификации функции достаточно только типов аргументов.</p></dd><dt><span class="term"><em class="replaceable"><code>тип_аргумента</code></em></span></dt><dd><p>Тип данных аргумента функции, процедуры или агрегата.</p></dd><dt><span class="term"><em class="replaceable"><code>oid_большого_объекта</code></em></span></dt><dd><p>OID большого объекта.</p></dd><dt><span class="term"><em class="replaceable"><code>тип_слева</code></em><br /></span><span class="term"><em class="replaceable"><code>тип_справа</code></em></span></dt><dd><p>Тип данных аргументов оператора (возможно, дополненный именем схемы). В случае отсутствия аргумента префиксного оператора укажите вместо типа <code class="literal">NONE</code>.</p></dd><dt><span class="term"><code class="literal">PROCEDURAL</code></span></dt><dd><p>Это слово не несёт смысловой нагрузки.</p></dd><dt><span class="term"><em class="replaceable"><code>имя_типа</code></em></span></dt><dd><p>Имя типа данных, для которого предназначена трансформация.</p></dd><dt><span class="term"><em class="replaceable"><code>имя_языка</code></em></span></dt><dd><p>Имя языка, для которого предназначена трансформация.</p></dd><dt><span class="term"><em class="replaceable"><code>строковая_константа</code></em></span></dt><dd><p>Содержание нового комментария, записанное в виде строковой константы.</p></dd><dt><span class="term"><code class="literal">NULL</code></span></dt><dd><p>Укажите <code class="literal">NULL</code> для удаления комментария.</p></dd></dl></div></div><div class="refsect1" id="id-1.9.3.52.7"><h2>Замечания</h2><p>В настоящее время механизм безопасности в части просмотра комментариев отсутствует: любой пользователь, подключённый к базе данных, может видеть все комментарии всех объектов базы. Для общих объектов, таких как базы данных, роли и табличные пространства, комментарии хранятся глобально, так что их может видеть любой пользователь, подключённый к любой базе данных в кластере. Поэтому ничего секретного писать в комментариях не следует.</p></div><div class="refsect1" id="id-1.9.3.52.8"><h2>Примеры</h2><p>Добавление комментария для таблицы <code class="literal">mytable</code>: </p><pre class="programlisting">COMMENT ON TABLE mytable IS 'Это моя таблица.';</pre><p> Удаление его: </p><pre class="programlisting">COMMENT ON TABLE mytable IS NULL;</pre><p>Ещё несколько примеров: </p><pre class="programlisting">COMMENT ON ACCESS METHOD gin IS 'Метод доступа для индекса GIN';
+COMMENT ON AGGREGATE my_aggregate (double precision) IS 'Вычисляет дисперсию выборки';
+COMMENT ON CAST (text AS int4) IS 'Выполняет приведение строк к int4';
+COMMENT ON COLLATION "fr_CA" IS 'Канадский французский';
+COMMENT ON COLUMN my_table.my_column IS 'Порядковый номер сотрудника';
+COMMENT ON CONVERSION my_conv IS 'Перекодировка в UTF-8';
+COMMENT ON CONSTRAINT bar_col_cons ON bar IS 'Ограничение столбца col';
+COMMENT ON CONSTRAINT dom_col_constr ON DOMAIN dom IS 'Ограничение для домена';
+COMMENT ON DATABASE my_database IS 'База данных разработчиков';
+COMMENT ON DOMAIN my_domain IS 'Домен почтового адреса';
+COMMENT ON EVENT TRIGGER abort_ddl IS 'Прерывает все команды DDL';
+COMMENT ON EXTENSION hstore IS 'Реализует тип данных hstore';
+COMMENT ON FOREIGN DATA WRAPPER mywrapper IS 'Моя обёртка сторонних данных';
+COMMENT ON FOREIGN TABLE my_foreign_table IS 'Информация о сотрудниках в другой БД';
+COMMENT ON FUNCTION my_function (timestamp) IS 'Возвращает число римскими цифрами';
+COMMENT ON INDEX my_index IS 'Обеспечивает уникальность по коду сотрудника';
+COMMENT ON LANGUAGE plpython IS 'Поддержка Python для хранимых процедур';
+COMMENT ON LARGE OBJECT 346344 IS 'Документ планирования';
+COMMENT ON MATERIALIZED VIEW my_matview IS 'Сводка истории заказов';
+COMMENT ON OPERATOR ^ (text, text) IS 'Вычисляет пересечение двух текстов';
+COMMENT ON OPERATOR - (NONE, integer) IS 'Унарный минус';
+COMMENT ON OPERATOR CLASS int4ops USING btree IS 'Операторы для четырёхбайтовых целых (для B-деревьев)';
+COMMENT ON OPERATOR FAMILY integer_ops USING btree IS 'Все целочисленные операторы (для B-деревьев)';
+COMMENT ON POLICY my_policy ON mytable IS 'Фильтр строк по пользователям';
+COMMENT ON PROCEDURE my_proc (integer, integer) IS 'Строит отчёт';
+COMMENT ON PUBLICATION alltables IS 'Публикует все операции во всех таблицах';
+COMMENT ON ROLE my_role IS 'Административная группа для таблиц бухгалтерии';
+COMMENT ON ROUTINE my_routine (integer, integer) IS 'Выполняет подпрограмму (функцию или процедуру)';
+COMMENT ON RULE my_rule ON my_table IS 'Протоколирует изменения в записях сотрудников';
+COMMENT ON SCHEMA my_schema IS 'Данные отдела';
+COMMENT ON SEQUENCE my_sequence IS 'Предназначена для генерации первичных ключей';
+COMMENT ON SERVER myserver IS 'Мой сторонний сервер';
+COMMENT ON STATISTICS my_statistics IS 'Улучшает оценку числа строк для планировщика';
+COMMENT ON SUBSCRIPTION alltables IS 'Подписка на все операции во всех таблицах';
+COMMENT ON TABLE my_schema.my_table IS 'Данные сотрудников';
+COMMENT ON TABLESPACE my_tablespace IS 'Табличное пространство для индексов';
+COMMENT ON TEXT SEARCH CONFIGURATION my_config IS 'Фильтрация специальных слов';
+COMMENT ON TEXT SEARCH DICTIONARY swedish IS 'Стеммер Snowball для шведского языка';
+COMMENT ON TEXT SEARCH PARSER my_parser IS 'Разделяет текст на слова';
+COMMENT ON TEXT SEARCH TEMPLATE snowball IS 'Стеммер Snowball';
+COMMENT ON TRANSFORM FOR hstore LANGUAGE plpython3u IS 'Трансформирует данные из hstore в словарь Python';
+COMMENT ON TRIGGER my_trigger ON my_table IS 'Обеспечивает ссылочную целостность';
+COMMENT ON TYPE complex IS 'Тип данных комплексных чисел';
+COMMENT ON VIEW my_view IS 'Представление расходов по отделам';</pre></div><div class="refsect1" id="id-1.9.3.52.9"><h2>Совместимость</h2><p>Оператор <code class="command">COMMENT</code> отсутствует в стандарте SQL.</p></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="sql-cluster.html" title="CLUSTER">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="sql-commands.html" title="Команды SQL">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="sql-commit.html" title="COMMIT">След.</a></td></tr><tr><td width="40%" align="left" valign="top">CLUSTER </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> COMMIT</td></tr></table></div></body></html>

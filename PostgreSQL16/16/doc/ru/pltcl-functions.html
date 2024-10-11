@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>44.2. Функции на PL/Tcl и их аргументы</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="pltcl-overview.html" title="44.1. Обзор" /><link rel="next" href="pltcl-data.html" title="44.3. Значения данных в PL/Tcl" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">44.2. Функции на PL/Tcl и их аргументы</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="pltcl-overview.html" title="44.1. Обзор">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="pltcl.html" title="Глава 44. PL/Tcl — процедурный язык Tcl">Наверх</a></td><th width="60%" align="center">Глава 44. PL/Tcl — процедурный язык Tcl</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="pltcl-data.html" title="44.3. Значения данных в PL/Tcl">След.</a></td></tr></table><hr /></div><div class="sect1" id="PLTCL-FUNCTIONS"><div class="titlepage"><div><div><h2 class="title" style="clear: both">44.2. Функции на PL/Tcl и их аргументы <a href="#PLTCL-FUNCTIONS" class="id_link">#</a></h2></div></div></div><p>Чтобы создать функцию на языке <span class="application">PL/Tcl</span>, используйте стандартный синтаксис <a class="xref" href="sql-createfunction.html" title="CREATE FUNCTION"><span class="refentrytitle">CREATE FUNCTION</span></a>: </p><pre class="programlisting">CREATE FUNCTION <em class="replaceable"><code>имя_функции</code></em> (<em class="replaceable"><code>типы_аргументов</code></em>) RETURNS <em class="replaceable"><code>тип_результата</code></em> AS $$
+    # Тело функции на PL/Tcl
+$$ LANGUAGE pltcl;</pre><p> С <span class="application">PL/TclU</span> команда та же, но в качестве языка должно быть указано <code class="literal">pltclu</code>.</p><p>Тело функции содержит просто скрипт на Tcl. Когда вызывается функция, значения аргументов передаются скрипту Tcl в виде переменных с именами <code class="literal">1</code> ... <code class="literal"><em class="replaceable"><code>n</code></em></code>. Результат из кода Tcl возвращается как обычно, оператором <code class="literal">return</code>. В процедуре значение, возвращаемое из кода Tcl, игнорируется.</p><p>Например, функцию, возвращающую большее из двух целых чисел, можно определить так: </p><pre class="programlisting">CREATE FUNCTION tcl_max(integer, integer) RETURNS integer AS $$
+    if {$1 &gt; $2} {return $1}
+    return $2
+$$ LANGUAGE pltcl STRICT;</pre><p> Обратите внимание на предложение <code class="literal">STRICT</code>, которое избавляет нас от необходимости думать о входящих значениях NULL: если при вызове передаётся значение NULL, функция не будет выполняться вовсе, будет сразу возвращён результат NULL.</p><p>В нестрогой функции, если фактическое значение аргумента — NULL, соответствующей переменной <code class="literal">$<em class="replaceable"><code>n</code></em></code> будет присвоена пустая строка. Чтобы определить, был ли передан NULL в определённом аргументе, используйте функцию <code class="literal">argisnull</code>. Например, предположим, что нам нужна функция <code class="function">tcl_max</code>, которая с одним аргументом NULL и вторым аргументом не NULL должна возвращать не NULL, а второй аргумент: </p><pre class="programlisting">CREATE FUNCTION tcl_max(integer, integer) RETURNS integer AS $$
+    if {[argisnull 1]} {
+        if {[argisnull 2]} { return_null }
+        return $2
+    }
+    if {[argisnull 2]} { return $1 }
+    if {$1 &gt; $2} {return $1}
+    return $2
+$$ LANGUAGE pltcl;</pre><p>Как показано выше, чтобы вернуть значение NULL из функции PL/Tcl, нужно выполнить <code class="literal">return_null</code>. Это можно сделать и в строгой, и в нестрогой функции.</p><p>Аргументы составного типа передаются функции в виде массивов Tcl. Именами элементов массива являются имена атрибутов составного типа. Если атрибут в переданной строке имеет значение NULL, он будет отсутствовать в данном массиве. Например: </p><pre class="programlisting">CREATE TABLE employee (
+    name text,
+    salary integer,
+    age integer
+);
+
+CREATE FUNCTION overpaid(employee) RETURNS boolean AS $$
+    if {200000.0 &lt; $1(salary)} {
+        return "t"
+    }
+    if {$1(age) &lt; 30 &amp;&amp; 100000.0 &lt; $1(salary)} {
+        return "t"
+    }
+    return "f"
+$$ LANGUAGE pltcl;</pre><p>Функции PL/Tcl могут возвращать и результаты составного типа. Для этого код на Tcl должен вернуть список пар имя/значение столбца, соответствующий ожидаемому типу результата. Столбцы, имена которых в этом списке отсутствуют, получат значения NULL, а если в списке указано имя несуществующего столбца, возникнет ошибка. Например: </p><pre class="programlisting">CREATE FUNCTION square_cube(in int, out squared int, out cubed int) AS $$
+    return [list squared [expr {$1 * $1}] cubed [expr {$1 * $1 * $1}]]
+$$ LANGUAGE pltcl;</pre><p>Выходные аргументы процедур возвращаются таким же образом. Например: </p><pre class="programlisting">CREATE PROCEDURE tcl_triple(INOUT a integer, INOUT b integer) AS $$
+    return [list a [expr {$1 * 3}] b [expr {$2 * 3}]]
+$$ LANGUAGE pltcl;
+
+CALL tcl_triple(5, 10);</pre><div class="tip"><h3 class="title">Подсказка</h3><p>Список результатов можно создать из желаемого кортежа, представленного в виде массива, с помощью команды <code class="literal">array get</code> языка Tcl. Например: </p><pre class="programlisting">CREATE FUNCTION raise_pay(employee, delta int) RETURNS employee AS $$
+    set 1(salary) [expr {$1(salary) + $2}]
+    return [array get 1]
+$$ LANGUAGE pltcl;</pre></div><p>Функции PL/Tcl могут возвращать наборы результатов. Для этого код на Tcl должен вызывать <code class="function">return_next</code> для каждой возвращаемой строки, передавая ей соответствующее значение, когда возвращается скалярный тип, или список пар имя/значение столбца, когда возвращается составной тип. Пример с результатом скалярного типа: </p><pre class="programlisting">CREATE FUNCTION sequence(int, int) RETURNS SETOF int AS $$
+    for {set i $1} {$i &lt; $2} {incr i} {
+        return_next $i
+    }
+$$ LANGUAGE pltcl;</pre><p> и с результатом составного: </p><pre class="programlisting">CREATE FUNCTION table_of_squares(int, int) RETURNS TABLE (x int, x2 int) AS $$
+    for {set i $1} {$i &lt; $2} {incr i} {
+        return_next [list x $i x2 [expr {$i * $i}]]
+    }
+$$ LANGUAGE pltcl;</pre></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="pltcl-overview.html" title="44.1. Обзор">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="pltcl.html" title="Глава 44. PL/Tcl — процедурный язык Tcl">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="pltcl-data.html" title="44.3. Значения данных в PL/Tcl">След.</a></td></tr><tr><td width="40%" align="left" valign="top">44.1. Обзор </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 44.3. Значения данных в PL/Tcl</td></tr></table></div></body></html>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>CONNECT</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="ecpg-sql-allocate-descriptor.html" title="ALLOCATE DESCRIPTOR" /><link rel="next" href="ecpg-sql-deallocate-descriptor.html" title="DEALLOCATE DESCRIPTOR" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">CONNECT</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="ecpg-sql-allocate-descriptor.html" title="ALLOCATE DESCRIPTOR">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="ecpg-sql-commands.html" title="36.14. Команды встраиваемого SQL">Наверх</a></td><th width="60%" align="center">36.14. Команды встраиваемого SQL</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="ecpg-sql-deallocate-descriptor.html" title="DEALLOCATE DESCRIPTOR">След.</a></td></tr></table><hr /></div><div class="refentry" id="ECPG-SQL-CONNECT"><div class="titlepage"></div><div class="refnamediv"><h2>CONNECT</h2><p>CONNECT — установить подключение к базе данных</p></div><div class="refsynopsisdiv"><h2>Синтаксис</h2><pre class="synopsis">CONNECT TO <em class="replaceable"><code>цель_подключения</code></em> [ AS <em class="replaceable"><code>имя_подключения</code></em> ] [ USER <em class="replaceable"><code>пользователь_подключения</code></em> ]
+CONNECT TO DEFAULT
+CONNECT <em class="replaceable"><code>пользователь_подключения</code></em>
+DATABASE <em class="replaceable"><code>цель_подключения</code></em></pre></div><div class="refsect1" id="id-1.7.5.20.4.3"><h2>Описание</h2><p>Команда <code class="command">CONNECT</code> устанавливает подключение клиента к серверу PostgreSQL.</p></div><div class="refsect1" id="id-1.7.5.20.4.4"><h2>Параметры</h2><div class="variablelist"><dl class="variablelist"><dt id="ECPG-SQL-CONNECT-CONNECTION-TARGET"><span class="term"><em class="replaceable"><code>цель_подключения</code></em></span> <a href="#ECPG-SQL-CONNECT-CONNECTION-TARGET" class="id_link">#</a></dt><dd><p><em class="replaceable"><code>цель_соединения</code></em> задаёт целевой сервер и базу для подключения в одной из нескольких форм. </p><div class="variablelist"><dl class="variablelist"><dt id="ECPG-SQL-CONNECT-CONNECTION-TARGET-DATABASE-NAME"><span class="term">[ <em class="replaceable"><code>имя_бд</code></em> ] [ <code class="literal">@</code><em class="replaceable"><code>сервер</code></em> ] [ <code class="literal">:</code><em class="replaceable"><code>порт</code></em> ]</span> <a href="#ECPG-SQL-CONNECT-CONNECTION-TARGET-DATABASE-NAME" class="id_link">#</a></dt><dd><p>Подключение по TCP/IP</p></dd><dt id="ECPG-SQL-CONNECT-CONNECTION-TARGET-UNIX-DOMAIN-SOCKETS"><span class="term"><code class="literal">unix:postgresql://</code><em class="replaceable"><code>сервер</code></em> [ <code class="literal">:</code><em class="replaceable"><code>порт</code></em> ] <code class="literal">/</code> [ <em class="replaceable"><code>имя_бд</code></em> ] [ <code class="literal">?</code><em class="replaceable"><code>параметр_подключения</code></em> ]</span> <a href="#ECPG-SQL-CONNECT-CONNECTION-TARGET-UNIX-DOMAIN-SOCKETS" class="id_link">#</a></dt><dd><p>Подключение через Unix-сокеты</p></dd><dt id="ECPG-SQL-CONNECT-CONNECTION-TARGET-TCP-IP"><span class="term"><code class="literal">tcp:postgresql://</code><em class="replaceable"><code>сервер</code></em> [ <code class="literal">:</code><em class="replaceable"><code>порт</code></em> ] <code class="literal">/</code> [ <em class="replaceable"><code>имя_бд</code></em> ] [ <code class="literal">?</code><em class="replaceable"><code>параметр_подключения</code></em> ]</span> <a href="#ECPG-SQL-CONNECT-CONNECTION-TARGET-TCP-IP" class="id_link">#</a></dt><dd><p>Подключение по TCP/IP</p></dd><dt id="ECPG-SQL-CONNECT-CONNECTION-TARGET-CONSTANT"><span class="term">Строковая константа SQL</span> <a href="#ECPG-SQL-CONNECT-CONNECTION-TARGET-CONSTANT" class="id_link">#</a></dt><dd><p>содержащая значение в одной из показанных выше форм</p></dd><dt id="ECPG-SQL-CONNECT-CONNECTION-TARGET-HOST-VARIABLE"><span class="term">переменная среды C</span> <a href="#ECPG-SQL-CONNECT-CONNECTION-TARGET-HOST-VARIABLE" class="id_link">#</a></dt><dd><p>переменная среды C типа <code class="type">char[]</code> или <code class="type">VARCHAR[]</code>, содержащая значение в одной из показанных выше форм</p></dd></dl></div></dd><dt id="ECPG-SQL-CONNECT-CONNECTION-NAME"><span class="term"><em class="replaceable"><code>имя_подключения</code></em></span> <a href="#ECPG-SQL-CONNECT-CONNECTION-NAME" class="id_link">#</a></dt><dd><p>Необязательный идентификатор подключения, позволяющий обращаться к этому подключению в других командах. Это может быть идентификатор SQL или переменная среды C.</p></dd><dt id="ECPG-SQL-CONNECT-CONNECTION-USER"><span class="term"><em class="replaceable"><code>пользователь_подключения</code></em></span> <a href="#ECPG-SQL-CONNECT-CONNECTION-USER" class="id_link">#</a></dt><dd><p>Имя пользователя для подключения к базе данных.</p><p>В этом параметре также можно передать имя и пароль одним из следующих способов: <code class="literal"><em class="replaceable"><code>имя_пользователя</code></em>/<em class="replaceable"><code>пароль</code></em></code>, <code class="literal"><em class="replaceable"><code>имя_пользователя</code></em> IDENTIFIED BY <em class="replaceable"><code>пароль</code></em></code> или <code class="literal"><em class="replaceable"><code>имя_пользователя</code></em> USING <em class="replaceable"><code>пароль</code></em></code>.</p><p>В качестве имени пользователя и пароля можно задать идентификаторы SQL, строковые константы или переменные среды.</p></dd><dt id="ECPG-SQL-CONNECT-DEFAULT"><span class="term"><code class="literal">DEFAULT</code></span> <a href="#ECPG-SQL-CONNECT-DEFAULT" class="id_link">#</a></dt><dd><p>Использовать все параметры подключения по умолчанию, которые определены библиотекой libpq.</p></dd></dl></div></div><div class="refsect1" id="id-1.7.5.20.4.5"><h2>Примеры</h2><p>Несколько вариантов указания параметров подключения: </p><pre class="programlisting">EXEC SQL CONNECT TO "connectdb" AS main;
+EXEC SQL CONNECT TO "connectdb" AS second;
+EXEC SQL CONNECT TO "unix:postgresql://200.46.204.71/connectdb" AS main USER connectuser;
+EXEC SQL CONNECT TO "unix:postgresql://localhost/connectdb" AS main USER connectuser;
+EXEC SQL CONNECT TO 'connectdb' AS main;
+EXEC SQL CONNECT TO 'unix:postgresql://localhost/connectdb' AS main USER :user;
+EXEC SQL CONNECT TO :db AS :id;
+EXEC SQL CONNECT TO :db USER connectuser USING :pw;
+EXEC SQL CONNECT TO @localhost AS main USER connectdb;
+EXEC SQL CONNECT TO REGRESSDB1 as main;
+EXEC SQL CONNECT TO AS main USER connectdb;
+EXEC SQL CONNECT TO connectdb AS :id;
+EXEC SQL CONNECT TO connectdb AS main USER connectuser/connectdb;
+EXEC SQL CONNECT TO connectdb AS main;
+EXEC SQL CONNECT TO connectdb@localhost AS main;
+EXEC SQL CONNECT TO tcp:postgresql://localhost/ USER connectdb;
+EXEC SQL CONNECT TO tcp:postgresql://localhost/connectdb USER connectuser IDENTIFIED BY connectpw;
+EXEC SQL CONNECT TO tcp:postgresql://localhost:20/connectdb USER connectuser IDENTIFIED BY connectpw;
+EXEC SQL CONNECT TO unix:postgresql://localhost/ AS main USER connectdb;
+EXEC SQL CONNECT TO unix:postgresql://localhost/connectdb AS main USER connectuser;
+EXEC SQL CONNECT TO unix:postgresql://localhost/connectdb USER connectuser IDENTIFIED BY "connectpw";
+EXEC SQL CONNECT TO unix:postgresql://localhost/connectdb USER connectuser USING "connectpw";
+EXEC SQL CONNECT TO unix:postgresql://localhost/connectdb?connect_timeout=14 USER connectuser;</pre><p>Следующий пример программы демонстрирует применение переменных среды для определения параметров подключения: </p><pre class="programlisting">int
+main(void)
+{
+EXEC SQL BEGIN DECLARE SECTION;
+    char *dbname     = "testdb";    /* имя базы данных */
+    char *user       = "testuser";  /* имя пользователя подключения */
+    char *connection = "tcp:postgresql://localhost:5432/testdb";
+                                    /* строка подключения */
+    char ver[256];                  /* буфер для хранения строки версии */
+EXEC SQL END DECLARE SECTION;
+
+    ECPGdebug(1, stderr);
+
+    EXEC SQL CONNECT TO :dbname USER :user;
+    EXEC SQL SELECT pg_catalog.set_config('search_path', '', false); EXEC SQL COMMIT;
+    EXEC SQL SELECT version() INTO :ver;
+    EXEC SQL DISCONNECT;
+
+    printf("version: %s\n", ver);
+
+    EXEC SQL CONNECT TO :connection USER :user;
+    EXEC SQL SELECT pg_catalog.set_config('search_path', '', false); EXEC SQL COMMIT;
+    EXEC SQL SELECT version() INTO :ver;
+    EXEC SQL DISCONNECT;
+
+    printf("version: %s\n", ver);
+
+    return 0;
+}</pre></div><div class="refsect1" id="id-1.7.5.20.4.6"><h2>Совместимость</h2><p>Команда <code class="command">CONNECT</code> описана в стандарте SQL, но формат параметров подключения определяется реализацией.</p></div><div class="refsect1" id="id-1.7.5.20.4.7"><h2>См. также</h2><span class="simplelist"><a class="xref" href="ecpg-sql-disconnect.html" title="DISCONNECT">DISCONNECT</a>, <a class="xref" href="ecpg-sql-set-connection.html" title="SET CONNECTION">SET CONNECTION</a></span></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ecpg-sql-allocate-descriptor.html" title="ALLOCATE DESCRIPTOR">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="ecpg-sql-commands.html" title="36.14. Команды встраиваемого SQL">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="ecpg-sql-deallocate-descriptor.html" title="DEALLOCATE DESCRIPTOR">След.</a></td></tr><tr><td width="40%" align="left" valign="top">ALLOCATE DESCRIPTOR </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> DEALLOCATE DESCRIPTOR</td></tr></table></div></body></html>

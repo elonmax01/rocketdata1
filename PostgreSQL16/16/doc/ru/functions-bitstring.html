@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>9.6. Функции и операторы для работы с битовыми строками</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="functions-binarystring.html" title="9.5. Функции и операторы двоичных строк" /><link rel="next" href="functions-matching.html" title="9.7. Поиск по шаблону" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">9.6. Функции и операторы для работы с битовыми строками</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="functions-binarystring.html" title="9.5. Функции и операторы двоичных строк">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="functions.html" title="Глава 9. Функции и операторы">Наверх</a></td><th width="60%" align="center">Глава 9. Функции и операторы</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="functions-matching.html" title="9.7. Поиск по шаблону">След.</a></td></tr></table><hr /></div><div class="sect1" id="FUNCTIONS-BITSTRING"><div class="titlepage"><div><div><h2 class="title" style="clear: both">9.6. Функции и операторы для работы с битовыми строками <a href="#FUNCTIONS-BITSTRING" class="id_link">#</a></h2></div></div></div><a id="id-1.5.8.12.2" class="indexterm"></a><p>В этом разделе описываются функции и операторы, предназначенные для работы с битовыми строками, то есть с данными типов <code class="type">bit</code> и <code class="type">bit varying</code>. (Хотя в этих таблицах упоминается только тип <code class="type">bit</code>, с ним полностью взаимозаменяем тип <code class="type">bit varying</code>.) Для битовых строк поддерживаются обычные операторы сравнения, показанные в <a class="xref" href="functions-comparison.html#FUNCTIONS-COMPARISON-OP-TABLE" title="Таблица 9.1. Операторы сравнения">Таблице 9.1</a>, а также операторы, приведённые в <a class="xref" href="functions-bitstring.html#FUNCTIONS-BIT-STRING-OP-TABLE" title="Таблица 9.14. Операторы для работы с битовыми строками">Таблице 9.14</a>.</p><div class="table" id="FUNCTIONS-BIT-STRING-OP-TABLE"><p class="title"><strong>Таблица 9.14. Операторы для работы с битовыми строками</strong></p><div class="table-contents"><table class="table" summary="Операторы для работы с битовыми строками" border="1"><colgroup><col /></colgroup><thead><tr><th class="func_table_entry"><p class="func_signature">Оператор</p>
+       <p>Описание</p>
+       <p>Пример(ы)</p></th></tr></thead><tbody><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">bit</code> <code class="literal">||</code> <code class="type">bit</code>
+        → <code class="returnvalue">bit</code>
+       </p>
+       <p>Конкатенация</p>
+       <p>
+        <code class="literal">B'10001' || B'011'</code>
+        → <code class="returnvalue">10001011</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">bit</code> <code class="literal">&amp;</code> <code class="type">bit</code>
+        → <code class="returnvalue">bit</code>
+       </p>
+       <p>Битовое И (операнды должны быть одинаковой длины)</p>
+       <p>
+        <code class="literal">B'10001' &amp; B'01101'</code>
+        → <code class="returnvalue">00001</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">bit</code> <code class="literal">|</code> <code class="type">bit</code>
+        → <code class="returnvalue">bit</code>
+       </p>
+       <p>Битовое ИЛИ (операнды должны быть одинаковой длины)</p>
+       <p>
+        <code class="literal">B'10001' | B'01101'</code>
+        → <code class="returnvalue">11101</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">bit</code> <code class="literal">#</code> <code class="type">bit</code>
+        → <code class="returnvalue">bit</code>
+       </p>
+       <p>Битовое исключающее ИЛИ (операнды должны быть одинаковой длины)</p>
+       <p>
+        <code class="literal">B'10001' # B'01101'</code>
+        → <code class="returnvalue">11100</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="literal">~</code> <code class="type">bit</code>
+        → <code class="returnvalue">bit</code>
+       </p>
+       <p>Битовое НЕ</p>
+       <p>
+        <code class="literal">~ B'10001'</code>
+        → <code class="returnvalue">01110</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">bit</code> <code class="literal">&lt;&lt;</code> <code class="type">integer</code>
+        → <code class="returnvalue">bit</code>
+       </p>
+       <p>Битовый сдвиг влево (с сохранением длины строки)</p>
+       <p>
+        <code class="literal">B'10001' &lt;&lt; 3</code>
+        → <code class="returnvalue">01000</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">bit</code> <code class="literal">&gt;&gt;</code> <code class="type">integer</code>
+        → <code class="returnvalue">bit</code>
+       </p>
+       <p>Битовый сдвиг вправо (с сохранением длины строки)</p>
+       <p>
+        <code class="literal">B'10001' &gt;&gt; 2</code>
+        → <code class="returnvalue">00100</code>
+       </p></td></tr></tbody></table></div></div><br class="table-break" /><p>Некоторые функции, работающие с двоичными строками, также работают и с битовыми строками, как показано в <a class="xref" href="functions-bitstring.html#FUNCTIONS-BIT-STRING-TABLE" title="Таблица 9.15. Функции для работы с битовыми строками">Таблице 9.15</a>.</p><div class="table" id="FUNCTIONS-BIT-STRING-TABLE"><p class="title"><strong>Таблица 9.15. Функции для работы с битовыми строками</strong></p><div class="table-contents"><table class="table" summary="Функции для работы с битовыми строками" border="1"><colgroup><col /></colgroup><thead><tr><th class="func_table_entry"><p class="func_signature">Функция</p>
+       <p>Описание</p>
+       <p>Пример(ы)</p></th></tr></thead><tbody><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.12.6.2.2.1.1.1.1" class="indexterm"></a> <code class="function">bit_count</code> ( <code class="type">bit</code> ) → <code class="returnvalue">bigint</code></p>
+       <p>Возвращает число бит в битовой строке (эту операцию так же называют <span class="quote">«<span class="quote">popcount</span>»</span>).</p>
+       <p>
+        <code class="literal">bit_count(B'10111')</code>
+        → <code class="returnvalue">4</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.12.6.2.2.2.1.1.1" class="indexterm"></a> <code class="function">bit_length</code> ( <code class="type">bit</code> ) → <code class="returnvalue">integer</code></p>
+       <p>Возвращает число бит в битовой строке.</p>
+       <p>
+        <code class="literal">bit_length(B'10111')</code>
+        → <code class="returnvalue">5</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.12.6.2.2.3.1.1.1" class="indexterm"></a> <a id="id-1.5.8.12.6.2.2.3.1.1.2" class="indexterm"></a> <code class="function">length</code> ( <code class="type">bit</code> ) → <code class="returnvalue">integer</code></p>
+       <p>Возвращает число бит в битовой строке.</p>
+       <p>
+        <code class="literal">length(B'10111')</code>
+        → <code class="returnvalue">5</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.12.6.2.2.4.1.1.1" class="indexterm"></a> <code class="function">octet_length</code> ( <code class="type">bit</code> ) → <code class="returnvalue">integer</code></p>
+       <p>Возвращает число байт в битовой строке.</p>
+       <p>
+        <code class="literal">octet_length(B'1011111011')</code>
+        → <code class="returnvalue">2</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.12.6.2.2.5.1.1.1" class="indexterm"></a> <code class="function">overlay</code> ( <em class="parameter"><code>bits</code></em> <code class="type">bit</code> <code class="literal">PLACING</code> <em class="parameter"><code>newsubstring</code></em> <code class="type">bit</code> <code class="literal">FROM</code> <em class="parameter"><code>start</code></em> <code class="type">integer</code> [<span class="optional"><code class="literal">FOR</code> <em class="parameter"><code>count</code></em> <code class="type">integer</code></span>] ) → <code class="returnvalue">bit</code></p>
+       <p>Заменяет подстроку в <em class="parameter"><code>bits</code></em>, начиная с бита с номером <em class="parameter"><code>start</code></em>, длиной <em class="parameter"><code>count</code></em> бит, на подстроку <em class="parameter"><code>newsubstring</code></em>. В отсутствие параметра <em class="parameter"><code>count</code></em> количество заменяемых бит определяется длиной <em class="parameter"><code>newsubstring</code></em>.</p>
+       <p>
+        <code class="literal">overlay(B'01010101010101010' placing B'11111' from 2 for 3)</code>
+        → <code class="returnvalue">0111110101010101010</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.12.6.2.2.6.1.1.1" class="indexterm"></a> <code class="function">position</code> ( <em class="parameter"><code>substring</code></em> <code class="type">bit</code> <code class="literal">IN</code> <em class="parameter"><code>bits</code></em> <code class="type">bit</code> ) → <code class="returnvalue">integer</code></p>
+       <p>Возвращает начальную позицию первого вхождения <em class="parameter"><code>substring</code></em> в <em class="parameter"><code>bits</code></em> либо 0, если такого вхождения нет.</p>
+       <p>
+        <code class="literal">position(B'010' in B'000001101011')</code>
+        → <code class="returnvalue">8</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.12.6.2.2.7.1.1.1" class="indexterm"></a> <code class="function">substring</code> ( <em class="parameter"><code>bits</code></em> <code class="type">bit</code> [<span class="optional"><code class="literal">FROM</code> <em class="parameter"><code>start</code></em> <code class="type">integer</code></span>] [<span class="optional"><code class="literal">FOR</code> <em class="parameter"><code>count</code></em> <code class="type">integer</code></span>] ) → <code class="returnvalue">bit</code></p>
+       <p>Извлекает из <em class="parameter"><code>bits</code></em> подстроку, начиная с позиции <em class="parameter"><code>start</code></em> (если она указана), длиной до <em class="parameter"><code>count</code></em> бит (если она указана). Параметры <em class="parameter"><code>start</code></em> и <em class="parameter"><code>count</code></em> могут опускаться, но не оба сразу.</p>
+       <p>
+        <code class="literal">substring(B'110010111111' from 3 for 2)</code>
+        → <code class="returnvalue">00</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.12.6.2.2.8.1.1.1" class="indexterm"></a> <code class="function">get_bit</code> ( <em class="parameter"><code>bits</code></em> <code class="type">bit</code>, <em class="parameter"><code>n</code></em> <code class="type">integer</code> ) → <code class="returnvalue">integer</code></p>
+       <p>Извлекает из битовой строки бит с номером <em class="parameter"><code>n</code></em>; первый (самый левый) бит имеет номер 0.</p>
+       <p>
+        <code class="literal">get_bit(B'101010101010101010', 6)</code>
+        → <code class="returnvalue">1</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.12.6.2.2.9.1.1.1" class="indexterm"></a> <code class="function">set_bit</code> ( <em class="parameter"><code>bits</code></em> <code class="type">bit</code>, <em class="parameter"><code>n</code></em> <code class="type">integer</code>, <em class="parameter"><code>newvalue</code></em> <code class="type">integer</code> ) → <code class="returnvalue">bit</code></p>
+       <p>Устанавливает для бита с номером <em class="parameter"><code>n</code></em> в битовой строке значение <em class="parameter"><code>newvalue</code></em>; первый (самый левый) бит имеет номер 0.</p>
+       <p>
+        <code class="literal">set_bit(B'101010101010101010', 6, 0)</code>
+        → <code class="returnvalue">101010001010101010</code>
+       </p></td></tr></tbody></table></div></div><br class="table-break" /><p>Кроме того, целые значения можно преобразовать в тип <code class="type">bit</code> и обратно. Приведение целого к типу <code class="type">bit(n)</code> заключается в копировании в это значение правых <code class="literal">n</code> бит. Когда целое приводится к битовой строке, имеющей длину больше, чем размер этого целого, результат дополняется слева знаком. Некоторые примеры: </p><pre class="programlisting">44::bit(10)                    <em class="lineannotation"><span class="lineannotation">0000101100</span></em>
+44::bit(3)                     <em class="lineannotation"><span class="lineannotation">100</span></em>
+cast(-44 as bit(12))           <em class="lineannotation"><span class="lineannotation">111111010100</span></em>
+'1110'::bit(4)::integer        <em class="lineannotation"><span class="lineannotation">14</span></em></pre><p> Заметьте, что приведение к типу <span class="quote">«<span class="quote">bit</span>»</span> без длины будет означать приведение к <code class="literal">bit(1)</code> и в результате будет получен только один самый младший бит числа.</p></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="functions-binarystring.html" title="9.5. Функции и операторы двоичных строк">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="functions.html" title="Глава 9. Функции и операторы">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="functions-matching.html" title="9.7. Поиск по шаблону">След.</a></td></tr><tr><td width="40%" align="left" valign="top">9.5. Функции и операторы двоичных строк </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 9.7. Поиск по шаблону</td></tr></table></div></body></html>

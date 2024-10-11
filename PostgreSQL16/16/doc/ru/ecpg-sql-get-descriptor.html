@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>GET DESCRIPTOR</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="ecpg-sql-execute-immediate.html" title="EXECUTE IMMEDIATE" /><link rel="next" href="ecpg-sql-open.html" title="OPEN" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">GET DESCRIPTOR</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="ecpg-sql-execute-immediate.html" title="EXECUTE IMMEDIATE">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="ecpg-sql-commands.html" title="36.14. Команды встраиваемого SQL">Наверх</a></td><th width="60%" align="center">36.14. Команды встраиваемого SQL</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="ecpg-sql-open.html" title="OPEN">След.</a></td></tr></table><hr /></div><div class="refentry" id="ECPG-SQL-GET-DESCRIPTOR"><div class="titlepage"></div><div class="refnamediv"><h2>GET DESCRIPTOR</h2><p>GET DESCRIPTOR — получить информацию из области дескриптора SQL</p></div><div class="refsynopsisdiv"><h2>Синтаксис</h2><pre class="synopsis">GET DESCRIPTOR <em class="replaceable"><code>имя_дескриптора</code></em> <em class="replaceable"><code>:cvariable</code></em> = <em class="replaceable"><code>элемент_заголовка_дескриптора</code></em> [, ... ]
+GET DESCRIPTOR <em class="replaceable"><code>имя_дескриптора</code></em> VALUE <em class="replaceable"><code>номер_столбца</code></em> <em class="replaceable"><code>:cvariable</code></em> = <em class="replaceable"><code>элемент_дескриптора</code></em> [, ... ]</pre></div><div class="refsect1" id="id-1.7.5.20.11.3"><h2>Описание</h2><p><code class="command">GET DESCRIPTOR</code> получает информацию о наборе результатов запроса из области дескриптора SQL и сохраняет её в переменные среды. Область дескриптора обычно предварительно заполняется командами <code class="command">FETCH</code> или <code class="command">SELECT</code>, чтобы из неё можно было перенести сопутствующую информацию в переменные среды.</p><p>Эта команда имеет две формы: первая форма выдаёт элементы из <span class="quote">«<span class="quote">заголовка</span>»</span> дескриптора, который относится ко всему набору результатов в целом. Например, это число строк. Другая форма, требующая указания в дополнительном параметре номера столбца, выдаёт информацию о конкретном столбце строки. В качестве примеров можно привести имя столбца и фактическое значение в этом столбце.</p></div><div class="refsect1" id="id-1.7.5.20.11.4"><h2>Параметры</h2><div class="variablelist"><dl class="variablelist"><dt id="ECPG-SQL-GET-DESCRIPTOR-DESCRIPTOR-NAME"><span class="term"><em class="replaceable"><code>имя_дескриптора</code></em></span> <a href="#ECPG-SQL-GET-DESCRIPTOR-DESCRIPTOR-NAME" class="id_link">#</a></dt><dd><p>Имя дескриптора.</p></dd><dt id="ECPG-SQL-GET-DESCRIPTOR-DESCRIPTOR-HEADER-ITEM"><span class="term"><em class="replaceable"><code>элемент_заголовка_дескриптора</code></em></span> <a href="#ECPG-SQL-GET-DESCRIPTOR-DESCRIPTOR-HEADER-ITEM" class="id_link">#</a></dt><dd><p>Идентификатор, определяющий, какой элемент заголовка нужно получить. В настоящее время поддерживается только <code class="literal">COUNT</code>, позволяющий получить число столбцов в наборе результатов.</p></dd><dt id="ECPG-SQL-GET-DESCRIPTOR-COLUMN-NUMBER"><span class="term"><em class="replaceable"><code>номер_столбца</code></em></span> <a href="#ECPG-SQL-GET-DESCRIPTOR-COLUMN-NUMBER" class="id_link">#</a></dt><dd><p>Номер столбца, информацию о котором нужно получить. Нумерация начинается с 1.</p></dd><dt id="ECPG-SQL-GET-DESCRIPTOR-DESCRIPTOR-ITEM"><span class="term"><em class="replaceable"><code>элемент_дескриптора</code></em></span> <a href="#ECPG-SQL-GET-DESCRIPTOR-DESCRIPTOR-ITEM" class="id_link">#</a></dt><dd><p>Идентификатор, определяющий, какой элемент информации о столбце нужно получить. Список поддерживаемых элементов приведён в <a class="xref" href="ecpg-descriptors.html#ECPG-NAMED-DESCRIPTORS" title="36.7.1. Именованные области SQL-дескрипторов">Подразделе 36.7.1</a>.</p></dd><dt id="ECPG-SQL-GET-DESCRIPTOR-CVARIABLE"><span class="term"><em class="replaceable"><code>cvariable</code></em></span> <a href="#ECPG-SQL-GET-DESCRIPTOR-CVARIABLE" class="id_link">#</a></dt><dd><p>Переменная среды C, в которую будут сохранены данные, полученные из области дескриптора.</p></dd></dl></div></div><div class="refsect1" id="id-1.7.5.20.11.5"><h2>Примеры</h2><p>Пример получения числа столбцов в наборе результатов: </p><pre class="programlisting">EXEC SQL GET DESCRIPTOR d :d_count = COUNT;</pre><p>Пример получения размера данных в первом столбце: </p><pre class="programlisting">EXEC SQL GET DESCRIPTOR d VALUE 1 :d_returned_octet_length = RETURNED_OCTET_LENGTH;</pre><p>Пример получения содержимого данных второго столбца в виде строки: </p><pre class="programlisting">EXEC SQL GET DESCRIPTOR d VALUE 2 :d_data = DATA;</pre><p>Следующий пример демонстрирует всю процедуру выполнения <code class="literal">SELECT current_database();</code> и вывода числа столбцов, длины данных в столбце и содержимого столбца: </p><pre class="programlisting">int
+main(void)
+{
+EXEC SQL BEGIN DECLARE SECTION;
+    int  d_count;
+    char d_data[1024];
+    int  d_returned_octet_length;
+EXEC SQL END DECLARE SECTION;
+
+    EXEC SQL CONNECT TO testdb AS con1 USER testuser;
+    EXEC SQL SELECT pg_catalog.set_config('search_path', '', false); EXEC SQL COMMIT;
+    EXEC SQL ALLOCATE DESCRIPTOR d;
+
+    /* Объявить, открыть курсор и присвоить ему дескриптор */
+    EXEC SQL DECLARE cur CURSOR FOR SELECT current_database();
+    EXEC SQL OPEN cur;
+    EXEC SQL FETCH NEXT FROM cur INTO SQL DESCRIPTOR d;
+
+    /* Получить общее число столбцов */
+    EXEC SQL GET DESCRIPTOR d :d_count = COUNT;
+    printf("d_count                 = %d\n", d_count);
+
+    /* Получить размер возвращённого столбца */
+    EXEC SQL GET DESCRIPTOR d VALUE 1 :d_returned_octet_length = RETURNED_OCTET_LENGTH;
+    printf("d_returned_octet_length = %d\n", d_returned_octet_length);
+
+    /* Выбрать возвращённый столбец в виде текстовой строки */
+    EXEC SQL GET DESCRIPTOR d VALUE 1 :d_data = DATA;
+    printf("d_data                  = %s\n", d_data);
+
+    /* Закрытие */
+    EXEC SQL CLOSE cur;
+    EXEC SQL COMMIT;
+
+    EXEC SQL DEALLOCATE DESCRIPTOR d;
+    EXEC SQL DISCONNECT ALL;
+
+    return 0;
+}</pre><p> При выполнении этого примера будет получен такой результат: </p><pre class="screen">
+d_count                 = 1
+d_returned_octet_length = 6
+d_data                  = testdb
+</pre></div><div class="refsect1" id="id-1.7.5.20.11.6"><h2>Совместимость</h2><p>Команда <code class="command">GET DESCRIPTOR</code> описана в стандарте SQL.</p></div><div class="refsect1" id="id-1.7.5.20.11.7"><h2>См. также</h2><span class="simplelist"><a class="xref" href="ecpg-sql-allocate-descriptor.html" title="ALLOCATE DESCRIPTOR">ALLOCATE DESCRIPTOR</a>, <a class="xref" href="ecpg-sql-set-descriptor.html" title="SET DESCRIPTOR">SET DESCRIPTOR</a></span></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ecpg-sql-execute-immediate.html" title="EXECUTE IMMEDIATE">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="ecpg-sql-commands.html" title="36.14. Команды встраиваемого SQL">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="ecpg-sql-open.html" title="OPEN">След.</a></td></tr><tr><td width="40%" align="left" valign="top">EXECUTE IMMEDIATE </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> OPEN</td></tr></table></div></body></html>

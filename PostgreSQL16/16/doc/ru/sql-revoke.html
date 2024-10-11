@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>REVOKE</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="sql-reset.html" title="RESET" /><link rel="next" href="sql-rollback.html" title="ROLLBACK" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">REVOKE</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="sql-reset.html" title="RESET">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="sql-commands.html" title="Команды SQL">Наверх</a></td><th width="60%" align="center">Команды SQL</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="sql-rollback.html" title="ROLLBACK">След.</a></td></tr></table><hr /></div><div class="refentry" id="SQL-REVOKE"><div class="titlepage"></div><a id="id-1.9.3.166.1" class="indexterm"></a><div class="refnamediv"><h2><span class="refentrytitle">REVOKE</span></h2><p>REVOKE — отозвать права доступа</p></div><div class="refsynopsisdiv"><h2>Синтаксис</h2><pre class="synopsis">REVOKE [ GRANT OPTION FOR ]
+    { { SELECT | INSERT | UPDATE | DELETE | TRUNCATE | REFERENCES | TRIGGER }
+    [, ...] | ALL [ PRIVILEGES ] }
+    ON { [ TABLE ] <em class="replaceable"><code>имя_таблицы</code></em> [, ...]
+         | ALL TABLES IN SCHEMA <em class="replaceable"><code>имя_схемы</code></em> [, ...] }
+    FROM <em class="replaceable"><code>указание_роли</code></em> [, ...]
+    [ GRANTED BY <em class="replaceable"><code>указание_роли</code></em> ]
+    [ CASCADE | RESTRICT ]
+
+REVOKE [ GRANT OPTION FOR ]
+    { { SELECT | INSERT | UPDATE | REFERENCES } ( <em class="replaceable"><code>имя_столбца</code></em> [, ...] )
+    [, ...] | ALL [ PRIVILEGES ] ( <em class="replaceable"><code>имя_столбца</code></em> [, ...] ) }
+    ON [ TABLE ] <em class="replaceable"><code>имя_таблицы</code></em> [, ...]
+    FROM <em class="replaceable"><code>указание_роли</code></em> [, ...]
+    [ GRANTED BY <em class="replaceable"><code>указание_роли</code></em> ]
+    [ CASCADE | RESTRICT ]
+
+REVOKE [ GRANT OPTION FOR ]
+    { { USAGE | SELECT | UPDATE }
+    [, ...] | ALL [ PRIVILEGES ] }
+    ON { SEQUENCE <em class="replaceable"><code>имя_последовательности</code></em> [, ...]
+         | ALL SEQUENCES IN SCHEMA <em class="replaceable"><code>имя_схемы</code></em> [, ...] }
+    FROM <em class="replaceable"><code>указание_роли</code></em> [, ...]
+    [ GRANTED BY <em class="replaceable"><code>указание_роли</code></em> ]
+    [ CASCADE | RESTRICT ]
+
+REVOKE [ GRANT OPTION FOR ]
+    { { CREATE | CONNECT | TEMPORARY | TEMP } [, ...] | ALL [ PRIVILEGES ] }
+    ON DATABASE <em class="replaceable"><code>имя_бд</code></em> [, ...]
+    FROM <em class="replaceable"><code>указание_роли</code></em> [, ...]
+    [ GRANTED BY <em class="replaceable"><code>указание_роли</code></em> ]
+    [ CASCADE | RESTRICT ]
+
+REVOKE [ GRANT OPTION FOR ]
+    { USAGE | ALL [ PRIVILEGES ] }
+    ON DOMAIN <em class="replaceable"><code>имя_домена</code></em> [, ...]
+    FROM <em class="replaceable"><code>указание_роли</code></em> [, ...]
+    [ GRANTED BY <em class="replaceable"><code>указание_роли</code></em> ]
+    [ CASCADE | RESTRICT ]
+
+REVOKE [ GRANT OPTION FOR ]
+    { USAGE | ALL [ PRIVILEGES ] }
+    ON FOREIGN DATA WRAPPER <em class="replaceable"><code>имя_обёртки_сторонних_данных</code></em> [, ...]
+    FROM <em class="replaceable"><code>указание_роли</code></em> [, ...]
+    [ GRANTED BY <em class="replaceable"><code>указание_роли</code></em> ]
+    [ CASCADE | RESTRICT ]
+
+REVOKE [ GRANT OPTION FOR ]
+    { USAGE | ALL [ PRIVILEGES ] }
+    ON FOREIGN SERVER <em class="replaceable"><code>имя_сервера</code></em> [, ...]
+    FROM <em class="replaceable"><code>указание_роли</code></em> [, ...]
+    [ GRANTED BY <em class="replaceable"><code>указание_роли</code></em> ]
+    [ CASCADE | RESTRICT ]
+
+REVOKE [ GRANT OPTION FOR ]
+    { EXECUTE | ALL [ PRIVILEGES ] }
+    ON { { FUNCTION | PROCEDURE | ROUTINE } <em class="replaceable"><code>имя_функции</code></em> [ ( [ [ <em class="replaceable"><code>режим_аргумента</code></em> ] [ <em class="replaceable"><code>имя_аргумента</code></em> ] <em class="replaceable"><code>тип_аргумента</code></em> [, ...] ] ) ] [, ...]
+         | ALL { FUNCTIONS | PROCEDURES | ROUTINES } IN SCHEMA <em class="replaceable"><code>имя_схемы</code></em> [, ...] }
+    FROM <em class="replaceable"><code>указание_роли</code></em> [, ...]
+    [ GRANTED BY <em class="replaceable"><code>указание_роли</code></em> ]
+    [ CASCADE | RESTRICT ]
+
+REVOKE [ GRANT OPTION FOR ]
+    { USAGE | ALL [ PRIVILEGES ] }
+    ON LANGUAGE <em class="replaceable"><code>имя_языка</code></em> [, ...]
+    FROM <em class="replaceable"><code>указание_роли</code></em> [, ...]
+    [ GRANTED BY <em class="replaceable"><code>указание_роли</code></em> ]
+    [ CASCADE | RESTRICT ]
+
+REVOKE [ GRANT OPTION FOR ]
+    { { SELECT | UPDATE } [, ...] | ALL [ PRIVILEGES ] }
+    ON LARGE OBJECT <em class="replaceable"><code>oid_БО</code></em> [, ...]
+    FROM <em class="replaceable"><code>указание_роли</code></em> [, ...]
+    [ GRANTED BY <em class="replaceable"><code>указание_роли</code></em> ]
+    [ CASCADE | RESTRICT ]
+
+REVOKE [ GRANT OPTION FOR ]
+    { { SET | ALTER SYSTEM } [, ...] | ALL [ PRIVILEGES ] }
+    ON PARAMETER <em class="replaceable"><code>параметр_конфигурации</code></em> [, ...]
+    FROM <em class="replaceable"><code>указание_роли</code></em> [, ...]
+    [ GRANTED BY <em class="replaceable"><code>указание_роли</code></em> ]
+    [ CASCADE | RESTRICT ]
+
+REVOKE [ GRANT OPTION FOR ]
+    { { CREATE | USAGE } [, ...] | ALL [ PRIVILEGES ] }
+    ON SCHEMA <em class="replaceable"><code>имя_схемы</code></em> [, ...]
+    FROM <em class="replaceable"><code>указание_роли</code></em> [, ...]
+    [ GRANTED BY <em class="replaceable"><code>указание_роли</code></em> ]
+    [ CASCADE | RESTRICT ]
+
+REVOKE [ GRANT OPTION FOR ]
+    { CREATE | ALL [ PRIVILEGES ] }
+    ON TABLESPACE <em class="replaceable"><code>табл_пространство</code></em> [, ...]
+    FROM <em class="replaceable"><code>указание_роли</code></em> [, ...]
+    [ GRANTED BY <em class="replaceable"><code>указание_роли</code></em> ]
+    [ CASCADE | RESTRICT ]
+
+REVOKE [ GRANT OPTION FOR ]
+    { USAGE | ALL [ PRIVILEGES ] }
+    ON TYPE <em class="replaceable"><code>имя_типа</code></em> [, ...]
+    FROM <em class="replaceable"><code>указание_роли</code></em> [, ...]
+    [ GRANTED BY <em class="replaceable"><code>указание_роли</code></em> ]
+    [ CASCADE | RESTRICT ]
+
+REVOKE [ { ADMIN | INHERIT | SET } OPTION FOR ]
+    <em class="replaceable"><code>имя_роли</code></em> [, ...] FROM <em class="replaceable"><code>указание_роли</code></em> [, ...]
+    [ GRANTED BY <em class="replaceable"><code>указание_роли</code></em> ]
+    [ CASCADE | RESTRICT ]
+
+<span class="phrase">Здесь <em class="replaceable"><code>указание_роли</code></em>:</span>
+
+    [ GROUP ] <em class="replaceable"><code>имя_роли</code></em>
+  | PUBLIC
+  | CURRENT_ROLE
+  | CURRENT_USER
+  | SESSION_USER</pre></div><div class="refsect1" id="SQL-REVOKE-DESCRIPTION"><h2>Описание</h2><p>Команда <code class="command">REVOKE</code> лишает одну или несколько ролей прав, назначенных ранее. Ключевое слово <code class="literal">PUBLIC</code> обозначает неявно определённую группу всех ролей.</p><p>Различные типы прав подробно рассматриваются в описании команды <a class="link" href="sql-grant.html" title="GRANT"><code class="command">GRANT</code></a>.</p><p>Заметьте, что любая конкретная роль получает в сумме права, данные непосредственно ей, права, данные любой роли, в которую она включена, а также права, данные группе <code class="literal">PUBLIC</code>. Поэтому, например, лишение <code class="literal">PUBLIC</code> права <code class="literal">SELECT</code> не обязательно будет означать, что все роли лишатся права <code class="literal">SELECT</code> для данного объекта: оно сохранится у тех ролей, которым оно дано непосредственно или косвенно, через другую роль. Подобным образом, лишение права <code class="literal">SELECT</code> какого-либо пользователя может не повлиять на его возможность пользоваться правом <code class="literal">SELECT</code>, если это право дано группе <code class="literal">PUBLIC</code> или другой роли, в которую он включён.</p><p>Если указано <code class="literal">GRANT OPTION FOR</code>, отзывается только право передачи права, но не само право. Без этого указания отзывается и право, и право распоряжаться им.</p><p>Если пользователь обладает правом с правом передачи и он дал его другим пользователям, последнее право считается зависимым. Когда первый пользователь лишается самого права или права передачи и существуют зависимые права, эти зависимые права также отзываются, если дополнительно указано <code class="literal">CASCADE</code>; в противном случае операция завершается ошибкой. Это рекурсивное лишение прав затрагивает только права, полученные через цепочку пользователей, которую можно проследить до пользователя, являющегося субъектом команды <code class="literal">REVOKE</code>. Таким образом, пользователи могут в итоге сохранить это право, если оно было также получено через других пользователей.</p><p>Когда отзывается право доступа к таблице, с ним вместе автоматически отзываются соответствующие права для каждого столбца таблицы (если такие права заданы). С другой стороны, если роли были даны права для таблицы, лишение роли таких же прав на уровне отдельных столбцов ни на что не влияет.</p><p>Когда пользователь лишается членства в роли, указание <code class="literal">GRANT OPTION</code> меняется на <code class="literal">ADMIN OPTION</code>, но в остальном поведение не отличается. Обратите внимание, что в версиях <span class="productname">PostgreSQL</span> до 16 при назначении членства в ролях зависимые права не отслеживались, то есть указание <code class="literal">CASCADE</code> при этом не действовало. Сейчас зависимые права отслеживаются. Заметьте также, что эта форма команды не принимает избыточное слово <code class="literal">GROUP</code> в <em class="replaceable"><code>указании_роли</code></em>.</p><p>Можно отозвать право <code class="literal">INHERIT OPTION</code> или <code class="literal">SET OPTION</code> так же, как <code class="literal">ADMIN OPTION</code>. Это равнозначно присваиванию параметру значения <code class="literal">FALSE</code>.</p></div><div class="refsect1" id="SQL-REVOKE-NOTES"><h2>Замечания</h2><p>Пользователь может отзывать только те права, которые он дал другому непосредственно. Если, например, пользователь A дал право с правом передачи пользователю B, а пользователь B, в свою очередь, дал это право пользователю C, то пользователь A не сможет лишить этого права непосредственно C. Вместо этого, пользователь A может лишить права передачи права пользователя B и использовать параметр <code class="literal">CASCADE</code>, чтобы этого права по цепочке лишился пользователь C. Или же, например, если и A, и B дали одно и то же право C, то A сможет отозвать право, которое дал он, но не пользователь B, так что в результате C всё равно будет иметь это право.</p><p>Если отозвать право доступа к объекту (с помощью <code class="command">REVOKE</code>) попытается не владелец объекта, команда завершится ошибкой, если пользователь не имеет никаких прав для этого объекта. Если же пользователь имеет какие-то права, команда будет выполняться, но пользователь сможет отозвать только те права, которые даны ему с правом распоряжения ими. Формы <code class="command">REVOKE ALL PRIVILEGES</code> будут выдавать предупреждение, если у него вовсе нет таких прав, тогда как другие формы будут выдавать предупреждения, если пользователь не имеет права распоряжаться именно правами, указанными в команде. (В принципе, эти утверждения применимы и к владельцу объекта, но ему разрешено распоряжаться всем правами, поэтому такие ситуации невозможны.)</p><p>Если команду <code class="command">GRANT</code> или <code class="command">REVOKE</code> выполняет суперпользователь, эта команда выполняется так, как будто её выполняет владелец затрагиваемого объекта. (Поскольку у ролей владельцев нет, <code class="command">GRANT</code> для назначения членства в роли выполняется, как от имени начального суперпользователя.) Так как все права в конце концов исходят от владельца объекта (возможно, косвенно по цепочке или через право распоряжением правом), суперпользователь может отозвать все права, но это может потребовать применения режима <code class="literal">CASCADE</code>, как описывалось выше.</p><p><code class="command">REVOKE</code> также может быть выполнена ролью, которая не является владельцем заданного объекта, но является членом роли-владельца, либо членом роли, имеющей права <code class="literal">WITH GRANT OPTION</code> для этого объекта. В этом случае команда будет выполнена, как если бы её выполняла содержащая роль, действительно владеющая объектом или имеющая права <code class="literal">WITH GRANT OPTION</code>. Например, если таблица <code class="literal">t1</code> принадлежит роли <code class="literal">g1</code>, членом которой является роль <code class="literal">u1</code>, то <code class="literal">u1</code> может отзывать права на использование <code class="literal">t1</code>, которые записаны как данные ролью <code class="literal">g1</code>. В том числе это могут быть права, данные ролью <code class="literal">u1</code>, а также другими членами роли <code class="literal">g1</code>.</p><p>Если роль, выполняющая команду <code class="command">REVOKE</code>, получила указанные права косвенно по нескольким путям членства ролей, какая именно роль будет выбрана для выполнения команды, не определено. В таких случаях рекомендуется воспользоваться командой <code class="command">SET ROLE</code> и переключиться на роль, которую хочется видеть в качестве выполняющей <code class="command">REVOKE</code>. Если этого не сделать, могут быть отозваны не те права, что планировалось, либо отозвать права вообще не удастся.</p><p>Подробнее о конкретных типах прав, а также о том, как просмотреть права, назначенные для объектов, рассказывается в <a class="xref" href="ddl-priv.html" title="5.7. Права">Разделе 5.7</a>.</p></div><div class="refsect1" id="SQL-REVOKE-EXAMPLES"><h2>Примеры</h2><p>Лишение группы public права добавлять данные в таблицу <code class="literal">films</code>: </p><pre class="programlisting">REVOKE INSERT ON films FROM PUBLIC;</pre><p>Лишение пользователя <code class="literal">manuel</code> всех прав для представления <code class="literal">kinds</code>: </p><pre class="programlisting">REVOKE ALL PRIVILEGES ON kinds FROM manuel;</pre><p> Заметьте, что на самом деле это означает <span class="quote">«<span class="quote">лишить всех прав, которые дал я</span>»</span>.</p><p>Исключение из членов роли <code class="literal">admins</code> пользователя <code class="literal">joe</code>: </p><pre class="programlisting">REVOKE admins FROM joe;</pre></div><div class="refsect1" id="SQL-REVOKE-COMPATIBILITY"><h2>Совместимость</h2><p>Замечания по совместимости, приведённые для команды <a class="link" href="sql-grant.html" title="GRANT"><code class="command">GRANT</code></a>, справедливы и для <code class="command">REVOKE</code>. Стандарт требует обязательного указания ключевого слова <code class="literal">RESTRICT</code> или <code class="literal">CASCADE</code>, но <span class="productname">PostgreSQL</span> подразумевает <code class="literal">RESTRICT</code> по умолчанию.</p></div><div class="refsect1" id="id-1.9.3.166.9"><h2>См. также</h2><span class="simplelist"><a class="xref" href="sql-grant.html" title="GRANT"><span class="refentrytitle">GRANT</span></a>, <a class="xref" href="sql-alterdefaultprivileges.html" title="ALTER DEFAULT PRIVILEGES"><span class="refentrytitle">ALTER DEFAULT PRIVILEGES</span></a></span></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="sql-reset.html" title="RESET">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="sql-commands.html" title="Команды SQL">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="sql-rollback.html" title="ROLLBACK">След.</a></td></tr><tr><td width="40%" align="left" valign="top">RESET </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> ROLLBACK</td></tr></table></div></body></html>

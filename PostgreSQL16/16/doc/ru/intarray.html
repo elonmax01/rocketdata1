@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>F.20. intarray — работа с массивами целых чисел</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="intagg.html" title="F.19. intagg — агрегатор и нумератор целых чисел" /><link rel="next" href="isn.html" title="F.21. isn — типы данных для международных стандартов нумерации (ISBN, EAN, UPC и т. д.)" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">F.20. intarray — работа с массивами целых чисел</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="intagg.html" title="F.19. intagg — агрегатор и нумератор целых чисел">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="contrib.html" title="Приложение F. Дополнительно поставляемые модули и расширения">Наверх</a></td><th width="60%" align="center">Приложение F. Дополнительно поставляемые модули и расширения</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="isn.html" title="F.21. isn — типы данных для международных стандартов нумерации (ISBN, EAN, UPC и т. д.)">След.</a></td></tr></table><hr /></div><div class="sect1" id="INTARRAY"><div class="titlepage"><div><div><h2 class="title" style="clear: both">F.20. intarray — работа с массивами целых чисел <a href="#INTARRAY" class="id_link">#</a></h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="intarray.html#INTARRAY-FUNCS-OPS">F.20.1. Функции и операторы <code class="filename">intarray</code></a></span></dt><dt><span class="sect2"><a href="intarray.html#INTARRAY-INDEX">F.20.2. Поддержка индексов</a></span></dt><dt><span class="sect2"><a href="intarray.html#INTARRAY-EXAMPLE">F.20.3. Пример</a></span></dt><dt><span class="sect2"><a href="intarray.html#INTARRAY-BENCHMARK">F.20.4. Тестирование производительности</a></span></dt><dt><span class="sect2"><a href="intarray.html#INTARRAY-AUTHORS">F.20.5. Авторы</a></span></dt></dl></div><a id="id-1.11.7.30.2" class="indexterm"></a><p>Модуль <code class="filename">intarray</code> предоставляет ряд полезных функций и операторов для работы с массивами целых чисел без NULL. Также он поддерживает поиск по индексу для некоторых из этих операторов.</p><p>Все эти операции выдают ошибку, если в передаваемом массиве оказываются значения NULL.</p><p>Многие из этих операций имеют смысл только с одномерными массивами. Хотя им можно передать входной массив и большей размерности, значения будут считываться из него как из линейного массива в порядке хранения.</p><p>Данный модуль считается <span class="quote">«<span class="quote">доверенным</span>»</span>, то есть его могут устанавливать обычные пользователи, имеющие право <code class="literal">CREATE</code> в текущей базе данных.</p><div class="sect2" id="INTARRAY-FUNCS-OPS"><div class="titlepage"><div><div><h3 class="title">F.20.1. Функции и операторы <code class="filename">intarray</code> <a href="#INTARRAY-FUNCS-OPS" class="id_link">#</a></h3></div></div></div><p>Реализованные в модуле <code class="filename">intarray</code> функции перечислены в <a class="xref" href="intarray.html#INTARRAY-FUNC-TABLE" title="Таблица F.9. Функции intarray">Таблице F.9</a>, а операторы — в <a class="xref" href="intarray.html#INTARRAY-OP-TABLE" title="Таблица F.10. Операторы intarray">Таблице F.10</a>.</p><div class="table" id="INTARRAY-FUNC-TABLE"><p class="title"><strong>Таблица F.9. Функции <code class="filename">intarray</code></strong></p><div class="table-contents"><table class="table" summary="Функции intarray" border="1"><colgroup><col /></colgroup><thead><tr><th class="func_table_entry"><p class="func_signature">Функция</p>
+       <p>Описание</p>
+       <p>Примеры</p></th></tr></thead><tbody><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.30.7.3.2.2.1.1.1.1" class="indexterm"></a> <code class="function">icount</code> ( <code class="type">integer[]</code> ) → <code class="returnvalue">integer</code></p>
+       <p>Выдаёт число элементов в массиве.</p>
+       <p>
+        <code class="literal">icount('{1,2,3}'::integer[])</code>
+        → <code class="returnvalue">3</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.30.7.3.2.2.2.1.1.1" class="indexterm"></a> <code class="function">sort</code> ( <code class="type">integer[]</code>, <em class="parameter"><code>dir</code></em> <code class="type">text</code> ) → <code class="returnvalue">integer[]</code></p>
+       <p>Сортирует массив в порядке возрастания или убывания. Направление определяется параметром <em class="parameter"><code>dir</code></em>, значением которого должно быть <code class="literal">asc</code> (по возрастанию) или <code class="literal">desc</code> (по убыванию).</p>
+       <p>
+        <code class="literal">sort('{1,3,2}'::integer[], 'desc')</code>
+        → <code class="returnvalue">{3,2,1}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">sort</code> ( <code class="type">integer[]</code> ) → <code class="returnvalue">integer[]</code></p>
+       <p class="func_signature"><a id="id-1.11.7.30.7.3.2.2.3.1.2.1" class="indexterm"></a> <code class="function">sort_asc</code> ( <code class="type">integer[]</code> ) → <code class="returnvalue">integer[]</code></p>
+       <p>Сортирует в порядке возрастания.</p>
+       <p>
+        <code class="literal">sort(array[11,77,44])</code>
+        → <code class="returnvalue">{11,44,77}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.30.7.3.2.2.4.1.1.1" class="indexterm"></a> <code class="function">sort_desc</code> ( <code class="type">integer[]</code> ) → <code class="returnvalue">integer[]</code></p>
+       <p>Сортирует в порядке убывания.</p>
+       <p>
+        <code class="literal">sort_desc(array[11,77,44])</code>
+        → <code class="returnvalue">{77,44,11}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.30.7.3.2.2.5.1.1.1" class="indexterm"></a> <code class="function">uniq</code> ( <code class="type">integer[]</code> ) → <code class="returnvalue">integer[]</code></p>
+       <p>Удаляет соседние дубликаты. Часто используется вместе с <code class="function">sort</code> для удаления всех дубликатов.</p>
+       <p>
+        <code class="literal">uniq('{1,2,2,3,1,1}'::integer[])</code>
+        → <code class="returnvalue">{1,2,3,1}</code>
+       </p>
+       <p>
+        <code class="literal">uniq(sort('{1,2,3,2,1}'::integer[]))</code>
+        → <code class="returnvalue">{1,2,3}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.30.7.3.2.2.6.1.1.1" class="indexterm"></a> <code class="function">idx</code> ( <code class="type">integer[]</code>, <em class="parameter"><code>item</code></em> <code class="type">integer</code> ) → <code class="returnvalue">integer</code></p>
+       <p>Выдаёт индекс первого элемента, равного <em class="parameter"><code>item</code></em>, или 0, если такого элемента нет.</p>
+       <p>
+        <code class="literal">idx(array[11,22,33,22,11], 22)</code>
+        → <code class="returnvalue">2</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.30.7.3.2.2.7.1.1.1" class="indexterm"></a> <code class="function">subarray</code> ( <code class="type">integer[]</code>, <em class="parameter"><code>start</code></em> <code class="type">integer</code>, <em class="parameter"><code>len</code></em> <code class="type">integer</code> ) → <code class="returnvalue">integer[]</code></p>
+       <p>Извлекает часть массива, которая начинается с позиции <em class="parameter"><code>start</code></em> и содержит <em class="parameter"><code>len</code></em> элементов.</p>
+       <p>
+        <code class="literal">subarray('{1,2,3,2,1}'::integer[], 2, 3)</code>
+        → <code class="returnvalue">{2,3,2}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">subarray</code> ( <code class="type">integer[]</code>, <em class="parameter"><code>start</code></em> <code class="type">integer</code> ) → <code class="returnvalue">integer[]</code></p>
+       <p>Извлекает часть массива, которая начинается с позиции <em class="parameter"><code>start</code></em>.</p>
+       <p>
+        <code class="literal">subarray('{1,2,3,2,1}'::integer[], 2)</code>
+        → <code class="returnvalue">{2,3,2,1}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.30.7.3.2.2.9.1.1.1" class="indexterm"></a> <code class="function">intset</code> ( <code class="type">integer</code> ) → <code class="returnvalue">integer[]</code></p>
+       <p>Создаёт массив с одним элементом.</p>
+       <p>
+        <code class="literal">intset(42)</code>
+        → <code class="returnvalue">{42}</code>
+       </p></td></tr></tbody></table></div></div><br class="table-break" /><div class="table" id="INTARRAY-OP-TABLE"><p class="title"><strong>Таблица F.10. Операторы <code class="filename">intarray</code></strong></p><div class="table-contents"><table class="table" summary="Операторы intarray" border="1"><colgroup><col /></colgroup><thead><tr><th class="func_table_entry"><p class="func_signature">Оператор</p>
+       <p>Описание</p></th></tr></thead><tbody><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">integer[]</code> <code class="literal">&amp;&amp;</code> <code class="type">integer[]</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Массивы пересекаются (у них есть минимум один общий элемент)?</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">integer[]</code> <code class="literal">@&gt;</code> <code class="type">integer[]</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Левый массив содержит правый?</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">integer[]</code> <code class="literal">&lt;@</code> <code class="type">integer[]</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Левый массив содержится в правом?</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type"></code> <code class="literal">#</code> <code class="type">integer[]</code>
+        → <code class="returnvalue">integer</code>
+       </p>
+       <p>Выдаёт число элементов в массиве.</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">integer[]</code> <code class="literal">#</code> <code class="type">integer</code>
+        → <code class="returnvalue">integer</code>
+       </p>
+       <p>Выдаёт индекс первого элемента, равного правому аргументу, или 0, если такого элемента нет. (Аналог функции <code class="function">idx</code>.)</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">integer[]</code> <code class="literal">+</code> <code class="type">integer</code>
+        → <code class="returnvalue">integer[]</code>
+       </p>
+       <p>Добавляет элемент в конец массива.</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">integer[]</code> <code class="literal">+</code> <code class="type">integer[]</code>
+        → <code class="returnvalue">integer[]</code>
+       </p>
+       <p>Соединяет два массива.</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">integer[]</code> <code class="literal">-</code> <code class="type">integer</code>
+        → <code class="returnvalue">integer[]</code>
+       </p>
+       <p>Удаляет из массива элементы, равные правому аргументу.</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">integer[]</code> <code class="literal">-</code> <code class="type">integer[]</code>
+        → <code class="returnvalue">integer[]</code>
+       </p>
+       <p>Удаляет из левого массива элементы правого массива.</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">integer[]</code> <code class="literal">|</code> <code class="type">integer</code>
+        → <code class="returnvalue">integer[]</code>
+       </p>
+       <p>Вычисляет объединение аргументов.</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">integer[]</code> <code class="literal">|</code> <code class="type">integer[]</code>
+        → <code class="returnvalue">integer[]</code>
+       </p>
+       <p>Вычисляет объединение аргументов.</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">integer[]</code> <code class="literal">&amp;</code> <code class="type">integer[]</code>
+        → <code class="returnvalue">integer[]</code>
+       </p>
+       <p>Вычисляет пересечение аргументов.</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">integer[]</code> <code class="literal">@@</code> <code class="type">query_int</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Массив удовлетворяет запросу? (см. ниже)</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">query_int</code> <code class="literal">~~</code> <code class="type">integer[]</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Массив удовлетворяет запросу? (коммутирующий оператор к <code class="literal">@@</code>)</p></td></tr></tbody></table></div></div><br class="table-break" /><p>Операторы <code class="literal">&amp;&amp;</code>, <code class="literal">@&gt;</code> и <code class="literal">&lt;@</code> равнозначны встроенным операторам <span class="productname">PostgreSQL</span> с теми же именами, за исключением того, что они работают только с целочисленными массивами, не содержащими NULL, тогда как встроенные операторы работают с массивами любых типов. Благодаря этому ограничению, в большинстве случаев они работают быстрее, чем встроенные операторы.</p><p>Операторы <code class="literal">@@</code> и <code class="literal">~~</code> проверяют, удовлетворяет ли массив <em class="firstterm">запросу</em>, представляемому в виде значения специализированного типа данных <code class="type">query_int</code>. <em class="firstterm">Запрос</em> содержит целочисленные значения, сравниваемые с элементами массива, возможно с использованием операторов <code class="literal">&amp;</code> (AND), <code class="literal">|</code> (OR) и <code class="literal">!</code> (NOT). При необходимости могут использоваться скобки. Например, запросу <code class="literal">1&amp;(2|3)</code> удовлетворяют запросы, которые содержат 1 и также содержат 2 или 3.</p></div><div class="sect2" id="INTARRAY-INDEX"><div class="titlepage"><div><div><h3 class="title">F.20.2. Поддержка индексов <a href="#INTARRAY-INDEX" class="id_link">#</a></h3></div></div></div><p>Модуль <code class="filename">intarray</code> поддерживает индексы для операторов <code class="literal">&amp;&amp;</code>, <code class="literal">@&gt;</code>, и <code class="literal">@@</code>, а также обычную проверку равенства массивов.</p><p>Модуль предоставляет два параметризованных класса операторов GiST: <code class="literal">gist__int_ops</code> (используется по умолчанию), подходящий для маленьких и средних по размеру наборов данных, и <code class="literal">gist__intbig_ops</code>, применяющий сигнатуру большего размера и подходящий для индексации больших наборов данных (то есть столбцов, содержащих много различных значений массива). В этой реализации используется структура данных RD-дерева со встроенным сжатием с потерями.</p><p>Класс <code class="literal">gist__int_ops</code> аппроксимирует набор целых чисел в виде массива диапазонов. В его необязательном целочисленном параметре <code class="literal">numranges</code> можно задать максимальное число диапазонов в одном ключе индекса. Параметр может принимать значения от 1 до 253, по умолчанию он равен 100. При увеличении числа массивов, составляющих ключ индекса GiST, поиск работает точнее (сканируется меньшая область в индексе и меньше страниц кучи), но сам индекс становится больше.</p><p>Класс <code class="literal">gist__intbig_ops</code> аппроксимирует набор целых чисел в виде сигнатуры битовой карты. В его необязательном целочисленном параметре <code class="literal">siglen</code> можно задать размер сигнатуры в байтах. Параметр может принимать значения от 1 до 2024, по умолчанию он равен 16. При увеличении размера сигнатуры поиск работает точнее (сканируется меньшая область в индексе и меньше страниц кучи), но сам индекс становится больше.</p><p>Есть также нестандартный класс операторов GIN, <code class="literal">gin__int_ops</code>, поддерживающий эти операторы наряду с <code class="literal">&lt;@</code>.</p><p>Выбор между индексами GiST и GIN зависит от относительных характеристик производительности GiST и GIN, которые здесь не рассматриваются.</p></div><div class="sect2" id="INTARRAY-EXAMPLE"><div class="titlepage"><div><div><h3 class="title">F.20.3. Пример <a href="#INTARRAY-EXAMPLE" class="id_link">#</a></h3></div></div></div><pre class="programlisting">-- сообщение может относиться к одной или нескольким <span class="quote">«<span class="quote">секциям</span>»</span>
+CREATE TABLE message (mid INT PRIMARY KEY, sections INT[], ...);
+
+-- создать специализированный индекс с длиной сигнатуры 32 байта
+CREATE INDEX message_rdtree_idx ON message USING GIST (sections gist__intbig_ops (siglen = 32));
+
+-- вывести сообщения из секций 1 или 2 — оператор пересечения
+SELECT message.mid FROM message WHERE message.sections &amp;&amp; '{1,2}';
+
+-- вывести сообщения из секций 1 и 2 — оператор включения
+SELECT message.mid FROM message WHERE message.sections @&gt; '{1,2}';
+
+-- тот же результат, но с оператором запроса
+SELECT message.mid FROM message WHERE message.sections @@ '1&amp;2'::query_int;</pre></div><div class="sect2" id="INTARRAY-BENCHMARK"><div class="titlepage"><div><div><h3 class="title">F.20.4. Тестирование производительности <a href="#INTARRAY-BENCHMARK" class="id_link">#</a></h3></div></div></div><p>В каталоге исходного кода <code class="filename">contrib/intarray/bench</code> содержится набор тестов, которые можно провести на установленном сервере <span class="productname">PostgreSQL</span>. (Для этого нужно установить пакет <code class="filename">DBD::Pg</code>.) Чтобы запустить эти тесты, выполните:</p><pre class="programlisting">cd .../contrib/intarray/bench
+createdb TEST
+psql -c "CREATE EXTENSION intarray" TEST
+./create_test.pl | psql TEST
+./bench.pl</pre><p>Скрипт <code class="filename">bench.pl</code> принимает несколько аргументов, о которых можно узнать, запустив его без аргументов.</p></div><div class="sect2" id="INTARRAY-AUTHORS"><div class="titlepage"><div><div><h3 class="title">F.20.5. Авторы <a href="#INTARRAY-AUTHORS" class="id_link">#</a></h3></div></div></div><p>Разработку осуществили Фёдор Сигаев (<code class="email">&lt;<a class="email" href="mailto:teodor@sigaev.ru">teodor@sigaev.ru</a>&gt;</code>) и Олег Бартунов (<code class="email">&lt;<a class="email" href="mailto:oleg@sai.msu.su">oleg@sai.msu.su</a>&gt;</code>). Дополнительные сведения можно найти на странице <a class="ulink" href="http://www.sai.msu.su/~megera/postgres/gist/" target="_top">http://www.sai.msu.su/~megera/postgres/gist/</a>. Андрей Октябрьский проделал отличную работу, добавив новые функции и операторы.</p></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="intagg.html" title="F.19. intagg — агрегатор и нумератор целых чисел">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="contrib.html" title="Приложение F. Дополнительно поставляемые модули и расширения">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="isn.html" title="F.21. isn — типы данных для международных стандартов нумерации (ISBN, EAN, UPC и т. д.)">След.</a></td></tr><tr><td width="40%" align="left" valign="top">F.19. intagg — агрегатор и нумератор целых чисел </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> F.21. isn — типы данных для международных стандартов нумерации (ISBN, EAN, UPC и т. д.)</td></tr></table></div></body></html>

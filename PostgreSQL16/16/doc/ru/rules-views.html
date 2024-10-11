@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>41.2. Система правил и представления</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="querytree.html" title="41.1. Дерево запроса" /><link rel="next" href="rules-materializedviews.html" title="41.3. Материализованные представления" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">41.2. Система правил и представления</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="querytree.html" title="41.1. Дерево запроса">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="rules.html" title="Глава 41. Система правил">Наверх</a></td><th width="60%" align="center">Глава 41. Система правил</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="rules-materializedviews.html" title="41.3. Материализованные представления">След.</a></td></tr></table><hr /></div><div class="sect1" id="RULES-VIEWS"><div class="titlepage"><div><div><h2 class="title" style="clear: both">41.2. Система правил и представления <a href="#RULES-VIEWS" class="id_link">#</a></h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="rules-views.html#RULES-SELECT">41.2.1. Как работают правила <code class="command">SELECT</code></a></span></dt><dt><span class="sect2"><a href="rules-views.html#RULES-VIEWS-NON-SELECT">41.2.2. Правила представлений не для <code class="command">SELECT</code></a></span></dt><dt><span class="sect2"><a href="rules-views.html#RULES-VIEWS-POWER">41.2.3. Преимущества представлений в <span class="productname">PostgreSQL</span></a></span></dt><dt><span class="sect2"><a href="rules-views.html#RULES-VIEWS-UPDATE">41.2.4. Изменение представления</a></span></dt></dl></div><a id="id-1.8.6.7.2" class="indexterm"></a><a id="id-1.8.6.7.3" class="indexterm"></a><p>Представления в <span class="productname">PostgreSQL</span> реализованы на основе системы правил. По сути представление ­­­­­— это пустая таблица (фактически без данных) с правилом <code class="literal">ON SELECT DO INSTEAD</code>. Традиционно это правило называется <code class="literal">_RETURN</code>. Поэтому такое представление, как </p><pre class="programlisting">CREATE VIEW myview AS SELECT * FROM mytab;</pre><p>, — это практически то же, что и </p><pre class="programlisting">CREATE TABLE myview (<em class="replaceable"><code>same column list as mytab</code></em>);
+CREATE RULE "_RETURN" AS ON SELECT TO myview DO INSTEAD
+    SELECT * FROM mytab;</pre><p>, однако такие параметры в запросе указывать нельзя, поскольку для таблиц не может быть правила <code class="literal">ON SELECT</code>.</p><p>Кроме того, для представления могут быть другие типы правил <code class="literal">DO INSTEAD</code>, которые позволяют выполнять команды <code class="command">INSERT</code>, <code class="command">UPDATE</code> и <code class="command">DELETE</code> с представлением, несмотря на нехватку нижележащего хранилища. Эта тема освещается более подробно в <a class="xref" href="rules-views.html#RULES-VIEWS-UPDATE" title="41.2.4. Изменение представления">Подразделе 41.2.4</a>.</p><div class="sect2" id="RULES-SELECT"><div class="titlepage"><div><div><h3 class="title">41.2.1. Как работают правила <code class="command">SELECT</code> <a href="#RULES-SELECT" class="id_link">#</a></h3></div></div></div><a id="id-1.8.6.7.6.2" class="indexterm"></a><p>Правила <code class="literal">ON SELECT</code> применяются ко всем запросам на последнем этапе, даже если это команда <code class="command">INSERT</code>, <code class="command">UPDATE</code> или <code class="command">DELETE</code>. Эти правила отличаются от правил других видов тем, что они модифицируют непосредственно дерево запросов, а не создают новое. Поэтому мы начнём описание с правил <code class="command">SELECT</code>.</p><p>В настоящее время возможно только одно действие в правиле <code class="literal">ON SELECT</code> и это должно быть безусловное действие <code class="command">SELECT</code>, выполняемое в режиме <code class="literal">INSTEAD</code>. Это ограничение было введено, чтобы сделать правила достаточно безопасными для применения обычными пользователями, так что действие правил <code class="literal">ON SELECT</code> сводится к реализации представлений.</p><p>В примерах этой главы рассматриваются два представления с соединением, которые выполняют некоторые вычисления, и которые, в свою очередь, используются другими представлениями. Первое из этих двух представлений затем модифицируется, к нему добавляются правила для операций <code class="command">INSERT</code>, <code class="command">UPDATE</code> и <code class="command">DELETE</code>, так что в итоге получается представление, которое работает как обычная таблица с некоторыми необычными функциями. Это не самый простой пример для начала, поэтому понять некоторые вещи будет сложнее. Но лучше иметь один пример, поэтапно охватывающий все обсуждаемые здесь темы, чем несколько различных, при восприятии которых в итоге может возникнуть путаница.</p><p>Таблицы, которые понадобятся нам для описания системы правил, выглядят так: </p><pre class="programlisting">CREATE TABLE shoe_data (
+    shoename   text,          -- первичный ключ
+    sh_avail   integer,       -- число имеющихся пар
+    slcolor    text,          -- предпочитаемый цвет шнурков
+    slminlen   real,          -- минимальная длина шнурков
+    slmaxlen   real,          -- максимальная длина шнурков
+    slunit     text           -- единица длины
+);
+
+CREATE TABLE shoelace_data (
+    sl_name    text,          -- первичный ключ
+    sl_avail   integer,       -- число имеющихся пар
+    sl_color   text,          -- цвет шнурков
+    sl_len     real,          -- длина шнурков
+    sl_unit    text           -- единица длины
+);
+
+CREATE TABLE unit (
+    un_name    text,          -- первичный ключ
+    un_fact    real           -- коэффициент для перевода в см
+);</pre><p> Как можно догадаться, в них хранятся данные обувной фабрики.</p><p>Представления создаются так: </p><pre class="programlisting">CREATE VIEW shoe AS
+    SELECT sh.shoename,
+           sh.sh_avail,
+           sh.slcolor,
+           sh.slminlen,
+           sh.slminlen * un.un_fact AS slminlen_cm,
+           sh.slmaxlen,
+           sh.slmaxlen * un.un_fact AS slmaxlen_cm,
+           sh.slunit
+      FROM shoe_data sh, unit un
+     WHERE sh.slunit = un.un_name;
+
+CREATE VIEW shoelace AS
+    SELECT s.sl_name,
+           s.sl_avail,
+           s.sl_color,
+           s.sl_len,
+           s.sl_unit,
+           s.sl_len * u.un_fact AS sl_len_cm
+      FROM shoelace_data s, unit u
+     WHERE s.sl_unit = u.un_name;
+
+CREATE VIEW shoe_ready AS
+    SELECT rsh.shoename,
+           rsh.sh_avail,
+           rsl.sl_name,
+           rsl.sl_avail,
+           least(rsh.sh_avail, rsl.sl_avail) AS total_avail
+      FROM shoe rsh, shoelace rsl
+     WHERE rsl.sl_color = rsh.slcolor
+       AND rsl.sl_len_cm &gt;= rsh.slminlen_cm
+       AND rsl.sl_len_cm &lt;= rsh.slmaxlen_cm;</pre><p> Команда <code class="command">CREATE VIEW</code> для представления <code class="literal">shoelace</code> (самого простого из имеющихся) создаёт отношение <code class="literal">shoelace</code> и запись в <code class="structname">pg_rewrite</code> о правиле перезаписи, которое должно применяться, когда в запросе на выборку задействуется отношение <code class="literal">shoelace</code>. Для этого правила не задаются условия применения (о них рассказывается ниже, в описании правил не для <code class="command">SELECT</code>, так как правила <code class="command">SELECT</code> в настоящее бывают только безусловными) и оно действует в режиме <code class="literal">INSTEAD</code>. Заметьте, что условия применения отличаются от условий фильтра запроса, например, действие для нашего правила содержит условие фильтра. Действие правила выражается одним деревом запроса, которое является копией оператора <code class="command">SELECT</code> в команде, создающей представление.</p><div class="note"><h3 class="title">Примечание</h3><p>Два дополнительных элемента списка отношений <code class="literal">NEW</code> и <code class="literal">OLD</code>, которые можно увидеть в соответствующей строке <code class="structname">pg_rewrite</code>, не представляют интереса для правил <code class="command">SELECT</code>.</p></div><p>Сейчас мы наполним таблицы <code class="literal">unit</code> (единицы измерения), <code class="literal">shoe_data</code> (данные о туфлях) и <code class="literal">shoelace_data</code> (данные о шнурках) и выполним простой запрос к представлению: </p><pre class="programlisting">INSERT INTO unit VALUES ('cm', 1.0);
+INSERT INTO unit VALUES ('m', 100.0);
+INSERT INTO unit VALUES ('inch', 2.54);
+
+INSERT INTO shoe_data VALUES ('sh1', 2, 'black', 70.0, 90.0, 'cm');
+INSERT INTO shoe_data VALUES ('sh2', 0, 'black', 30.0, 40.0, 'inch');
+INSERT INTO shoe_data VALUES ('sh3', 4, 'brown', 50.0, 65.0, 'cm');
+INSERT INTO shoe_data VALUES ('sh4', 3, 'brown', 40.0, 50.0, 'inch');
+
+INSERT INTO shoelace_data VALUES ('sl1', 5, 'black', 80.0, 'cm');
+INSERT INTO shoelace_data VALUES ('sl2', 6, 'black', 100.0, 'cm');
+INSERT INTO shoelace_data VALUES ('sl3', 0, 'black', 35.0, 'inch');
+INSERT INTO shoelace_data VALUES ('sl4', 8, 'black', 40.0, 'inch');
+INSERT INTO shoelace_data VALUES ('sl5', 4, 'brown', 1.0, 'm');
+INSERT INTO shoelace_data VALUES ('sl6', 0, 'brown', 0.9, 'm');
+INSERT INTO shoelace_data VALUES ('sl7', 7, 'brown', 60, 'cm');
+INSERT INTO shoelace_data VALUES ('sl8', 1, 'brown', 40, 'inch');
+
+SELECT * FROM shoelace;
+
+ sl_name   | sl_avail | sl_color | sl_len | sl_unit | sl_len_cm
+-----------+----------+----------+--------+---------+-----------
+ sl1       |        5 | black    |     80 | cm      |        80
+ sl2       |        6 | black    |    100 | cm      |       100
+ sl7       |        7 | brown    |     60 | cm      |        60
+ sl3       |        0 | black    |     35 | inch    |      88.9
+ sl4       |        8 | black    |     40 | inch    |     101.6
+ sl8       |        1 | brown    |     40 | inch    |     101.6
+ sl5       |        4 | brown    |      1 | m       |       100
+ sl6       |        0 | brown    |    0.9 | m       |        90
+(8 rows)</pre><p>Это самый простой запрос <code class="command">SELECT</code>, который можно выполнить с нашими представлениями, и мы воспользуемся этим, чтобы объяснить азы правил представлений. Запрос <code class="literal">SELECT * FROM shoelace</code> интерпретируется анализатором запросов и преобразуется в дерево запроса: </p><pre class="programlisting">SELECT shoelace.sl_name, shoelace.sl_avail,
+       shoelace.sl_color, shoelace.sl_len,
+       shoelace.sl_unit, shoelace.sl_len_cm
+  FROM shoelace shoelace;</pre><p> Это дерево передаётся в систему правил, которая проходит по списку отношений и проверяет, есть ли какие-либо правила для этих отношений. Обрабатывая элемент отношения <code class="literal">shoelace</code> (сейчас он единственный), система правил находит правило <code class="literal">_RETURN</code> с деревом запроса: </p><pre class="programlisting">SELECT s.sl_name, s.sl_avail,
+       s.sl_color, s.sl_len, s.sl_unit,
+       s.sl_len * u.un_fact AS sl_len_cm
+  FROM shoelace old, shoelace new,
+       shoelace_data s, unit u
+ WHERE s.sl_unit = u.un_name;</pre><p>Чтобы развернуть представление, механизм перезаписи просто формирует новый элемент для списка отношений — подзапрос, содержащий дерево действия правила, и подставляет этот элемент вместо исходного, на который ссылалось представление. Получившееся перезаписанное дерево запроса будет почти таким как дерево запроса: </p><pre class="programlisting">SELECT shoelace.sl_name, shoelace.sl_avail,
+       shoelace.sl_color, shoelace.sl_len,
+       shoelace.sl_unit, shoelace.sl_len_cm
+  FROM (SELECT s.sl_name,
+               s.sl_avail,
+               s.sl_color,
+               s.sl_len,
+               s.sl_unit,
+               s.sl_len * u.un_fact AS sl_len_cm
+          FROM shoelace_data s, unit u
+         WHERE s.sl_unit = u.un_name) shoelace;</pre><p> Однако есть одно различие: в списке отношений подзапроса будут содержаться два дополнительных элемента: <code class="literal">shoelace old</code> и <code class="literal">shoelace new</code>. Эти элементы не принимают непосредственного участия в запросе, так как они не задействованы в дереве соединения подзапроса и в целевом списке. Механизм перезаписи использует их для хранения информации о проверке прав доступа, которая изначально хранилась в элементе, указывающем на представление. Таким образом, исполнитель будет по-прежнему проверять, имеет ли пользователь необходимые права для доступа к представлению, хотя в перезаписанном запросе это представление не фигурирует непосредственно.</p><p>Так было применено первое правило. Система правил продолжит проверку оставшихся элементов списка отношений на верхнем уровне запроса (в данном случае таких элементов нет) и рекурсивно проверит элементы списка отношений в добавленном подзапросе, не ссылаются ли они на представления. (Но <code class="literal">old</code> и <code class="literal">new</code> разворачиваться не будут — иначе мы получили бы бесконечную рекурсию!) В этом примере для <code class="literal">shoelace_data</code> и <code class="literal">unit</code> нет правил перезаписи, так что перезапись завершается и результат, полученный выше, передаётся планировщику.</p><p>Сейчас мы хотим написать запрос, который выбирает туфли из имеющихся в данный момент, для которых есть подходящие шнурки (по цвету и длине) и число готовых пар больше или равно двум. </p><pre class="programlisting">SELECT * FROM shoe_ready WHERE total_avail &gt;= 2;
+
+ shoename | sh_avail | sl_name | sl_avail | total_avail
+----------+----------+---------+----------+-------------
+ sh1      |        2 | sl1     |        5 |           2
+ sh3      |        4 | sl7     |        7 |           4
+(2 rows)</pre><p>На этот раз анализатор запроса выводит такое дерево: </p><pre class="programlisting">SELECT shoe_ready.shoename, shoe_ready.sh_avail,
+       shoe_ready.sl_name, shoe_ready.sl_avail,
+       shoe_ready.total_avail
+  FROM shoe_ready shoe_ready
+ WHERE shoe_ready.total_avail &gt;= 2;</pre><p> Первое правило применяется к представлению <code class="literal">shoe_ready</code> и в результате получается дерево запроса: </p><pre class="programlisting">SELECT shoe_ready.shoename, shoe_ready.sh_avail,
+       shoe_ready.sl_name, shoe_ready.sl_avail,
+       shoe_ready.total_avail
+  FROM (SELECT rsh.shoename,
+               rsh.sh_avail,
+               rsl.sl_name,
+               rsl.sl_avail,
+               least(rsh.sh_avail, rsl.sl_avail) AS total_avail
+          FROM shoe rsh, shoelace rsl
+         WHERE rsl.sl_color = rsh.slcolor
+           AND rsl.sl_len_cm &gt;= rsh.slminlen_cm
+           AND rsl.sl_len_cm &lt;= rsh.slmaxlen_cm) shoe_ready
+ WHERE shoe_ready.total_avail &gt;= 2;</pre><p> Подобным образом, правила для <code class="literal">shoe</code> и <code class="literal">shoelace</code> подставляются в список отношений, что даёт окончательное дерево запроса: </p><pre class="programlisting">SELECT shoe_ready.shoename, shoe_ready.sh_avail,
+       shoe_ready.sl_name, shoe_ready.sl_avail,
+       shoe_ready.total_avail
+  FROM (SELECT rsh.shoename,
+               rsh.sh_avail,
+               rsl.sl_name,
+               rsl.sl_avail,
+               least(rsh.sh_avail, rsl.sl_avail) AS total_avail
+          FROM (SELECT sh.shoename,
+                       sh.sh_avail,
+                       sh.slcolor,
+                       sh.slminlen,
+                       sh.slminlen * un.un_fact AS slminlen_cm,
+                       sh.slmaxlen,
+                       sh.slmaxlen * un.un_fact AS slmaxlen_cm,
+                       sh.slunit
+                  FROM shoe_data sh, unit un
+                 WHERE sh.slunit = un.un_name) rsh,
+               (SELECT s.sl_name,
+                       s.sl_avail,
+                       s.sl_color,
+                       s.sl_len,
+                       s.sl_unit,
+                       s.sl_len * u.un_fact AS sl_len_cm
+                  FROM shoelace_data s, unit u
+                 WHERE s.sl_unit = u.un_name) rsl
+         WHERE rsl.sl_color = rsh.slcolor
+           AND rsl.sl_len_cm &gt;= rsh.slminlen_cm
+           AND rsl.sl_len_cm &lt;= rsh.slmaxlen_cm) shoe_ready
+ WHERE shoe_ready.total_avail &gt; 2;</pre><p>Это может показаться неэффективным, но планировщик преобразует этот запрос в одноуровневое дерево, <span class="quote">«<span class="quote">подтягивая</span>»</span> подзапросы в главный запрос, а затем планирует соединения так же, как и при явной записи с соединениями. Таким образом, упрощение дерева запросов является оптимизацией, которая производится независимо от перезаписи запросов.</p></div><div class="sect2" id="RULES-VIEWS-NON-SELECT"><div class="titlepage"><div><div><h3 class="title">41.2.2. Правила представлений не для <code class="command">SELECT</code> <a href="#RULES-VIEWS-NON-SELECT" class="id_link">#</a></h3></div></div></div><p>До этого в описании правил представлений не затрагивались два компонента дерева запросов — тип команды и результирующее отношение. На самом деле, тип команды не важен для правил представления, но результирующее отношение может повлиять на работу механизма перезаписи, потому что если это представление, требуются дополнительные операции.</p><p>Есть только несколько отличий между деревом запроса для <code class="command">SELECT</code> и деревом для другой команды. Очевидно, у них различные типы команд, и для команды, отличной от <code class="command">SELECT</code>, результирующее отношение указывает на элемент в списке отношений, куда должен попасть результат. Все остальные компоненты в точности те же. Поэтому, например, если взять таблицы <code class="literal">t1</code> и <code class="literal">t2</code> со столбцами <code class="literal">a</code> и <code class="literal">b</code>, деревья запросов для этих операторов: </p><pre class="programlisting">SELECT t2.b FROM t1, t2 WHERE t1.a = t2.a;
+
+UPDATE t1 SET b = t2.b FROM t2 WHERE t1.a = t2.a;</pre><p> будут практически одинаковыми. В частности: </p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Списки отношений содержат элементы для таблиц <code class="literal">t1</code> и <code class="literal">t2</code>.</p></li><li class="listitem"><p>Выходные списки содержат одну переменную, указывающую на столбец <code class="literal">b</code> элемента-отношения для таблицы <code class="literal">t2</code>.</p></li><li class="listitem"><p>Выражения условий сравнивают столбцы <code class="literal">a</code> обоих элементов-отношений на равенство.</p></li><li class="listitem"><p>Деревья соединений показывают простое соединение между <code class="literal">t1</code> и <code class="literal">t2</code>.</p></li></ul></div><p>Как следствие, для обоих деревьев строятся похожие планы выполнения, с соединением двух таблиц. Для <code class="command">UPDATE</code> планировщик добавляет в выходной список недостающие столбцы из <code class="literal">t1</code> и окончательное дерево становится таким: </p><pre class="programlisting">UPDATE t1 SET a = t1.a, b = t2.b FROM t2 WHERE t1.a = t2.a;</pre><p> В результате исполнитель, обрабатывающий соединение, выдаёт тот же результат, что и запрос: </p><pre class="programlisting">SELECT t1.a, t2.b FROM t1, t2 WHERE t1.a = t2.a;</pre><p> Но с <code class="command">UPDATE</code> есть маленькая проблема: часть плана исполнителя, в которой выполняется соединение, не представляет, для чего предназначены результаты соединения. Она просто выдаёт результирующий набор строк. Фактически есть одна команда <code class="command">SELECT</code>, а другая, <code class="command">UPDATE</code>, обрабатывается исполнителем выше, где он уже знает, что это команда <code class="command">UPDATE</code> и что результат должен попасть в таблицу <code class="literal">t1</code>. Но какие из строк таблицы должны заменяться новыми?</p><p>Для решения этой проблемы в выходной список операторов <code class="command">UPDATE</code> (и <code class="command">DELETE</code>) добавляется ещё один элемент: идентификатор текущего кортежа (Current Tuple ID, <acronym class="acronym">CTID</acronym>).<a id="id-1.8.6.7.7.5.4" class="indexterm"></a> Это системный столбец, содержащий номер блока в файле и позицию строки в блоке. Зная таблицу, по <acronym class="acronym">CTID</acronym> можно получить исходную строку в <code class="literal">t1</code>, подлежащую изменению. С добавленным в выходной список <acronym class="acronym">CTID</acronym> запрос фактически выглядит так: </p><pre class="programlisting">SELECT t1.a, t2.b, t1.ctid FROM t1, t2 WHERE t1.a = t2.a;</pre><p> Теперь мы перейдём ещё к одной особенности <span class="productname">PostgreSQL</span>. Старые строки таблицы не переписываются, поэтому <code class="command">ROLLBACK</code> выполняется быстро. С командой <code class="command">UPDATE</code> в таблицу вставляется новая строка результата (без <acronym class="acronym">CTID</acronym>) и в заголовке старой строки, на которую указывает <acronym class="acronym">CTID</acronym>, в поля <code class="literal">cmax</code> и <code class="literal">xmax</code> записываются текущий счётчик команд и идентификатор текущей транзакции. Таким образом, старая строка оказывается скрытой и после фиксирования транзакции процесс очистки может окончательно удалить неактуальную версию строки.</p><p>Зная всё это, мы можем применять правила представлений абсолютно таким же образом к любой команде — никаких различий нет.</p></div><div class="sect2" id="RULES-VIEWS-POWER"><div class="titlepage"><div><div><h3 class="title">41.2.3. Преимущества представлений в <span class="productname">PostgreSQL</span> <a href="#RULES-VIEWS-POWER" class="id_link">#</a></h3></div></div></div><p>Выше было показано, как система правил внедряет определения представлений в исходное дерево запроса. Во втором примере простой запрос <code class="command">SELECT</code> к одному представлению создал окончательное дерево запроса, соединяющее 4 таблицы (таблица <code class="literal">unit</code> использовалась дважды с разными именами).</p><p>Преимущество реализации представлений через систему правил заключается в том, что планировщик получает в одном дереве запроса всю информацию о таблицах, которые нужно прочитать, о том, как связаны эти таблицы, об условиях в представлениях, а также об условиях, заданных в исходном запросе. И всё это имеет место, когда сам исходный запрос представляет собой соединение представлений. Планировщик должен выбрать лучший способ выполнения запроса, и чем больше информации он получит, тем лучше может быть его выбор. И то, как в <span class="productname">PostgreSQL</span> реализована система правил, гарантирует, что ему поступает вся информация, собранная о запросе на данный момент.</p></div><div class="sect2" id="RULES-VIEWS-UPDATE"><div class="titlepage"><div><div><h3 class="title">41.2.4. Изменение представления <a href="#RULES-VIEWS-UPDATE" class="id_link">#</a></h3></div></div></div><p>Но что произойдёт, если записать имя представления в качестве целевого отношения команды <code class="command">INSERT</code>, <code class="command">UPDATE</code> или <code class="command">DELETE</code>? Если проделать подстановки, описанные выше, будет получено дерево запроса, в котором результирующее отношение указывает на элемент-подзапрос, что не будет работать. Однако <span class="productname">PostgreSQL</span> даёт ряд возможностей, чтобы сделать представления изменяемыми. Эти возможности перечислены в порядке увеличения сложности для пользователя: автоматически заменять нижележащие таблицы представления, выполнять пользовательский триггер или переписать запрос, используя механизм правил. Все варианты действий описаны ниже.</p><p>Если подзапрос выбирает данные из одного базового отношения и он достаточно прост, механизм перезаписи может автоматически заменить его нижележащим базовым отношением, чтобы команды <code class="command">INSERT</code>, <code class="command">UPDATE</code> или <code class="command">DELETE</code> обращались к базовому отношению. Представления, <span class="quote">«<span class="quote">достаточно простые</span>»</span> для этого, называются <em class="firstterm">автоматически изменяемыми</em>. Подробнее виды представлений, которые могут изменяться автоматически, описаны в <a class="xref" href="sql-createview.html" title="CREATE VIEW"><span class="refentrytitle">CREATE VIEW</span></a>.</p><p>Эту задачу также можно решить, создав триггер <code class="literal">INSTEAD OF</code> для представления (см. <a class="xref" href="sql-createtrigger.html" title="CREATE TRIGGER"><span class="refentrytitle">CREATE TRIGGER</span></a>). В этом случае перезапись будет работать немного по-другому. Для <code class="command">INSERT</code> механизм перезаписи не делает с представлением ничего, оставляя его результирующим отношением запроса. Для <code class="command">UPDATE</code> и <code class="command">DELETE</code> ему по-прежнему придётся разворачивать запрос представления, чтобы получить <span class="quote">«<span class="quote">старые</span>»</span> строки, которые эта команда попытается изменить или удалить. Поэтому представление разворачивается как обычно, но в запрос добавляется ещё один элемент списка отношений, указывающий на представление в роли результирующего отношения.</p><p>При этом возникает проблема идентификации строк в представлении, подлежащих изменению. Вспомните, что когда результирующее отношение является таблицей, в выходной список добавляется специальное поле <acronym class="acronym">CTID</acronym>, указывающее на физическое расположение изменяемых строк. Но это не будет работать, когда результирующее отношение — представление, так как в представлениях нет <acronym class="acronym">CTID</acronym>, потому что их строки физически нигде не находятся. Вместо этого, для операций <code class="command">UPDATE</code> или <code class="command">DELETE</code> в выходной список добавляется специальный элемент <code class="literal">wholerow</code> (вся строка), который разворачивается в содержимое всех столбцов представления. Используя этот элемент, исполнитель передаёт строку <span class="quote">«<span class="quote">old</span>»</span> в триггер <code class="literal">INSTEAD OF</code>. Какие именно строки должны изменяться фактически, будет решать сам триггер, исходя из полученных значений старых и новых строк.</p><p>Кроме того, пользователь может определить правила <code class="literal">INSTEAD</code>, в которых задать действия замены для команд <code class="command">INSERT</code>, <code class="command">UPDATE</code> и <code class="command">DELETE</code> с представлением. Эти правила обычно преобразуют команду в другую команду, изменяющую одну или несколько таблиц, а не представление. Эта тема освещается в <a class="xref" href="rules-update.html" title="41.4. Правила для INSERT, UPDATE и DELETE">Разделе 41.4</a>.</p><p>Заметьте, что такие правила вычисляются сначала, перезаписывая исходный запрос до того, как он будет планироваться и выполняться. Поэтому, если для представления определены и триггеры <code class="literal">INSTEAD OF</code>, и правила для <code class="command">INSERT</code>, <code class="command">UPDATE</code> или <code class="command">DELETE</code>, сначала вычисляются правила, а в зависимости от их действия, триггеры могут не вызываться вовсе.</p><p>Автоматическая перезапись запросов <code class="command">INSERT</code>, <code class="command">UPDATE</code> или <code class="command">DELETE</code> с простыми представлениями всегда производится в последнюю очередь. Таким образом, если у представления есть правила или триггеры, они переопределяют поведение автоматически изменяемых представлений.</p><p>Если для представления не определены правила <code class="literal">INSTEAD</code> или триггеры <code class="literal">INSTEAD OF</code>, и запрос не удаётся автоматически переписать в виде обращения к нижележащему базовому отношению, возникает ошибка, потому что исполнитель не сможет изменить такое представление.</p></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="querytree.html" title="41.1. Дерево запроса">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="rules.html" title="Глава 41. Система правил">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="rules-materializedviews.html" title="41.3. Материализованные представления">След.</a></td></tr><tr><td width="40%" align="left" valign="top">41.1. Дерево запроса </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 41.3. Материализованные представления</td></tr></table></div></body></html>

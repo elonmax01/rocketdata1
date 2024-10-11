@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>36.13. Приложения на C++</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="ecpg-lo.html" title="36.12. Большие объекты" /><link rel="next" href="ecpg-sql-commands.html" title="36.14. Команды встраиваемого SQL" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">36.13. Приложения на <acronym class="acronym">C++</acronym></th></tr><tr><td width="10%" align="left"><a accesskey="p" href="ecpg-lo.html" title="36.12. Большие объекты">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="ecpg.html" title="Глава 36. ECPG — Встраиваемый SQL в C">Наверх</a></td><th width="60%" align="center">Глава 36. <span class="application">ECPG</span> — Встраиваемый <acronym class="acronym">SQL</acronym> в C</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="ecpg-sql-commands.html" title="36.14. Команды встраиваемого SQL">След.</a></td></tr></table><hr /></div><div class="sect1" id="ECPG-CPP"><div class="titlepage"><div><div><h2 class="title" style="clear: both">36.13. Приложения на <acronym class="acronym">C++</acronym> <a href="#ECPG-CPP" class="id_link">#</a></h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="ecpg-cpp.html#ECPG-CPP-SCOPE">36.13.1. Область видимости переменных среды</a></span></dt><dt><span class="sect2"><a href="ecpg-cpp.html#ECPG-CPP-AND-C">36.13.2. Разработка приложения на C++ с внешним модулем на C</a></span></dt></dl></div><p>ECPG обеспечивает поддержку языка C++ в ограниченном объёме. Некоторые её особенности описаны в этом разделе.</p><p>Препроцессор <code class="command">ecpg</code> принимает входной файл, написанный на C (или языке, подобном C) со встраиваемыми командами SQL, преобразует встроенные команды SQL в конструкции языка C и в результате формирует файл <code class="filename">.c</code>. Объявления библиотечных функций, вызываемых в конструкциях C, которые генерирует <code class="command">ecpg</code>, заворачиваются в блоки <code class="literal">extern "C" { ... }</code> при использовании C++, так что они должны прозрачно работать в C++.</p><p>Однако вообще говоря, препроцессор <code class="command">ecpg</code> понимает только C; он не воспринимает особый синтаксис и зарезервированные слова языка C++. Поэтому какой-то код SQL, встроенный в код приложения на C++, в котором используются сложные особенности C++, может корректно не обработаться препроцессором или не работать как ожидается.</p><p>Надёжный подход к применению внедрённого кода SQL в приложении на C++ заключается в том, чтобы скрыть вызовы ECPG в модуле C, который будет вызываться приложением на C++ для работы с базой данных и который будет скомпонован с остальным кодом C++. Подробнее это описано в <a class="xref" href="ecpg-cpp.html#ECPG-CPP-AND-C" title="36.13.2. Разработка приложения на C++ с внешним модулем на C">Подразделе 36.13.2</a>.</p><div class="sect2" id="ECPG-CPP-SCOPE"><div class="titlepage"><div><div><h3 class="title">36.13.1. Область видимости переменных среды <a href="#ECPG-CPP-SCOPE" class="id_link">#</a></h3></div></div></div><p>Препроцессор <code class="command">ecpg</code> имеет понимание области видимости переменных в C. С языком C это довольно просто, так как область видимости переменных определяется их блоками кода. В C++, однако, переменные-члены класса задействуются не в том блоке кода, в каком они объявлены, так что препроцессор <code class="command">ecpg</code> не сможет корректно определить область видимости таких переменных.</p><p>Например, в следующем случае препроцессор <code class="command">ecpg</code> не сможет найти определение переменной <code class="literal">dbname</code> в методе <code class="literal">test</code>, так что произойдёт ошибка. </p><pre class="programlisting">class TestCpp
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    char dbname[1024];
+    EXEC SQL END DECLARE SECTION;
+
+  public:
+    TestCpp();
+    void test();
+    ~TestCpp();
+};
+
+TestCpp::TestCpp()
+{
+    EXEC SQL CONNECT TO testdb1;
+    EXEC SQL SELECT pg_catalog.set_config('search_path', '', false); EXEC SQL COMMIT;
+}
+
+void Test::test()
+{
+    EXEC SQL SELECT current_database() INTO :dbname;
+    printf("current_database = %s\n", dbname);
+}
+
+TestCpp::~TestCpp()
+{
+    EXEC SQL DISCONNECT ALL;
+}</pre><p> При обработке данного кода будет выдано сообщение: </p><pre class="screen">
+<strong class="userinput"><code>ecpg test_cpp.pgc</code></strong>
+test_cpp.pgc:28: ERROR: variable "dbname" is not declared
+</pre><p>
+(test_cpp.pgc:28: ОШИБКА: переменная "dbname" не объявлена)</p><p>Для решения этой проблемы можно немного изменить метод <code class="literal">test</code> и задействовать в нём локальную переменную для промежуточного хранения. Но предложенный подход нельзя считать хорошим, так как это портит код и снижает производительность. </p><pre class="programlisting">void TestCpp::test()
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    char tmp[1024];
+    EXEC SQL END DECLARE SECTION;
+
+    EXEC SQL SELECT current_database() INTO :tmp;
+    strlcpy(dbname, tmp, sizeof(tmp));
+
+    printf("current_database = %s\n", dbname);
+}</pre></div><div class="sect2" id="ECPG-CPP-AND-C"><div class="titlepage"><div><div><h3 class="title">36.13.2. Разработка приложения на C++ с внешним модулем на C <a href="#ECPG-CPP-AND-C" class="id_link">#</a></h3></div></div></div><p>Если вы поняли технические ограничения препроцессора <code class="command">ecpg</code> с C++, вы можете прийти к заключению, что для использования ECPG в приложениях на C++ лучше связывать код C с кодом C++ на стадии компоновки, а не внедрять команды SQL непосредственно в код на C++. В данном разделе показывается, как отделить встраиваемые команды SQL от кода приложения на C++, на простом примере. В этом примере приложение реализуется на C++, а взаимодействие с сервером PostgreSQL построено на C и ECPG.</p><p>Для сборки нужно создать три типа файлов: файл на C (<code class="filename">*.pgc</code>), заголовочный файл и файл на C++: </p><div class="variablelist"><dl class="variablelist"><dt id="ECPG-CPP-AND-C-TEST-MOD-PGC"><span class="term"><code class="filename">test_mod.pgc</code></span> <a href="#ECPG-CPP-AND-C-TEST-MOD-PGC" class="id_link">#</a></dt><dd><p>Модуль подпрограмм будет выполнять SQL-команды, встроенные в C. Этот код нужно будет преобразовать в <code class="filename">test_mod.c</code> с помощью препроцессора. </p><pre class="programlisting">#include "test_mod.h"
+#include &lt;stdio.h&gt;
+
+void
+db_connect()
+{
+    EXEC SQL CONNECT TO testdb1;
+    EXEC SQL SELECT pg_catalog.set_config('search_path', '', false); EXEC SQL COMMIT;
+}
+
+void
+db_test()
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    char dbname[1024];
+    EXEC SQL END DECLARE SECTION;
+
+    EXEC SQL SELECT current_database() INTO :dbname;
+    printf("current_database = %s\n", dbname);
+}
+
+void
+db_disconnect()
+{
+    EXEC SQL DISCONNECT ALL;
+}</pre></dd><dt id="ECPG-CPP-AND-C-TEST-MOD-H"><span class="term"><code class="filename">test_mod.h</code></span> <a href="#ECPG-CPP-AND-C-TEST-MOD-H" class="id_link">#</a></dt><dd><p>Заголовочный файл с объявлениями функций в модуле на языке C (<code class="filename">test_mod.pgc</code>). Он включается в <code class="filename">test_cpp.cpp</code>. Объявления в этом файле должны заключаться в блок <code class="literal">extern "C"</code>, так как он будет связываться с модулем C++. </p><pre class="programlisting">#ifdef __cplusplus
+extern "C" {
+#endif
+
+void db_connect();
+void db_test();
+void db_disconnect();
+
+#ifdef __cplusplus
+}
+#endif</pre></dd><dt id="ECPG-CPP-AND-C-TEST-CPP-CPP"><span class="term"><code class="filename">test_cpp.cpp</code></span> <a href="#ECPG-CPP-AND-C-TEST-CPP-CPP" class="id_link">#</a></dt><dd><p>Основной код приложения, содержащий функцию <code class="function">main</code>, а также, в данном примере, класс C++. </p><pre class="programlisting">#include "test_mod.h"
+
+class TestCpp
+{
+  public:
+    TestCpp();
+    void test();
+    ~TestCpp();
+};
+
+TestCpp::TestCpp()
+{
+    db_connect();
+}
+
+void
+TestCpp::test()
+{
+    db_test();
+}
+
+TestCpp::~TestCpp()
+{
+    db_disconnect();
+}
+
+int
+main(void)
+{
+    TestCpp *t = new TestCpp();
+
+    t-&gt;test();
+    return 0;
+}</pre></dd></dl></div><p>Для сборки приложения проделайте следующее. Преобразуйте <code class="filename">test_mod.pgc</code> в <code class="filename">test_mod.c</code> с помощью <code class="command">ecpg</code>, а затем получите <code class="filename">test_mod.o</code>, скомпилировав <code class="filename">test_mod.c</code> компилятором C: </p><pre class="programlisting">ecpg -o test_mod.c test_mod.pgc
+cc -c test_mod.c -o test_mod.o</pre><p>После этого получите <code class="filename">test_cpp.o</code>, скомпилировав <code class="filename">test_cpp.cpp</code> компилятором C++: </p><pre class="programlisting">c++ -c test_cpp.cpp -o test_cpp.o</pre><p>Наконец, свяжите полученные объектные файлы, <code class="filename">test_cpp.o</code> и <code class="filename">test_mod.o</code>, в один исполняемый файл, выполнив компоновку под управлением компилятора C++: </p><pre class="programlisting">c++ test_cpp.o test_mod.o -lecpg -o test_cpp</pre></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ecpg-lo.html" title="36.12. Большие объекты">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="ecpg.html" title="Глава 36. ECPG — Встраиваемый SQL в C">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="ecpg-sql-commands.html" title="36.14. Команды встраиваемого SQL">След.</a></td></tr><tr><td width="40%" align="left" valign="top">36.12. Большие объекты </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 36.14. Команды встраиваемого SQL</td></tr></table></div></body></html>

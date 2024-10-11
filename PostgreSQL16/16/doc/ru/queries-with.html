@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>7.8. Запросы WITH (Общие табличные выражения)</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="queries-values.html" title="7.7. Списки VALUES" /><link rel="next" href="datatype.html" title="Глава 8. Типы данных" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">7.8. Запросы <code class="literal">WITH</code> (Общие табличные выражения)</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="queries-values.html" title="7.7. Списки VALUES">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="queries.html" title="Глава 7. Запросы">Наверх</a></td><th width="60%" align="center">Глава 7. Запросы</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="datatype.html" title="Глава 8. Типы данных">След.</a></td></tr></table><hr /></div><div class="sect1" id="QUERIES-WITH"><div class="titlepage"><div><div><h2 class="title" style="clear: both">7.8. Запросы <code class="literal">WITH</code> (Общие табличные выражения) <a href="#QUERIES-WITH" class="id_link">#</a></h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="queries-with.html#QUERIES-WITH-SELECT">7.8.1. <code class="command">SELECT</code> в <code class="literal">WITH</code></a></span></dt><dt><span class="sect2"><a href="queries-with.html#QUERIES-WITH-RECURSIVE">7.8.2. Рекурсивные запросы</a></span></dt><dt><span class="sect2"><a href="queries-with.html#QUERIES-WITH-CTE-MATERIALIZATION">7.8.3. Материализация общих табличных выражений</a></span></dt><dt><span class="sect2"><a href="queries-with.html#QUERIES-WITH-MODIFYING">7.8.4. Изменение данных в <code class="literal">WITH</code></a></span></dt></dl></div><a id="id-1.5.6.12.2" class="indexterm"></a><a id="id-1.5.6.12.3" class="indexterm"></a><p><code class="literal">WITH</code> предоставляет способ записывать дополнительные операторы для применения в больших запросах. Эти операторы, которые также называют общими табличными выражениями (Common Table Expressions, <acronym class="acronym">CTE</acronym>), можно представить как определения временных таблиц, существующих только для одного запроса. Дополнительным оператором в предложении <code class="literal">WITH</code> может быть <code class="command">SELECT</code>, <code class="command">INSERT</code>, <code class="command">UPDATE</code> или <code class="command">DELETE</code>, а само предложение <code class="literal">WITH</code> присоединяется к основному оператору, которым может быть <code class="command">SELECT</code>, <code class="command">INSERT</code>, <code class="command">UPDATE</code>, <code class="command">DELETE</code> или <code class="command">MERGE</code>.</p><div class="sect2" id="QUERIES-WITH-SELECT"><div class="titlepage"><div><div><h3 class="title">7.8.1. <code class="command">SELECT</code> в <code class="literal">WITH</code> <a href="#QUERIES-WITH-SELECT" class="id_link">#</a></h3></div></div></div><p>Основное предназначение <code class="command">SELECT</code> в предложении <code class="literal">WITH</code> заключается в разбиении сложных запросов на простые части. Например, запрос: </p><pre class="programlisting">WITH regional_sales AS (
+    SELECT region, SUM(amount) AS total_sales
+    FROM orders
+    GROUP BY region
+), top_regions AS (
+    SELECT region
+    FROM regional_sales
+    WHERE total_sales &gt; (SELECT SUM(total_sales)/10 FROM regional_sales)
+)
+SELECT region,
+       product,
+       SUM(quantity) AS product_units,
+       SUM(amount) AS product_sales
+FROM orders
+WHERE region IN (SELECT region FROM top_regions)
+GROUP BY region, product;</pre><p> выводит итоги по продажам только для передовых регионов. Предложение <code class="literal">WITH</code> определяет два дополнительных оператора <code class="structname">regional_sales</code> и <code class="structname">top_regions</code> так, что результат <code class="structname">regional_sales</code> используется в <code class="structname">top_regions</code>, а результат <code class="structname">top_regions</code> используется в основном запросе <code class="command">SELECT</code>. Этот пример можно было бы переписать без <code class="literal">WITH</code>, но тогда нам понадобятся два уровня вложенных подзапросов <code class="command">SELECT</code>. Показанным выше способом это можно сделать немного проще.</p></div><div class="sect2" id="QUERIES-WITH-RECURSIVE"><div class="titlepage"><div><div><h3 class="title">7.8.2. Рекурсивные запросы <a href="#QUERIES-WITH-RECURSIVE" class="id_link">#</a></h3></div></div></div><p><a id="id-1.5.6.12.6.2.1" class="indexterm"></a> Необязательное указание <code class="literal">RECURSIVE</code> превращает <code class="literal">WITH</code> из просто удобной синтаксической конструкции в средство реализации того, что невозможно в стандартном SQL. Используя <code class="literal">RECURSIVE</code>, запрос <code class="literal">WITH</code> может обращаться к собственному результату. Очень простой пример, суммирующий числа от 1 до 100: </p><pre class="programlisting">WITH RECURSIVE t(n) AS (
+    VALUES (1)
+  UNION ALL
+    SELECT n+1 FROM t WHERE n &lt; 100
+)
+SELECT sum(n) FROM t;</pre><p> В общем виде рекурсивный запрос <code class="literal">WITH</code> всегда записывается как <em class="firstterm">не рекурсивная часть</em>, потом <code class="literal">UNION</code> (или <code class="literal">UNION ALL</code>), а затем <em class="firstterm">рекурсивная часть</em>, где только в рекурсивной части можно обратиться к результату запроса. Такой запрос выполняется следующим образом:</p><div class="procedure" id="id-1.5.6.12.6.3"><p class="title"><strong>Вычисление рекурсивного запроса</strong></p><ol class="procedure" type="1"><li class="step"><p>Вычисляется не рекурсивная часть. Для <code class="literal">UNION</code> (но не <code class="literal">UNION ALL</code>) отбрасываются дублирующиеся строки. Все оставшиеся строки включаются в результат рекурсивного запроса и также помещаются во временную <em class="firstterm">рабочую таблицу</em>.</p></li><li class="step"><p>Пока рабочая таблица не пуста, повторяются следующие действия:</p><ol type="a" class="substeps"><li class="step"><p>Вычисляется рекурсивная часть так, что рекурсивная ссылка на сам запрос обращается к текущему содержимому рабочей таблицы. Для <code class="literal">UNION</code> (но не <code class="literal">UNION ALL</code>) отбрасываются дублирующиеся строки и строки, дублирующие ранее полученные. Все оставшиеся строки включаются в результат рекурсивного запроса и также помещаются во временную <em class="firstterm">промежуточную таблицу</em>.</p></li><li class="step"><p>Содержимое рабочей таблицы заменяется содержимым промежуточной таблицы, а затем промежуточная таблица очищается.</p></li></ol></li></ol></div><div class="note"><h3 class="title">Примечание</h3><p>Хотя указание <code class="literal">RECURSIVE</code> позволяет определять рекурсивные запросы, внутри такие запросы обрабатываются итерационно.</p></div><p>В показанном выше примере в рабочей таблице на каждом этапе содержится всего одна строка и в ней последовательно накапливаются значения от 1 до 100. На сотом шаге, благодаря условию <code class="literal">WHERE</code>, не возвращается ничего, так что вычисление запроса завершается.</p><p>Рекурсивные запросы обычно применяются для работы с иерархическими или древовидными структурами данных. В качестве полезного примера можно привести запрос, находящий все непосредственные и косвенные составные части продукта, используя только таблицу с прямыми связями: </p><pre class="programlisting">WITH RECURSIVE included_parts(sub_part, part, quantity) AS (
+    SELECT sub_part, part, quantity FROM parts WHERE part = 'our_product'
+  UNION ALL
+    SELECT p.sub_part, p.part, p.quantity * pr.quantity
+    FROM included_parts pr, parts p
+    WHERE p.part = pr.sub_part
+)
+SELECT sub_part, SUM(quantity) as total_quantity
+FROM included_parts
+GROUP BY sub_part</pre><div class="sect3" id="QUERIES-WITH-SEARCH"><div class="titlepage"><div><div><h4 class="title">7.8.2.1. Порядок поиска <a href="#QUERIES-WITH-SEARCH" class="id_link">#</a></h4></div></div></div><p>Когда при выполнении рекурсивного запроса производится обход дерева, результаты можно получать в разном порядке: «сначала в глубину» или «сначала в ширину». Для этого можно в дополнение к другим столбцам вычислить упорядочивающий столбец и использовать его для сортировки результатов. Обратите внимание, что такой столбец не определяет порядок обхода строк запросом — этот порядок, как всегда, зависит от реализации SQL. Упорядочивающий столбец лишь позволяет удобным образом упорядочить полученные результаты.</p><p>Чтобы отсортировать результаты в порядке «сначала в глубину», для каждой строки результата вычисляется массив уже просмотренных строк. Например, рассмотрим следующий запрос, который выполняет поиск в таблице <code class="structname">tree</code> по полю <code class="structfield">link</code>: </p><pre class="programlisting">WITH RECURSIVE search_tree(id, link, data) AS (
+    SELECT t.id, t.link, t.data
+    FROM tree t
+  UNION ALL
+    SELECT t.id, t.link, t.data
+    FROM tree t, search_tree st
+    WHERE t.id = st.link
+)
+SELECT * FROM search_tree;</pre><p> Чтобы добавить информацию для упорядочивания «сначала в глубину», вы можете написать так: </p><pre class="programlisting">WITH RECURSIVE search_tree(id, link, data, <span class="emphasis"><strong>path</strong></span>) AS (
+    SELECT t.id, t.link, t.data, <span class="emphasis"><strong>ARRAY[t.id]</strong></span>
+    FROM tree t
+  UNION ALL
+    SELECT t.id, t.link, t.data, <span class="emphasis"><strong>path || t.id</strong></span>
+    FROM tree t, search_tree st
+    WHERE t.id = st.link
+)
+SELECT * FROM search_tree <span class="emphasis"><strong>ORDER BY path</strong></span>;</pre><p>В общем случае, когда для выявления строки нужно использовать несколько полей, следует использовать массив строк. Например, если нужно отследить поля <code class="structfield">f1</code> и <code class="structfield">f2</code>: </p><pre class="programlisting">WITH RECURSIVE search_tree(id, link, data, <span class="emphasis"><strong>path</strong></span>) AS (
+    SELECT t.id, t.link, t.data, <span class="emphasis"><strong>ARRAY[ROW(t.f1, t.f2)]</strong></span>
+    FROM tree t
+  UNION ALL
+    SELECT t.id, t.link, t.data, <span class="emphasis"><strong>path || ROW(t.f1, t.f2)</strong></span>
+    FROM tree t, search_tree st
+    WHERE t.id = st.link
+)
+SELECT * FROM search_tree <span class="emphasis"><strong>ORDER BY path</strong></span>;</pre><div class="tip"><h3 class="title">Подсказка</h3><p><code class="literal">ROW()</code> можно опустить, когда нужно отслеживать только одно поле (как обычно и бывает). При этом будет использоваться не массив данных составного типа, а простой массив, что более эффективно.</p></div><p>Чтобы получить результаты, отсортированные «сначала в ширину», можно добавить столбец, отслеживающий глубину поиска, например: </p><pre class="programlisting">WITH RECURSIVE search_tree(id, link, data, <span class="emphasis"><strong>depth</strong></span>) AS (
+    SELECT t.id, t.link, t.data, <span class="emphasis"><strong>0</strong></span>
+    FROM tree t
+  UNION ALL
+    SELECT t.id, t.link, t.data, <span class="emphasis"><strong>depth + 1</strong></span>
+    FROM tree t, search_tree st
+    WHERE t.id = st.link
+)
+SELECT * FROM search_tree <span class="emphasis"><strong>ORDER BY depth</strong></span>;</pre><p> Для обеспечения стабильности сортировки добавьте столбцы данных в качестве столбцов вторичной сортировки.</p><div class="tip"><h3 class="title">Подсказка</h3><p>Этот алгоритм рекурсивного вычисления запроса выдаёт в результате узлы, упорядоченные «сначала в ширину». И всё же это зависит от реализации, поэтому полагаться на это поведение не следует. Порядок строк внутри каждого уровня, конечно, не определён, поэтому в любом случае может потребоваться явное упорядочивание.</p></div><p>Для определения столбца, который будет вычисляться для упорядочивания «сначала в глубину» или «сначала в ширину», есть встроенный синтаксис. Например: </p><pre class="programlisting">WITH RECURSIVE search_tree(id, link, data) AS (
+    SELECT t.id, t.link, t.data
+    FROM tree t
+  UNION ALL
+    SELECT t.id, t.link, t.data
+    FROM tree t, search_tree st
+    WHERE t.id = st.link
+) <span class="emphasis"><strong>SEARCH DEPTH FIRST BY id SET ordercol</strong></span>
+SELECT * FROM search_tree ORDER BY ordercol;
+
+WITH RECURSIVE search_tree(id, link, data) AS (
+    SELECT t.id, t.link, t.data
+    FROM tree t
+  UNION ALL
+    SELECT t.id, t.link, t.data
+    FROM tree t, search_tree st
+    WHERE t.id = st.link
+) <span class="emphasis"><strong>SEARCH BREADTH FIRST BY id SET ordercol</strong></span>
+SELECT * FROM search_tree ORDER BY ordercol;</pre><p> Внутри этот синтаксис преобразуется в формы, подобные вышеприведённым формам, составленным вручную. В предложении <code class="literal">SEARCH</code> указывается, какой тип поиска необходим — «сначала в глубину» или «сначала в ширину», список отслеживаемых для сортировки столбцов и имя столбца, который будет содержать данные, используемые для упорядочивания. Этот столбец будет неявно добавлен в результирующие строки в CTE.</p></div><div class="sect3" id="QUERIES-WITH-CYCLE"><div class="titlepage"><div><div><h4 class="title">7.8.2.2. Выявление циклов <a href="#QUERIES-WITH-CYCLE" class="id_link">#</a></h4></div></div></div><p>Работая с рекурсивными запросами, важно обеспечить, чтобы рекурсивная часть запроса в конце концов не выдала никаких кортежей (строк), в противном случае цикл будет бесконечным. Иногда для этого достаточно применять <code class="literal">UNION</code> вместо <code class="literal">UNION ALL</code>, так как при этом будут отбрасываться строки, которые уже есть в результате. Однако часто в цикле выдаются строки, не совпадающие полностью с предыдущими: в таких случаях может иметь смысл проверить одно или несколько полей, чтобы определить, не была ли текущая точка достигнута раньше. Стандартный способ решения подобных задач — вычислить массив с уже обработанными значениями. Например, снова рассмотрите следующий запрос, просматривающий таблицу <code class="structname">graph</code> по полю <code class="structfield">link</code>: </p><pre class="programlisting">WITH RECURSIVE search_graph(id, link, data, depth) AS (
+    SELECT g.id, g.link, g.data, 0
+    FROM graph g
+  UNION ALL
+    SELECT g.id, g.link, g.data, sg.depth + 1
+    FROM graph g, search_graph sg
+    WHERE g.id = sg.link
+)
+SELECT * FROM search_graph;</pre><p> Этот запрос зациклится, если связи <code class="structfield">link</code> содержат циклы. Так как нам нужно получать в результате <span class="quote">«<span class="quote">depth</span>»</span>, одно лишь изменение <code class="literal">UNION ALL</code> на <code class="literal">UNION</code> не позволит избежать зацикливания. Вместо этого мы должны как-то определить, что уже достигали текущей строки, пройдя некоторый путь. Для этого, добавив два столбца <code class="structfield">is_cycle</code> и <code class="structfield">path</code>, мы получаем запрос, защищённый от зацикливания: </p><pre class="programlisting">WITH RECURSIVE search_graph(id, link, data, depth, <span class="emphasis"><strong>is_cycle, path</strong></span>) AS (
+    SELECT g.id, g.link, g.data, 0,
+      <span class="emphasis"><strong>false,
+      ARRAY[g.id]</strong></span>
+    FROM graph g
+  UNION ALL
+    SELECT g.id, g.link, g.data, sg.depth + 1,
+      <span class="emphasis"><strong>g.id = ANY(path),
+      path || g.id</strong></span>
+    FROM graph g, search_graph sg
+    WHERE g.id = sg.link <span class="emphasis"><strong>AND NOT is_cycle</strong></span>
+)
+SELECT * FROM search_graph;</pre><p> Помимо предотвращения циклов, значения массива часто бывают полезны сами по себе для представления <span class="quote">«<span class="quote">пути</span>»</span>, приведшего к определённой строке.</p><p>В общем случае, когда для выявления цикла нужно проверять несколько полей, следует использовать массив строк. Например, если нужно сравнить поля <code class="structfield">f1</code> и <code class="structfield">f2</code>: </p><pre class="programlisting">WITH RECURSIVE search_graph(id, link, data, depth, <span class="emphasis"><strong>is_cycle, path</strong></span>) AS (
+    SELECT g.id, g.link, g.data, 0,
+      <span class="emphasis"><strong>false,
+      ARRAY[ROW(g.f1, g.f2)]</strong></span>
+    FROM graph g
+  UNION ALL
+    SELECT g.id, g.link, g.data, sg.depth + 1,
+      <span class="emphasis"><strong>ROW(g.f1, g.f2) = ANY(path),
+      path || ROW(g.f1, g.f2)</strong></span>
+    FROM graph g, search_graph sg
+    WHERE g.id = sg.link <span class="emphasis"><strong>AND NOT is_cycle</strong></span>
+)
+SELECT * FROM search_graph;</pre><div class="tip"><h3 class="title">Подсказка</h3><p>Часто для выявления цикла достаточно одного поля, и тогда <code class="literal">ROW()</code> можно опустить. При этом будет использоваться не массив данных составного типа, а простой массив, что более эффективно.</p></div><p>Для упрощения выявления циклов есть встроенный синтаксис. Запрос выше можно записать так: </p><pre class="programlisting">WITH RECURSIVE search_graph(id, link, data, depth) AS (
+    SELECT g.id, g.link, g.data, 1
+    FROM graph g
+  UNION ALL
+    SELECT g.id, g.link, g.data, sg.depth + 1
+    FROM graph g, search_graph sg
+    WHERE g.id = sg.link
+) <span class="emphasis"><strong>CYCLE id SET is_cycle USING path</strong></span>
+SELECT * FROM search_graph;</pre><p> и внутри он будет приведён к вышеуказанной форме. В предложении <code class="literal">CYCLE</code> сначала указывается список столбцов, отслеживаемых для выявления цикла, затем имя столбца, показывающего признак выявления цикла, и, наконец, имя ещё одного столбца, в котором будет отслеживаться путь. Столбцы, указывающие цикл и путь, будут неявно добавлены в результирующие строки в CTE.</p><div class="tip"><h3 class="title">Подсказка</h3><p>Столбец с указанием пути цикла вычисляется так же, как и столбец для упорядочивания результатов «сначала в глубину», что показано в предыдущем подразделе. Запрос может содержать одновременно <code class="literal">SEARCH</code> и <code class="literal">CYCLE</code>, но в этом случае для упорядочивания «сначала в глубину» будут производиться лишние вычисления, поэтому эффективнее использовать только <code class="literal">CYCLE</code> и сортировать результаты по столбцу пути. Однако использование в запросе и <code class="literal">SEARCH</code>, и <code class="literal">CYCLE</code> оправдано, когда нужен порядок «сначала в ширину».</p></div><p>Для тестирования запросов, которые могут зацикливаться, есть хороший приём — добавить <code class="literal">LIMIT</code> в родительский запрос. Например, следующий запрос зациклится, если не добавить предложение <code class="literal">LIMIT</code>: </p><pre class="programlisting">WITH RECURSIVE t(n) AS (
+    SELECT 1
+  UNION ALL
+    SELECT n+1 FROM t
+)
+SELECT n FROM t <span class="emphasis"><strong>LIMIT 100</strong></span>;</pre><p> Но в данном случае этого не происходит, так как в <span class="productname">PostgreSQL</span> запрос <code class="literal">WITH</code> выдаёт столько строк, сколько фактически принимает родительский запрос. В производственной среде использовать этот приём не рекомендуется, так как другие системы могут вести себя по-другому. Кроме того, это не будет работать, если внешний запрос сортирует результаты рекурсивного запроса или соединяет их с другой таблицей, так как в подобных случаях внешний запрос обычно всё равно выбирает результат запроса <code class="literal">WITH</code> полностью.</p></div></div><div class="sect2" id="QUERIES-WITH-CTE-MATERIALIZATION"><div class="titlepage"><div><div><h3 class="title">7.8.3. Материализация общих табличных выражений <a href="#QUERIES-WITH-CTE-MATERIALIZATION" class="id_link">#</a></h3></div></div></div><p>Запросы <code class="literal">WITH</code> имеют полезное свойство — обычно они вычисляются только раз для всего родительского запроса, даже если этот запрос или соседние запросы <code class="literal">WITH</code> обращаются к ним неоднократно. Таким образом, сложные вычисления, результаты которых нужны в нескольких местах, можно выносить в запросы <code class="literal">WITH</code> в целях оптимизации. Кроме того, такие запросы позволяют избежать нежелательных вычислений функций с побочными эффектами. Однако есть и обратная сторона — оптимизатор не может распространить ограничения родительского запроса на неоднократно задействуемый запрос <code class="literal">WITH</code>, так как это может повлиять на использование результата <code class="literal">WITH</code> во всех местах, тогда как должно повлиять только в одном. Многократно задействуемый запрос <code class="literal">WITH</code> будет выполняться буквально и возвращать все строки, включая те, что потом может отбросить родительский запрос. (Но как было сказано выше, вычисление может остановиться раньше, если в ссылке на этот запрос затребуется только ограниченное число строк.)</p><p>Однако если запрос <code class="literal">WITH</code> является нерекурсивным и свободным от побочных эффектов (то есть это <code class="literal">SELECT</code>, не вызывающий изменчивых функций), он может быть свёрнут в родительский запрос, что позволит оптимизировать совместно два уровня запросов. По умолчанию это происходит, только если запрос <code class="literal">WITH</code> задействуется в родительском запросе всего в одном месте, а не в нескольких. Это поведение можно переопределить, добавив указание <code class="literal">MATERIALIZED</code>, чтобы выделить вычисление запроса <code class="literal">WITH</code>, или указание <code class="literal">NOT MATERIALIZED</code>, чтобы принудительно свернуть его в родительский запрос. В последнем случае возникает риск многократного вычисления запроса <code class="literal">WITH</code>, но в итоге это может быть выгодно, если в каждом случае использования <code class="literal">WITH</code> из всего результата запроса остаётся только небольшая часть.</p><p>Простой пример для демонстрации этих правил: </p><pre class="programlisting">WITH w AS (
+    SELECT * FROM big_table
+)
+SELECT * FROM w WHERE key = 123;</pre><p> Этот запрос <code class="literal">WITH</code> будет свёрнут в родительский и будет выполнен с тем же планом, что и запрос: </p><pre class="programlisting">SELECT * FROM big_table WHERE key = 123;</pre><p> В частности, если в таблице создан индекс по столбцу <code class="structfield">key</code>, он может использоваться для получения строк с <code class="literal">key = 123</code>. В другом случае: </p><pre class="programlisting">WITH w AS (
+    SELECT * FROM big_table
+)
+SELECT * FROM w AS w1 JOIN w AS w2 ON w1.key = w2.ref
+WHERE w2.key = 123;</pre><p> запрос <code class="literal">WITH</code> будет материализован, то есть создастся временная копия таблицы <code class="structname">big_table</code>, которая будет соединена с собой же, без использования какого-либо индекса. Этот запрос будет выполняться гораздо эффективнее в таком виде: </p><pre class="programlisting">WITH w AS NOT MATERIALIZED (
+    SELECT * FROM big_table
+)
+SELECT * FROM w AS w1 JOIN w AS w2 ON w1.key = w2.ref
+WHERE w2.key = 123;</pre><p> В этом случае ограничения родительского запроса могут применяться непосредственно при сканировании <code class="structname">big_table</code>.</p><p>Пример, в котором вариант <code class="literal">NOT MATERIALIZED</code> может быть нежелательным: </p><pre class="programlisting">WITH w AS (
+    SELECT key, very_expensive_function(val) as f FROM some_table
+)
+SELECT * FROM w AS w1 JOIN w AS w2 ON w1.f = w2.f;</pre><p> В данном случае благодаря материализации запроса <code class="literal">WITH</code> ресурсоёмкая функция <code class="function">very_expensive_function</code> вычисляется только один раз для строки таблицы, а не дважды.</p><p>Примеры выше показывают только предложение <code class="literal">WITH</code> с <code class="command">SELECT</code>, но таким же образом его можно использовать с командами <code class="command">INSERT</code>, <code class="command">UPDATE</code>, <code class="command">DELETE</code> и <code class="command">MERGE</code>. В каждом случае он по сути создаёт временную таблицу, к которой можно обратиться в основной команде.</p></div><div class="sect2" id="QUERIES-WITH-MODIFYING"><div class="titlepage"><div><div><h3 class="title">7.8.4. Изменение данных в <code class="literal">WITH</code> <a href="#QUERIES-WITH-MODIFYING" class="id_link">#</a></h3></div></div></div><p>В предложении <code class="literal">WITH</code> можно также использовать большинство операторов, изменяющих данные (<code class="command">INSERT</code>, <code class="command">UPDATE</code> или <code class="command">DELETE</code>, но не <code class="command">MERGE</code>). Это позволяет выполнять в одном запросе сразу несколько разных операций. Например: </p><pre class="programlisting">WITH moved_rows AS (
+    DELETE FROM products
+    WHERE
+        "date" &gt;= '2010-10-01' AND
+        "date" &lt; '2010-11-01'
+    RETURNING *
+)
+INSERT INTO products_log
+SELECT * FROM moved_rows;</pre><p> Этот запрос фактически перемещает строки из <code class="structname">products</code> в <code class="structname">products_log</code>. Оператор <code class="command">DELETE</code> в <code class="literal">WITH</code> удаляет указанные строки из <code class="structname">products</code> и возвращает их содержимое в предложении <code class="literal">RETURNING</code>; а затем главный запрос читает это содержимое и вставляет в таблицу <code class="structname">products_log</code>.</p><p>Следует заметить, что предложение <code class="literal">WITH</code> в данном случае присоединяется к оператору <code class="command">INSERT</code>, а не к <code class="command">SELECT</code>, вложенному в <code class="command">INSERT</code>. Это необходимо, так как <code class="literal">WITH</code> может содержать операторы, изменяющие данные, только на верхнем уровне запроса. Однако при этом применяются обычные правила видимости <code class="literal">WITH</code>, так что к результату <code class="literal">WITH</code> можно обратиться и из вложенного оператора <code class="command">SELECT</code>.</p><p>Операторы, изменяющие данные, в <code class="literal">WITH</code> обычно дополняются предложением <code class="literal">RETURNING</code> (см. <a class="xref" href="dml-returning.html" title="6.4. Возврат данных из изменённых строк">Раздел 6.4</a>), как показано в этом примере. Важно понимать, что временная таблица, которую можно будет использовать в остальном запросе, создаётся из результата <code class="literal">RETURNING</code>, а <span class="emphasis"><em>не</em></span> целевой таблицы оператора. Если оператор, изменяющий данные, в <code class="literal">WITH</code> не дополнен предложением <code class="literal">RETURNING</code>, временная таблица не создаётся и обращаться к ней в остальном запросе нельзя. Однако такой запрос всё равно будет выполнен. Например, допустим следующий не очень практичный запрос: </p><pre class="programlisting">WITH t AS (
+    DELETE FROM foo
+)
+DELETE FROM bar;</pre><p> Он удалит все строки из таблиц <code class="structname">foo</code> и <code class="structname">bar</code>. При этом число задействованных строк, которое получит клиент, будет подсчитываться только по строкам, удалённым из <code class="structname">bar</code>.</p><p>Рекурсивные ссылки в операторах, изменяющих данные, не допускаются. В некоторых случаях это ограничение можно обойти, обратившись к конечному результату рекурсивного <code class="literal">WITH</code>, например так: </p><pre class="programlisting">WITH RECURSIVE included_parts(sub_part, part) AS (
+    SELECT sub_part, part FROM parts WHERE part = 'our_product'
+  UNION ALL
+    SELECT p.sub_part, p.part
+    FROM included_parts pr, parts p
+    WHERE p.part = pr.sub_part
+)
+DELETE FROM parts
+  WHERE part IN (SELECT part FROM included_parts);</pre><p> Этот запрос удаляет все непосредственные и косвенные составные части продукта.</p><p>Операторы, изменяющие данные в <code class="literal">WITH</code>, выполняются только один раз и всегда полностью, вне зависимости от того, принимает ли их результат основной запрос. Заметьте, что это отличается от поведения <code class="command">SELECT</code> в <code class="literal">WITH</code>: как говорилось в предыдущем разделе, <code class="command">SELECT</code> выполняется только до тех пор, пока его результаты востребованы основным запросом.</p><p>Вложенные операторы в <code class="literal">WITH</code> выполняются одновременно друг с другом и с основным запросом. Таким образом, порядок, в котором операторы в <code class="literal">WITH</code> будут фактически изменять данные, непредсказуем. Все эти операторы выполняются с одним <em class="firstterm">снимком данных</em> (см. <a class="xref" href="mvcc.html" title="Глава 13. Управление конкурентным доступом">Главу 13</a>), так что они не могут <span class="quote">«<span class="quote">видеть</span>»</span>, как каждый из них меняет целевые таблицы. Это уменьшает эффект непредсказуемости фактического порядка изменения строк и означает, что <code class="literal">RETURNING</code> — единственный вариант передачи изменений от вложенных операторов <code class="literal">WITH</code> основному запросу. Например, в данном случае: </p><pre class="programlisting">WITH t AS (
+    UPDATE products SET price = price * 1.05
+    RETURNING *
+)
+SELECT * FROM products;</pre><p> внешний оператор <code class="command">SELECT</code> выдаст цены, которые были до действия <code class="command">UPDATE</code>, тогда как в запросе </p><pre class="programlisting">WITH t AS (
+    UPDATE products SET price = price * 1.05
+    RETURNING *
+)
+SELECT * FROM t;</pre><p> внешний <code class="command">SELECT</code> выдаст изменённые данные.</p><p>Неоднократное изменение одной и той же строки в рамках одного оператора не поддерживается. Иметь место будет только одно из нескольких изменений и надёжно определить, какое именно, часто довольно сложно (а иногда и вовсе невозможно). Это так же касается случая, когда строка удаляется и изменяется в том же операторе: в результате может быть выполнено только обновление. Поэтому в общем случае следует избегать подобного наложения операций. В частности, избегайте подзапросов <code class="literal">WITH</code>, которые могут повлиять на строки, изменяемые основным оператором или операторами, вложенные в него. Результат действия таких запросов будет непредсказуемым.</p><p>В настоящее время, для оператора, изменяющего данные в <code class="literal">WITH</code>, в качестве целевой нельзя использовать таблицу, для которой определено условное правило или правило <code class="literal">ALSO</code> или <code class="literal">INSTEAD</code>, если оно состоит из нескольких операторов.</p></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="queries-values.html" title="7.7. Списки VALUES">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="queries.html" title="Глава 7. Запросы">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="datatype.html" title="Глава 8. Типы данных">След.</a></td></tr><tr><td width="40%" align="left" valign="top">7.7. Списки <code class="literal">VALUES</code> </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> Глава 8. Типы данных</td></tr></table></div></body></html>

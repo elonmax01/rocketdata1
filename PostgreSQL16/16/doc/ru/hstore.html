@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>F.18. hstore — тип данных hstore для хранения пар ключ-значение</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="fuzzystrmatch.html" title="F.17. fuzzystrmatch — вычисление схожести и расстояния между строками" /><link rel="next" href="intagg.html" title="F.19. intagg — агрегатор и нумератор целых чисел" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">F.18. hstore — тип данных <code class="type">hstore</code> для хранения пар ключ-значение</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="fuzzystrmatch.html" title="F.17. fuzzystrmatch — вычисление схожести и расстояния между строками">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="contrib.html" title="Приложение F. Дополнительно поставляемые модули и расширения">Наверх</a></td><th width="60%" align="center">Приложение F. Дополнительно поставляемые модули и расширения</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="intagg.html" title="F.19. intagg — агрегатор и нумератор целых чисел">След.</a></td></tr></table><hr /></div><div class="sect1" id="HSTORE"><div class="titlepage"><div><div><h2 class="title" style="clear: both">F.18. hstore — тип данных <code class="type">hstore</code> для хранения пар ключ-значение <a href="#HSTORE" class="id_link">#</a></h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="hstore.html#HSTORE-EXTERNAL-REP">F.18.1. Внешнее представление <code class="type">hstore</code></a></span></dt><dt><span class="sect2"><a href="hstore.html#HSTORE-OPS-FUNCS">F.18.2. Операторы и функции <code class="type">hstore</code></a></span></dt><dt><span class="sect2"><a href="hstore.html#HSTORE-INDEXES">F.18.3. Индексы</a></span></dt><dt><span class="sect2"><a href="hstore.html#HSTORE-EXAMPLES">F.18.4. Примеры</a></span></dt><dt><span class="sect2"><a href="hstore.html#HSTORE-STATISTICS">F.18.5. Статистика</a></span></dt><dt><span class="sect2"><a href="hstore.html#HSTORE-COMPATIBILITY">F.18.6. Совместимость</a></span></dt><dt><span class="sect2"><a href="hstore.html#HSTORE-TRANSFORMS">F.18.7. Трансформации</a></span></dt><dt><span class="sect2"><a href="hstore.html#HSTORE-AUTHORS">F.18.8. Авторы</a></span></dt></dl></div><a id="id-1.11.7.28.2" class="indexterm"></a><p>Этот модуль реализует тип данных <code class="type">hstore</code> для хранения пар ключ-значение внутри одного значения <span class="productname">PostgreSQL</span>. Это может быть полезно в самых разных сценариях, например для хранения строк со множеством редко анализируемых атрибутов или частично структурированных данных. Ключи и значения задаются простыми текстовыми строками.</p><p>Данный модуль считается <span class="quote">«<span class="quote">доверенным</span>»</span>, то есть его могут устанавливать обычные пользователи, имеющие право <code class="literal">CREATE</code> в текущей базе данных.</p><div class="sect2" id="HSTORE-EXTERNAL-REP"><div class="titlepage"><div><div><h3 class="title">F.18.1. Внешнее представление <code class="type">hstore</code> <a href="#HSTORE-EXTERNAL-REP" class="id_link">#</a></h3></div></div></div><p>Текстовое представление типа <code class="type">hstore</code>, применяемое для ввода и вывода, включает ноль или более пар <em class="replaceable"><code>ключ</code></em> <code class="literal">=&gt;</code> <em class="replaceable"><code>значение</code></em>, разделённых запятыми. Несколько примеров: </p><pre class="synopsis">
+k =&gt; v
+foo =&gt; bar, baz =&gt; whatever
+"1-a" =&gt; "anything at all"
+</pre><p> Порядок пар не имеет значения (и может не воспроизводиться при выводе). Пробелы между парами и вокруг знака <code class="literal">=&gt;</code> игнорируются. Ключи и значения, содержащие пробелы, запятые и знаки <code class="literal">=</code> или <code class="literal">&gt;</code>, нужно заключать в двойные кавычки. Если в ключ или значение нужно вставить символ кавычек или обратную косую черту, добавьте перед ним обратную косую черту.</p><p>Все ключи в <code class="type">hstore</code> уникальны. Если вы объявите тип <code class="type">hstore</code> с дублирующимися ключами, в <code class="type">hstore</code> будет сохранён только один ключ без гарантии определённого выбора: </p><pre class="programlisting">SELECT 'a=&gt;1,a=&gt;2'::hstore;
+  hstore
+----------
+ "a"=&gt;"1"</pre><p>В качестве значения (но не ключа) может задаваться SQL <code class="literal">NULL</code>. Например: </p><pre class="programlisting">key =&gt; NULL</pre><p> В ключевом слове <code class="literal">NULL</code> регистр не имеет значения. Если требуется, чтобы текст <code class="literal">NULL</code> воспринимался как обычная строка <span class="quote">«<span class="quote">NULL</span>»</span>, заключите его в кавычки.</p><div class="note"><h3 class="title">Примечание</h3><p>Учтите, что когда текстовый формат <code class="type">hstore</code> используется для ввода данных, он применяется <span class="emphasis"><em>до</em></span> обработки кавычек или спецсимволов. Таким образом, если значение <code class="type">hstore</code> передаётся в параметре, дополнительная обработка не требуется. Но если вы передаёте его в виде строковой константы, то все символы апострофов и (в зависимости от параметра конфигурации <code class="varname">standard_conforming_strings</code>) обратной косой черты нужно корректно экранировать. Подробнее о записи строковых констант можно узнать в <a class="xref" href="sql-syntax-lexical.html#SQL-SYNTAX-STRINGS" title="4.1.2.1. Строковые константы">Подразделе 4.1.2.1</a>.</p></div><p>При выводе значения и ключи всегда заключаются в кавычки, даже когда без этого можно обойтись.</p></div><div class="sect2" id="HSTORE-OPS-FUNCS"><div class="titlepage"><div><div><h3 class="title">F.18.2. Операторы и функции <code class="type">hstore</code> <a href="#HSTORE-OPS-FUNCS" class="id_link">#</a></h3></div></div></div><p>Реализованные в модуле <code class="literal">hstore</code> операторы перечислены в <a class="xref" href="hstore.html#HSTORE-OP-TABLE" title="Таблица F.7. Операторы hstore">Таблице F.7</a>, функции — в <a class="xref" href="hstore.html#HSTORE-FUNC-TABLE" title="Таблица F.8. Функции hstore">Таблице F.8</a>.</p><div class="table" id="HSTORE-OP-TABLE"><p class="title"><strong>Таблица F.7. Операторы <code class="type">hstore</code></strong></p><div class="table-contents"><table class="table" summary="Операторы hstore" border="1"><colgroup><col /></colgroup><thead><tr><th class="func_table_entry"><p class="func_signature">Оператор</p>
+       <p>Описание</p>
+       <p>Примеры</p></th></tr></thead><tbody><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">hstore</code> <code class="literal">-&gt;</code> <code class="type">text</code>
+        → <code class="returnvalue">text</code>
+       </p>
+       <p>Выдаёт значение для заданного ключа, или <code class="literal">NULL</code>, если он отсутствует.</p>
+       <p>
+        <code class="literal">'a=&gt;x, b=&gt;y'::hstore -&gt; 'a'</code>
+        → <code class="returnvalue">x</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">hstore</code> <code class="literal">-&gt;</code> <code class="type">text[]</code>
+        → <code class="returnvalue">text[]</code>
+       </p>
+       <p>Выдаёт значения, связанные с заданными ключами, или <code class="literal">NULL</code>, если таких ключей нет.</p>
+       <p>
+        <code class="literal">'a=&gt;x, b=&gt;y, c=&gt;z'::hstore -&gt; ARRAY['c','a']</code>
+        → <code class="returnvalue">{"z","x"}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">hstore</code> <code class="literal">||</code> <code class="type">hstore</code>
+        → <code class="returnvalue">hstore</code>
+       </p>
+       <p>Соединяет два набора <code class="type">hstore</code>.</p>
+       <p>
+        <code class="literal">'a=&gt;b, c=&gt;d'::hstore || 'c=&gt;x, d=&gt;q'::hstore</code>
+        → <code class="returnvalue">"a"=&gt;"b", "c"=&gt;"x", "d"=&gt;"q"</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">hstore</code> <code class="literal">?</code> <code class="type">text</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Набор <code class="type">hstore</code> включает ключ?</p>
+       <p>
+        <code class="literal">'a=&gt;1'::hstore ? 'a'</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">hstore</code> <code class="literal">?&amp;</code> <code class="type">text[]</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Набор <code class="type">hstore</code> содержит все указанные ключи?</p>
+       <p>
+        <code class="literal">'a=&gt;1,b=&gt;2'::hstore ?&amp; ARRAY['a','b']</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">hstore</code> <code class="literal">?|</code> <code class="type">text[]</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Набор <code class="type">hstore</code> содержит какой-либо из указанных ключей?</p>
+       <p>
+        <code class="literal">'a=&gt;1,b=&gt;2'::hstore ?| ARRAY['b','c']</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">hstore</code> <code class="literal">@&gt;</code> <code class="type">hstore</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Левый операнд содержит правый?</p>
+       <p>
+        <code class="literal">'a=&gt;b, b=&gt;1, c=&gt;NULL'::hstore @&gt; 'b=&gt;1'</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">hstore</code> <code class="literal">&lt;@</code> <code class="type">hstore</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Левый операнд содержится в правом?</p>
+       <p>
+        <code class="literal">'a=&gt;c'::hstore &lt;@ 'a=&gt;b, b=&gt;1, c=&gt;NULL'</code>
+        → <code class="returnvalue">f</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">hstore</code> <code class="literal">-</code> <code class="type">text</code>
+        → <code class="returnvalue">hstore</code>
+       </p>
+       <p>Удаляет ключ из левого операнда.</p>
+       <p>
+        <code class="literal">'a=&gt;1, b=&gt;2, c=&gt;3'::hstore - 'b'::text</code>
+        → <code class="returnvalue">"a"=&gt;"1", "c"=&gt;"3"</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">hstore</code> <code class="literal">-</code> <code class="type">text[]</code>
+        → <code class="returnvalue">hstore</code>
+       </p>
+       <p>Удаляет ключи из левого операнда.</p>
+       <p>
+        <code class="literal">'a=&gt;1, b=&gt;2, c=&gt;3'::hstore - ARRAY['a','b']</code>
+        → <code class="returnvalue">"c"=&gt;"3"</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">hstore</code> <code class="literal">-</code> <code class="type">hstore</code>
+        → <code class="returnvalue">hstore</code>
+       </p>
+       <p>Удаляет из левого операнда пары ключ-значение, совпадающие с парами в правом.</p>
+       <p>
+        <code class="literal">'a=&gt;1, b=&gt;2, c=&gt;3'::hstore - 'a=&gt;4, b=&gt;2'::hstore</code>
+        → <code class="returnvalue">"a"=&gt;"1", "c"=&gt;"3"</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">anyelement</code> <code class="literal">#=</code> <code class="type">hstore</code>
+        → <code class="returnvalue">anyelement</code>
+       </p>
+       <p>Заменяет поля в левом операнде, имеющем составной тип, соответствующими значениями из <code class="type">hstore</code>.</p>
+       <p>
+        <code class="literal">ROW(1,3) #= 'f1=&gt;11'::hstore</code>
+        → <code class="returnvalue">(11,3)</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="literal">%%</code> <code class="type">hstore</code>
+        → <code class="returnvalue">text[]</code>
+       </p>
+       <p>Преобразует <code class="type">hstore</code> в массив перемежающихся ключей и значений.</p>
+       <p>
+        <code class="literal">%% 'a=&gt;foo, b=&gt;bar'::hstore</code>
+        → <code class="returnvalue">{a,foo,b,bar}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="literal">%#</code> <code class="type">hstore</code>
+        → <code class="returnvalue">text[]</code>
+       </p>
+       <p>Преобразует <code class="type">hstore</code> в двумерный массив ключей-значений.</p>
+       <p>
+        <code class="literal">%# 'a=&gt;foo, b=&gt;bar'::hstore</code>
+        → <code class="returnvalue">{{a,foo},{b,bar}}</code>
+       </p></td></tr></tbody></table></div></div><br class="table-break" /><div class="table" id="HSTORE-FUNC-TABLE"><p class="title"><strong>Таблица F.8. Функции <code class="type">hstore</code></strong></p><div class="table-contents"><table class="table" summary="Функции hstore" border="1"><colgroup><col /></colgroup><thead><tr><th class="func_table_entry"><p class="func_signature">Функция</p>
+       <p>Описание</p>
+       <p>Примеры</p></th></tr></thead><tbody><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.28.6.4.2.2.1.1.1.1" class="indexterm"></a> <code class="function">hstore</code> ( <code class="type">record</code> ) → <code class="returnvalue">hstore</code></p>
+       <p>Формирует <code class="type">hstore</code> из записи или кортежа.</p>
+       <p>
+        <code class="literal">hstore(ROW(1,2))</code>
+        → <code class="returnvalue">"f1"=&gt;"1", "f2"=&gt;"2"</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">hstore</code> ( <code class="type">text[]</code> ) → <code class="returnvalue">hstore</code></p>
+       <p>Формирует <code class="type">hstore</code> из двумерного массива или из массива, содержащего перемежающиеся ключи-значения.</p>
+       <p>
+        <code class="literal">hstore(ARRAY['a','1','b','2'])</code>
+        → <code class="returnvalue">"a"=&gt;"1", "b"=&gt;"2"</code>
+       </p>
+       <p>
+        <code class="literal">hstore(ARRAY[['c','3'],['d','4']])</code>
+        → <code class="returnvalue">"c"=&gt;"3", "d"=&gt;"4"</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">hstore</code> ( <code class="type">text[]</code>, <code class="type">text[]</code> ) → <code class="returnvalue">hstore</code></p>
+       <p>Формирует <code class="type">hstore</code> из отдельных массивов ключей и значений.</p>
+       <p>
+        <code class="literal">hstore(ARRAY['a','b'], ARRAY['1','2'])</code>
+        → <code class="returnvalue">"a"=&gt;"1", "b"=&gt;"2"</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">hstore</code> ( <code class="type">text</code>, <code class="type">text</code> ) → <code class="returnvalue">hstore</code></p>
+       <p>Формирует <code class="type">hstore</code> с одним элементом.</p>
+       <p>
+        <code class="literal">hstore('a', 'b')</code>
+        → <code class="returnvalue">"a"=&gt;"b"</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.28.6.4.2.2.5.1.1.1" class="indexterm"></a> <code class="function">akeys</code> ( <code class="type">hstore</code> ) → <code class="returnvalue">text[]</code></p>
+       <p>Извлекает ключи из <code class="type">hstore</code> в виде массива.</p>
+       <p>
+        <code class="literal">akeys('a=&gt;1,b=&gt;2')</code>
+        → <code class="returnvalue">{a,b}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.28.6.4.2.2.6.1.1.1" class="indexterm"></a> <code class="function">skeys</code> ( <code class="type">hstore</code> ) → <code class="returnvalue">setof text</code></p>
+       <p>Извлекает ключи из <code class="type">hstore</code> в виде множества.</p>
+       <p>
+        <code class="literal">skeys('a=&gt;1,b=&gt;2')</code>
+        → <code class="returnvalue"></code>
+</p><pre class="programlisting">a
+b</pre><p>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.28.6.4.2.2.7.1.1.1" class="indexterm"></a> <code class="function">avals</code> ( <code class="type">hstore</code> ) → <code class="returnvalue">text[]</code></p>
+       <p>Извлекает значения из <code class="type">hstore</code> в виде массива.</p>
+       <p>
+        <code class="literal">avals('a=&gt;1,b=&gt;2')</code>
+        → <code class="returnvalue">{1,2}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.28.6.4.2.2.8.1.1.1" class="indexterm"></a> <code class="function">svals</code> ( <code class="type">hstore</code> ) → <code class="returnvalue">setof text</code></p>
+       <p>Извлекает значения <code class="type">hstore</code> в виде множества.</p>
+       <p>
+        <code class="literal">svals('a=&gt;1,b=&gt;2')</code>
+        → <code class="returnvalue"></code>
+</p><pre class="programlisting">1
+2</pre><p>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.28.6.4.2.2.9.1.1.1" class="indexterm"></a> <code class="function">hstore_to_array</code> ( <code class="type">hstore</code> ) → <code class="returnvalue">text[]</code></p>
+       <p>Извлекает ключи и значения из <code class="type">hstore</code> в виде массива перемежающихся ключей и значений.</p>
+       <p>
+        <code class="literal">hstore_to_array('a=&gt;1,b=&gt;2')</code>
+        → <code class="returnvalue">{a,1,b,2}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.28.6.4.2.2.10.1.1.1" class="indexterm"></a> <code class="function">hstore_to_matrix</code> ( <code class="type">hstore</code> ) → <code class="returnvalue">text[]</code></p>
+       <p>Извлекает ключи и значения из <code class="type">hstore</code> в виде двумерного массива.</p>
+       <p>
+        <code class="literal">hstore_to_matrix('a=&gt;1,b=&gt;2')</code>
+        → <code class="returnvalue">{{a,1},{b,2}}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.28.6.4.2.2.11.1.1.1" class="indexterm"></a> <code class="function">hstore_to_json</code> ( <code class="type">hstore</code> ) → <code class="returnvalue">json</code></p>
+       <p>Преобразует <code class="type">hstore</code> в <code class="type">json</code>, переводя все отличные от NULL значения в строки JSON.</p>
+       <p>Эта функция применяется неявно, когда значение <code class="type">hstore</code> приводится к типу <code class="type">json</code>.</p>
+       <p>
+        <code class="literal">hstore_to_json('"a key"=&gt;1, b=&gt;t, c=&gt;null, d=&gt;12345, e=&gt;012345, f=&gt;1.234, g=&gt;2.345e+4')</code>
+        → <code class="returnvalue">{"a key": "1", "b": "t", "c": null, "d": "12345", "e": "012345", "f": "1.234", "g": "2.345e+4"}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.28.6.4.2.2.12.1.1.1" class="indexterm"></a> <code class="function">hstore_to_jsonb</code> ( <code class="type">hstore</code> ) → <code class="returnvalue">jsonb</code></p>
+       <p>Преобразует <code class="type">hstore</code> в <code class="type">jsonb</code>, переводя все отличные от NULL значения в строки JSON.</p>
+       <p>Эта функция применяется неявно, когда значение <code class="type">hstore</code> приводится к типу <code class="type">jsonb</code>.</p>
+       <p>
+        <code class="literal">hstore_to_jsonb('"a key"=&gt;1, b=&gt;t, c=&gt;null, d=&gt;12345, e=&gt;012345, f=&gt;1.234, g=&gt;2.345e+4')</code>
+        → <code class="returnvalue">{"a key": "1", "b": "t", "c": null, "d": "12345", "e": "012345", "f": "1.234", "g": "2.345e+4"}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.28.6.4.2.2.13.1.1.1" class="indexterm"></a> <code class="function">hstore_to_json_loose</code> ( <code class="type">hstore</code> ) → <code class="returnvalue">json</code></p>
+       <p>Преобразует <code class="type">hstore</code> в <code class="type">json</code>, по возможности распознавая числовые и логические значения и передавая их в JSON без кавычек.</p>
+       <p>
+        <code class="literal">hstore_to_json_loose('"a key"=&gt;1, b=&gt;t, c=&gt;null, d=&gt;12345, e=&gt;012345, f=&gt;1.234, g=&gt;2.345e+4')</code>
+        → <code class="returnvalue">{"a key": 1, "b": true, "c": null, "d": 12345, "e": "012345", "f": 1.234, "g": 2.345e+4}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.28.6.4.2.2.14.1.1.1" class="indexterm"></a> <code class="function">hstore_to_jsonb_loose</code> ( <code class="type">hstore</code> ) → <code class="returnvalue">jsonb</code></p>
+       <p>Преобразует <code class="type">hstore</code> в <code class="type">jsonb</code>, по возможности распознавая числовые и логические значения и передавая их в JSON без кавычек.</p>
+       <p>
+        <code class="literal">hstore_to_jsonb_loose('"a key"=&gt;1, b=&gt;t, c=&gt;null, d=&gt;12345, e=&gt;012345, f=&gt;1.234, g=&gt;2.345e+4')</code>
+        → <code class="returnvalue">{"a key": 1, "b": true, "c": null, "d": 12345, "e": "012345", "f": 1.234, "g": 2.345e+4}</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.28.6.4.2.2.15.1.1.1" class="indexterm"></a> <code class="function">slice</code> ( <code class="type">hstore</code>, <code class="type">text[]</code> ) → <code class="returnvalue">hstore</code></p>
+       <p>Извлекает из <code class="type">hstore</code> подмножество, содержащее только заданные ключи.</p>
+       <p>
+        <code class="literal">slice('a=&gt;1,b=&gt;2,c=&gt;3'::hstore, ARRAY['b','c','x'])</code>
+        → <code class="returnvalue">"b"=&gt;"2", "c"=&gt;"3"</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.28.6.4.2.2.16.1.1.1" class="indexterm"></a> <code class="function">each</code> ( <code class="type">hstore</code> ) → <code class="returnvalue">setof record</code> ( <em class="parameter"><code>key</code></em> <code class="type">text</code>, <em class="parameter"><code>value</code></em> <code class="type">text</code> )</p>
+       <p>Извлекает ключи и значения из <code class="type">hstore</code> в виде набора записей.</p>
+       <p>
+        <code class="literal">select * from each('a=&gt;1,b=&gt;2')</code>
+        → <code class="returnvalue"></code>
+</p><pre class="programlisting"> key | value
+-----+-------
+ a   | 1
+ b   | 2</pre><p>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.28.6.4.2.2.17.1.1.1" class="indexterm"></a> <code class="function">exist</code> ( <code class="type">hstore</code>, <code class="type">text</code> ) → <code class="returnvalue">boolean</code></p>
+       <p>Набор <code class="type">hstore</code> включает ключ?</p>
+       <p>
+        <code class="literal">exist('a=&gt;1', 'a')</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.28.6.4.2.2.18.1.1.1" class="indexterm"></a> <code class="function">defined</code> ( <code class="type">hstore</code>, <code class="type">text</code> ) → <code class="returnvalue">boolean</code></p>
+       <p>Значение <code class="type">hstore</code> содержит отличное от <code class="literal">NULL</code> значение для заданного ключа?</p>
+       <p>
+        <code class="literal">defined('a=&gt;NULL', 'a')</code>
+        → <code class="returnvalue">f</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.28.6.4.2.2.19.1.1.1" class="indexterm"></a> <code class="function">delete</code> ( <code class="type">hstore</code>, <code class="type">text</code> ) → <code class="returnvalue">hstore</code></p>
+       <p>Удаляет пару с соответствующим ключом.</p>
+       <p>
+        <code class="literal">delete('a=&gt;1,b=&gt;2', 'b')</code>
+        → <code class="returnvalue">"a"=&gt;"1"</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">delete</code> ( <code class="type">hstore</code>, <code class="type">text[]</code> ) → <code class="returnvalue">hstore</code></p>
+       <p>Удаляет пары с соответствующими ключами.</p>
+       <p>
+        <code class="literal">delete('a=&gt;1,b=&gt;2,c=&gt;3', ARRAY['a','b'])</code>
+        → <code class="returnvalue">"c"=&gt;"3"</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">delete</code> ( <code class="type">hstore</code>, <code class="type">hstore</code> ) → <code class="returnvalue">hstore</code></p>
+       <p>Удаляет пары, соответствующие парам во втором аргументе.</p>
+       <p>
+        <code class="literal">delete('a=&gt;1,b=&gt;2', 'a=&gt;4,b=&gt;2'::hstore)</code>
+        → <code class="returnvalue">"a"=&gt;"1"</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.11.7.28.6.4.2.2.22.1.1.1" class="indexterm"></a> <code class="function">populate_record</code> ( <code class="type">anyelement</code>, <code class="type">hstore</code> ) → <code class="returnvalue">anyelement</code></p>
+       <p>Заменяет поля в левом операнде, имеющем составной тип, соответствующими значениями из <code class="type">hstore</code>.</p>
+       <p>
+        <code class="literal">populate_record(ROW(1,2), 'f1=&gt;42'::hstore)</code>
+        → <code class="returnvalue">(42,2)</code>
+       </p></td></tr></tbody></table></div></div><br class="table-break" /><p>Помимо этих операторов и функций, со значениями типа <code class="type">hstore</code> работает операция обращения по индексу, наделяющая их качествами ассоциативных массивов. Можно указать только один индекс типа <code class="type">text</code>; он воспринимается как ключ, для которого сохраняется или извлекается соответствующее значение. Например: </p><pre class="programlisting">CREATE TABLE mytable (h hstore);
+INSERT INTO mytable VALUES ('a=&gt;b, c=&gt;d');
+SELECT h['a'] FROM mytable;
+ h
+---
+ b
+(1 row)
+
+UPDATE mytable SET h['c'] = 'new';
+SELECT h FROM mytable;
+          h
+----------------------
+ "a"=&gt;"b", "c"=&gt;"new"
+(1 row)</pre><p> При обращении по индексу возвращается <code class="literal">NULL</code>, если индекс — <code class="literal">NULL</code> или указанный ключ не существует в <code class="type">hstore</code>. (Таким образом, обращение по индексу не сильно отличается от оператора <code class="literal">-&gt;</code>.) Изменение по индексу не выполняется, если индекс — <code class="literal">NULL</code>; в остальных случаях заменяется значение указанного ключа (если такой ключ не существует, он добавляется в <code class="type">hstore</code>).</p></div><div class="sect2" id="HSTORE-INDEXES"><div class="titlepage"><div><div><h3 class="title">F.18.3. Индексы <a href="#HSTORE-INDEXES" class="id_link">#</a></h3></div></div></div><p>Тип <code class="type">hstore</code> поддерживает индексы GiST и GIN для операторов <code class="literal">@&gt;</code>, <code class="literal">?</code>, <code class="literal">?&amp;</code> и <code class="literal">?|</code>. Например:</p><pre class="programlisting">CREATE INDEX hidx ON testhstore USING GIST (h);
+
+CREATE INDEX hidx ON testhstore USING GIN (h);</pre><p>Класс операторов GiST <code class="literal">gist_hstore_ops</code> аппроксимирует набор пар ключ-значение в виде сигнатуры битовой карты. В его необязательном целочисленном параметре <code class="literal">siglen</code> можно задать размер сигнатуры в байтах. Параметр может принимать значения от 1 до 2024, по умолчанию он равен 16. При увеличении размера сигнатуры поиск работает точнее (сканируется меньшая область в индексе и меньше страниц кучи), но сам индекс становится больше.</p><p>Пример создания такого индекса с длиной сигнатуры 32 байта: </p><pre class="programlisting">CREATE INDEX hidx ON testhstore USING GIST (h gist_hstore_ops(siglen=32));</pre><p>Тип <code class="type">hstore</code> также поддерживает индексы <code class="type">btree</code> и <code class="type">hash</code> для оператора <code class="literal">=</code>. Это позволяет объявлять столбцы <code class="type">hstore</code> как уникальные (<code class="literal">UNIQUE</code>) и использовать их в выражениях <code class="literal">GROUP BY</code>, <code class="literal">ORDER BY</code> или <code class="literal">DISTINCT</code>. Порядок сортировки значений <code class="type">hstore</code> не имеет практического смысла, но эти индексы могут быть полезны для поиска по равенству. Индексы для сравнений (с помощью <code class="literal">=</code>) можно создать так:</p><pre class="programlisting">CREATE INDEX hidx ON testhstore USING BTREE (h);
+
+CREATE INDEX hidx ON testhstore USING HASH (h);</pre></div><div class="sect2" id="HSTORE-EXAMPLES"><div class="titlepage"><div><div><h3 class="title">F.18.4. Примеры <a href="#HSTORE-EXAMPLES" class="id_link">#</a></h3></div></div></div><p>Присваивание значения существующему или новому ключу: </p><pre class="programlisting">UPDATE tab SET h['c'] = '3';</pre><p> Другой способ сделать то же самое: </p><pre class="programlisting">UPDATE tab SET h = h || hstore('c', '3');</pre><p> Если в одной операции нужно добавить или изменить несколько ключей, эффективнее использовать конкатенацию, а не обращение по индексу: </p><pre class="programlisting">UPDATE tab SET h = h || hstore(array['q', 'w'], array['11', '12']);</pre><p>Удаление ключа: </p><pre class="programlisting">UPDATE tab SET h = delete(h, 'k1');</pre><p>Приведение типа <code class="type">record</code> к типу <code class="type">hstore</code>: </p><pre class="programlisting">CREATE TABLE test (col1 integer, col2 text, col3 text);
+INSERT INTO test VALUES (123, 'foo', 'bar');
+
+SELECT hstore(t) FROM test AS t;
+                   hstore
+---------------------------------------------
+ "col1"=&gt;"123", "col2"=&gt;"foo", "col3"=&gt;"bar"
+(1 row)</pre><p>Приведение типа <code class="type">hstore</code> к предопределённому типу <code class="type">record</code>: </p><pre class="programlisting">CREATE TABLE test (col1 integer, col2 text, col3 text);
+
+SELECT * FROM populate_record(null::test,
+                              '"col1"=&gt;"456", "col2"=&gt;"zzz"');
+ col1 | col2 | col3 
+------+------+------
+  456 | zzz  |
+(1 row)</pre><p>Изменение существующей записи по данным из <code class="type">hstore</code>: </p><pre class="programlisting">CREATE TABLE test (col1 integer, col2 text, col3 text);
+INSERT INTO test VALUES (123, 'foo', 'bar');
+
+SELECT (r).* FROM (SELECT t #= '"col3"=&gt;"baz"' AS r FROM test t) s;
+ col1 | col2 | col3
+------+------+------
+  123 | foo  | baz
+(1 row)</pre></div><div class="sect2" id="HSTORE-STATISTICS"><div class="titlepage"><div><div><h3 class="title">F.18.5. Статистика <a href="#HSTORE-STATISTICS" class="id_link">#</a></h3></div></div></div><p>Тип <code class="type">hstore</code>, вследствие присущей ему либеральности, может содержать множество самых разных ключей. Контроль допустимости ключей является задачей приложения. Следующие примеры демонстрируют несколько приёмов проверки ключей и получения статистики.</p><p>Простой пример: </p><pre class="programlisting">SELECT * FROM each('aaa=&gt;bq, b=&gt;NULL, ""=&gt;1');</pre><p>С таблицей: </p><pre class="programlisting">CREATE TABLE stat AS SELECT (each(h)).key, (each(h)).value FROM testhstore;</pre><p>Актуальная статистика: </p><pre class="programlisting">SELECT key, count(*) FROM
+  (SELECT (each(h)).key FROM testhstore) AS stat
+  GROUP BY key
+  ORDER BY count DESC, key;
+    key    | count
+-----------+-------
+ line      |   883
+ query     |   207
+ pos       |   203
+ node      |   202
+ space     |   197
+ status    |   195
+ public    |   194
+ title     |   190
+ org       |   189
+...................</pre></div><div class="sect2" id="HSTORE-COMPATIBILITY"><div class="titlepage"><div><div><h3 class="title">F.18.6. Совместимость <a href="#HSTORE-COMPATIBILITY" class="id_link">#</a></h3></div></div></div><p>Начиная с PostgreSQL 9.0, <code class="type">hstore</code> использует внутреннее представление, отличающееся от предыдущих версий. Это не проблема при обновлении путём выгрузки/перезагрузки данных, так как текстовое представление (используемое при выгрузке) не меняется.</p><p>В случае двоичного обновления обратная совместимость поддерживается благодаря тому, что новый код понимает данные в старом формате. При таком обновлении возможно небольшое снижение производительности при обработке данных, которые ещё не были изменены новым кодом. Все значения в столбце таблицы можно обновить принудительно, выполнив следующий оператор <code class="literal">UPDATE</code>: </p><pre class="programlisting">UPDATE tablename SET hstorecol = hstorecol || '';</pre><p>Это можно сделать и так: </p><pre class="programlisting">ALTER TABLE tablename ALTER hstorecol TYPE hstore USING hstorecol || '';</pre><p> Вариант с командой <code class="command">ALTER TABLE</code> требует блокировки таблицы в режиме <code class="literal">ACCESS EXCLUSIVE</code>, но не приводит к раздуванию таблицы из-за старых версий строк.</p></div><div class="sect2" id="HSTORE-TRANSFORMS"><div class="titlepage"><div><div><h3 class="title">F.18.7. Трансформации <a href="#HSTORE-TRANSFORMS" class="id_link">#</a></h3></div></div></div><p>Также имеются дополнительные расширения, реализующие трансформации типа <code class="type">hstore</code> для языков PL/Perl и PL/Python. Расширения для PL/Perl называются <code class="literal">hstore_plperl</code> и <code class="literal">hstore_plperlu</code> для доверенного и недоверенного PL/Perl, соответственно. Если вы установите эти трансформации и укажете их при создании функции, значения <code class="type">hstore</code> будут отображаться в хеши Perl. Расширение для PL/Python называется <code class="literal">hstore_plpython3u</code>. Если вы воспользуетесь им, значения <code class="type">hstore</code> будут отображаться в словари Python.</p><div class="caution"><h3 class="title">Внимание</h3><p>Расширения, реализующие трансформации, настоятельно рекомендуется устанавливать в одну схему с <code class="filename">hstore</code>. Выбор какой-либо другой схемы, которая может содержать объекты, созданные злонамеренным пользователем, чреват угрозами безопасности во время установки расширения.</p></div></div><div class="sect2" id="HSTORE-AUTHORS"><div class="titlepage"><div><div><h3 class="title">F.18.8. Авторы <a href="#HSTORE-AUTHORS" class="id_link">#</a></h3></div></div></div><p>Олег Бартунов <code class="email">&lt;<a class="email" href="mailto:oleg@sai.msu.su">oleg@sai.msu.su</a>&gt;</code>, Москва, Московский Государственный Университет, Россия</p><p>Фёдор Сигаев <code class="email">&lt;<a class="email" href="mailto:teodor@sigaev.ru">teodor@sigaev.ru</a>&gt;</code>, Москва, ООО «Дельта-Софт», Россия</p><p>Дополнительные улучшения внёс Эндрю Гирт <code class="email">&lt;<a class="email" href="mailto:andrew@tao11.riddles.org.uk">andrew@tao11.riddles.org.uk</a>&gt;</code>, Великобритания</p></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="fuzzystrmatch.html" title="F.17. fuzzystrmatch — вычисление схожести и расстояния между строками">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="contrib.html" title="Приложение F. Дополнительно поставляемые модули и расширения">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="intagg.html" title="F.19. intagg — агрегатор и нумератор целых чисел">След.</a></td></tr><tr><td width="40%" align="left" valign="top">F.17. fuzzystrmatch — вычисление схожести и расстояния между строками </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> F.19. intagg — агрегатор и нумератор целых чисел</td></tr></table></div></body></html>

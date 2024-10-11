@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>8.15. Массивы</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="datatype-json.html" title="8.14. Типы JSON" /><link rel="next" href="rowtypes.html" title="8.16. Составные типы" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">8.15. Массивы</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="datatype-json.html" title="8.14. Типы JSON">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="datatype.html" title="Глава 8. Типы данных">Наверх</a></td><th width="60%" align="center">Глава 8. Типы данных</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="rowtypes.html" title="8.16. Составные типы">След.</a></td></tr></table><hr /></div><div class="sect1" id="ARRAYS"><div class="titlepage"><div><div><h2 class="title" style="clear: both">8.15. Массивы <a href="#ARRAYS" class="id_link">#</a></h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="arrays.html#ARRAYS-DECLARATION">8.15.1. Объявления типов массивов</a></span></dt><dt><span class="sect2"><a href="arrays.html#ARRAYS-INPUT">8.15.2. Ввод значения массива</a></span></dt><dt><span class="sect2"><a href="arrays.html#ARRAYS-ACCESSING">8.15.3. Обращение к массивам</a></span></dt><dt><span class="sect2"><a href="arrays.html#ARRAYS-MODIFYING">8.15.4. Изменение массивов</a></span></dt><dt><span class="sect2"><a href="arrays.html#ARRAYS-SEARCHING">8.15.5. Поиск значений в массивах</a></span></dt><dt><span class="sect2"><a href="arrays.html#ARRAYS-IO">8.15.6. Синтаксис вводимых и выводимых значений массива</a></span></dt></dl></div><a id="id-1.5.7.23.2" class="indexterm"></a><p><span class="productname">PostgreSQL</span> позволяет определять столбцы таблицы как многомерные массивы переменной длины. Элементами массивов могут быть любые встроенные или определённые пользователями базовые типы, перечисления, составные типы, типы-диапазоны или домены.</p><div class="sect2" id="ARRAYS-DECLARATION"><div class="titlepage"><div><div><h3 class="title">8.15.1. Объявления типов массивов <a href="#ARRAYS-DECLARATION" class="id_link">#</a></h3></div></div></div><a id="id-1.5.7.23.4.2" class="indexterm"></a><p>Чтобы проиллюстрировать использование массивов, мы создадим такую таблицу: </p><pre class="programlisting">CREATE TABLE sal_emp (
+    name            text,
+    pay_by_quarter  integer[],
+    schedule        text[][]
+);</pre><p> Как показано, для объявления типа массива к названию типа элементов добавляются квадратные скобки (<code class="literal">[]</code>). Показанная выше команда создаст таблицу <code class="structname">sal_emp</code> со столбцами типов <code class="type">text</code> (<code class="structfield">name</code>), одномерный массив с элементами <code class="type">integer</code> (<code class="structfield">pay_by_quarter</code>), представляющий квартальную зарплату работников, и двухмерный массив с элементами <code class="type">text</code> (<code class="structfield">schedule</code>), представляющий недельный график работника.</p><p>Команда <code class="command">CREATE TABLE</code> позволяет также указать точный размер массивов, например так: </p><pre class="programlisting">CREATE TABLE tictactoe (
+    squares   integer[3][3]
+);</pre><p> Однако текущая реализация игнорирует все указанные размеры, т. е. фактически размер массива остаётся неопределённым.</p><p>Текущая реализация также не ограничивает число размерностей. Все элементы массивов считаются одного типа, вне зависимости от его размера и числа размерностей. Поэтому явно указывать число элементов или размерностей в команде <code class="command">CREATE TABLE</code> имеет смысл только для документирования, на механизм работы с массивом это не влияет.</p><p>Для объявления одномерных массивов можно применять альтернативную запись с ключевым словом <code class="literal">ARRAY</code>, соответствующую стандарту SQL. Столбец <code class="structfield">pay_by_quarter</code> можно было бы определить так: </p><pre class="programlisting">    pay_by_quarter  integer ARRAY[4],</pre><p> Или без указания размера массива: </p><pre class="programlisting">    pay_by_quarter  integer ARRAY,</pre><p> Заметьте, что и в этом случае <span class="productname">PostgreSQL</span> не накладывает ограничения на фактический размер массива.</p></div><div class="sect2" id="ARRAYS-INPUT"><div class="titlepage"><div><div><h3 class="title">8.15.2. Ввод значения массива <a href="#ARRAYS-INPUT" class="id_link">#</a></h3></div></div></div><a id="id-1.5.7.23.5.2" class="indexterm"></a><p>Чтобы записать значение массива в виде буквальной константы, заключите значения элементов в фигурные скобки и разделите их запятыми. (Если вам знаком C, вы найдёте, что это похоже на синтаксис инициализации структур в C.) Вы можете заключить значение любого элемента в двойные кавычки, а если он содержит запятые или фигурные скобки, это обязательно нужно сделать. (Подробнее это описано ниже.) Таким образом, общий формат константы массива выглядит так: </p><pre class="synopsis">
+'{ <em class="replaceable"><code>значение1</code></em> <em class="replaceable"><code>разделитель</code></em> <em class="replaceable"><code>значение2</code></em> <em class="replaceable"><code>разделитель</code></em> ... }'
+</pre><p> где <em class="replaceable"><code>разделитель</code></em> — символ, указанный в качестве разделителя в соответствующей записи в таблице <code class="literal">pg_type</code>. Для стандартных типов данных, существующих в дистрибутиве <span class="productname">PostgreSQL</span>, разделителем является запятая (<code class="literal">,</code>), за исключением лишь типа <code class="type">box</code>, в котором разделитель —точка с запятой (<code class="literal">;</code>). Каждое <em class="replaceable"><code>значение</code></em> здесь — это либо константа типа элемента массива, либо вложенный массив. Например, константа массива может быть такой: </p><pre class="programlisting">'{{1,2,3},{4,5,6},{7,8,9}}'</pre><p> Эта константа определяет двухмерный массив 3x3, состоящий из трёх вложенных массивов целых чисел.</p><p>Чтобы присвоить элементу массива значение NULL, достаточно просто написать <code class="literal">NULL</code> (регистр символов при этом не имеет значения). Если же требуется добавить в массив строку, содержащую <span class="quote">«<span class="quote">NULL</span>»</span>, это слово нужно заключить в двойные кавычки.</p><p>(Такого рода константы массивов на самом деле представляют собой всего лишь частный случай констант, описанных в <a class="xref" href="sql-syntax-lexical.html#SQL-SYNTAX-CONSTANTS-GENERIC" title="4.1.2.7. Константы других типов">Подразделе 4.1.2.7</a>. Константа изначально воспринимается как строка и передаётся процедуре преобразования вводимого массива. При этом может потребоваться явно указать целевой тип.)</p><p>Теперь мы можем показать несколько операторов <code class="command">INSERT</code>: </p><pre class="programlisting">INSERT INTO sal_emp
+    VALUES ('Bill',
+    '{10000, 10000, 10000, 10000}',
+    '{{"meeting", "lunch"}, {"training", "presentation"}}');
+
+INSERT INTO sal_emp
+    VALUES ('Carol',
+    '{20000, 25000, 25000, 25000}',
+    '{{"breakfast", "consulting"}, {"meeting", "lunch"}}');</pre><p>Результат двух предыдущих команд: </p><pre class="programlisting">SELECT * FROM sal_emp;
+name |     pay_by_quarter      |                schedule
+-----+-------------------------+--------------------------------------
+Bill |{10000,10000,10000,10000}|{{meeting,lunch},{training,presentation}}
+Carol|{20000,25000,25000,25000}|{{breakfast,consulting},{meeting,lunch}}
+(2 rows)</pre><p>В многомерных массивов число элементов в каждой размерности должно быть одинаковым; в противном случае возникает ошибка. Например: </p><pre class="programlisting">INSERT INTO sal_emp
+    VALUES ('Bill',
+    '{10000, 10000, 10000, 10000}',
+    '{{"meeting", "lunch"}, {"meeting"}}');
+ОШИБКА:  для многомерных массивов должны задаваться выражения
+  с соответствующими размерностями</pre><p>Также можно использовать синтаксис конструктора <code class="literal">ARRAY</code>: </p><pre class="programlisting">INSERT INTO sal_emp
+    VALUES ('Bill',
+    ARRAY[10000, 10000, 10000, 10000],
+    ARRAY[['meeting', 'lunch'], ['training', 'presentation']]);
+
+INSERT INTO sal_emp
+    VALUES ('Carol',
+    ARRAY[20000, 25000, 25000, 25000],
+    ARRAY[['breakfast', 'consulting'], ['meeting', 'lunch']]);</pre><p> Заметьте, что элементы массива здесь — это простые SQL-константы или выражения; и поэтому, например строки будут заключаться в одинарные апострофы, а не в двойные, как в буквальной константе массива. Более подробно конструктор <code class="literal">ARRAY</code> обсуждается в <a class="xref" href="sql-expressions.html#SQL-SYNTAX-ARRAY-CONSTRUCTORS" title="4.2.12. Конструкторы массивов">Подразделе 4.2.12</a>.</p></div><div class="sect2" id="ARRAYS-ACCESSING"><div class="titlepage"><div><div><h3 class="title">8.15.3. Обращение к массивам <a href="#ARRAYS-ACCESSING" class="id_link">#</a></h3></div></div></div><a id="id-1.5.7.23.6.2" class="indexterm"></a><p>Добавив данные в таблицу, мы можем перейти к выборкам. Сначала мы покажем, как получить один элемент массива. Этот запрос получает имена сотрудников, зарплата которых изменилась во втором квартале: </p><pre class="programlisting">SELECT name FROM sal_emp WHERE pay_by_quarter[1] &lt;&gt; pay_by_quarter[2];
+
+ name
+-------
+ Carol
+(1 row)</pre><p> Индексы элементов массива записываются в квадратных скобках. По умолчанию в <span class="productname">PostgreSQL</span> действует соглашение о нумерации элементов массива с 1, то есть в массиве из <em class="replaceable"><code>n</code></em> элементов первым считается <code class="literal">array[1]</code>, а последним — <code class="literal">array[<em class="replaceable"><code>n</code></em>]</code>.</p><p>Этот запрос выдаёт зарплату всех сотрудников в третьем квартале: </p><pre class="programlisting">SELECT pay_by_quarter[3] FROM sal_emp;
+
+ pay_by_quarter
+----------------
+          10000
+          25000
+(2 rows)</pre><p>Мы также можем получать обычные прямоугольные срезы массива, то есть подмассивы. Срез массива обозначается как <code class="literal"><em class="replaceable"><code>нижняя-граница</code></em>:<em class="replaceable"><code>верхняя-граница</code></em></code> для одной или нескольких размерностей. Например, этот запрос получает первые пункты в графике Билла в первые два дня недели: </p><pre class="programlisting">SELECT schedule[1:2][1:1] FROM sal_emp WHERE name = 'Bill';
+
+        schedule
+------------------------
+ {{meeting},{training}}
+(1 row)</pre><p> Если одна из размерностей записана в виде среза, то есть содержит двоеточие, тогда срез распространяется на все размерности. Если при этом для размерности указывается только одно число (без двоеточия), в срез войдут элемент от 1 до заданного номера. Например, в этом примере <code class="literal">[2]</code> будет равнозначно <code class="literal">[1:2]</code>: </p><pre class="programlisting">SELECT schedule[1:2][2] FROM sal_emp WHERE name = 'Bill';
+
+                 schedule
+-------------------------------------------
+ {{meeting,lunch},{training,presentation}}
+(1 row)</pre><p> Во избежание путаницы с обращением к одному элементу, срезы лучше всегда записывать явно для всех измерений, например <code class="literal">[1:2][1:1]</code> вместо <code class="literal">[2][1:1]</code>.</p><p>Значения <em class="replaceable"><code>нижняя-граница</code></em> и/или <em class="replaceable"><code>верхняя-граница</code></em> в указании среза можно опустить; опущенная граница заменяется нижним или верхним пределом индексов массива. Например: </p><pre class="programlisting">SELECT schedule[:2][2:] FROM sal_emp WHERE name = 'Bill';
+
+        schedule
+------------------------
+ {{lunch},{presentation}}
+(1 row)
+
+SELECT schedule[:][1:1] FROM sal_emp WHERE name = 'Bill';
+
+        schedule
+------------------------
+ {{meeting},{training}}
+(1 row)</pre><p>Выражение обращения к элементу массива возвратит NULL, если сам массив или одно из выражений индексов элемента равны NULL. Значение NULL также возвращается, если индекс выходит за границы массива (это не считается ошибкой). Например, если <code class="literal">schedule</code> в настоящее время имеет размерности <code class="literal">[1:3][1:2]</code>, результатом обращения к <code class="literal">schedule[3][3]</code> будет NULL. Подобным образом, при обращении к элементу массива с неправильным числом индексов возвращается NULL, а не ошибка.</p><p>Аналогично, NULL возвращается при обращении к срезу массива, если сам массив или одно из выражений, определяющих индексы элементов, равны NULL. Однако в других случаях, например, когда границы среза выходят за рамки массива, возвращается не NULL, а пустой массив (с размерностью 0). (Так сложилось исторически, что в этом срезы отличаются от обращений к обычным элементам.) Если запрошенный срез пересекает границы массива, тогда возвращается не NULL, а срез, сокращённый до области пересечения.</p><p>Текущие размеры значения массива можно получить с помощью функции <code class="function">array_dims</code>: </p><pre class="programlisting">SELECT array_dims(schedule) FROM sal_emp WHERE name = 'Carol';
+
+ array_dims
+------------
+ [1:2][1:2]
+(1 row)</pre><p> <code class="function">array_dims</code> выдаёт результат типа <code class="type">text</code>, что удобно скорее для людей, чем для программ. Размеры массива также можно получить с помощью функций <code class="function">array_upper</code> и <code class="function">array_lower</code>, которые возвращают соответственно верхнюю и нижнюю границу для указанной размерности: </p><pre class="programlisting">SELECT array_upper(schedule, 1) FROM sal_emp WHERE name = 'Carol';
+
+ array_upper
+-------------
+           2
+(1 row)</pre><p> <code class="function">array_length</code> возвращает число элементов в указанной размерности массива: </p><pre class="programlisting">SELECT array_length(schedule, 1) FROM sal_emp WHERE name = 'Carol';
+
+ array_length
+--------------
+            2
+(1 row)</pre><p> <code class="function">cardinality</code> возвращает общее число элементов массива по всем измерениям. Фактически это число строк, которое вернёт функция <code class="function">unnest</code>: </p><pre class="programlisting">SELECT cardinality(schedule) FROM sal_emp WHERE name = 'Carol';
+
+ cardinality
+-------------
+           4
+(1 row)</pre></div><div class="sect2" id="ARRAYS-MODIFYING"><div class="titlepage"><div><div><h3 class="title">8.15.4. Изменение массивов <a href="#ARRAYS-MODIFYING" class="id_link">#</a></h3></div></div></div><a id="id-1.5.7.23.7.2" class="indexterm"></a><p>Значение массива можно заменить полностью так: </p><pre class="programlisting">UPDATE sal_emp SET pay_by_quarter = '{25000,25000,27000,27000}'
+    WHERE name = 'Carol';</pre><p> или используя синтаксис <code class="literal">ARRAY</code>: </p><pre class="programlisting">UPDATE sal_emp SET pay_by_quarter = ARRAY[25000,25000,27000,27000]
+    WHERE name = 'Carol';</pre><p> Также можно изменить один элемент массива: </p><pre class="programlisting">UPDATE sal_emp SET pay_by_quarter[4] = 15000
+    WHERE name = 'Bill';</pre><p> или срез: </p><pre class="programlisting">UPDATE sal_emp SET pay_by_quarter[1:2] = '{27000,27000}'
+    WHERE name = 'Carol';</pre><p> При этом в указании среза может быть опущена <em class="replaceable"><code>нижняя-граница</code></em> и/или <em class="replaceable"><code>верхняя-граница</code></em>, но только для массива, отличного от NULL, и имеющего ненулевую размерность (иначе неизвестно, какие граничные значения должны подставляться вместо опущенных).</p><p>Сохранённый массив можно расширить, определив значения ранее отсутствовавших в нём элементов. При этом все элементы, располагающиеся между существовавшими ранее и новыми, принимают значения NULL. Например, если массив <code class="literal">myarray</code> содержит 4 элемента, после присваивания значения элементу <code class="literal">myarray[6]</code> его длина будет равна 6, а <code class="literal">myarray[5]</code> будет содержать NULL. В настоящее время подобное расширение поддерживается только для одномерных, но не многомерных массивов.</p><p>Определяя элементы по индексам, можно создавать массивы, в которых нумерация элементов может начинаться не с 1. Например, можно присвоить значение выражению <code class="literal">myarray[-2:7]</code> и таким образом создать массив, в котором будут элементы с индексами от -2 до 7.</p><p>Значения массива также можно сконструировать с помощью оператора конкатенации, <code class="literal">||</code>: </p><pre class="programlisting">SELECT ARRAY[1,2] || ARRAY[3,4];
+ ?column?
+-----------
+ {1,2,3,4}
+(1 row)
+
+SELECT ARRAY[5,6] || ARRAY[[1,2],[3,4]];
+      ?column?
+---------------------
+ {{5,6},{1,2},{3,4}}
+(1 row)</pre><p>Оператор конкатенации позволяет вставить один элемент в начало или в конец одномерного массива. Он также может принять два <em class="replaceable"><code>N</code></em>-мерных массива или массивы размерностей <em class="replaceable"><code>N</code></em> и <em class="replaceable"><code>N+1</code></em>.</p><p>Когда в начало или конец одномерного массива вставляется один элемент, в образованном в результате массиве будет та же нижняя граница, что и в массиве-операнде. Например: </p><pre class="programlisting">SELECT array_dims(1 || '[0:1]={2,3}'::int[]);
+ array_dims
+------------
+ [0:2]
+(1 row)
+
+SELECT array_dims(ARRAY[1,2] || 3);
+ array_dims
+------------
+ [1:3]
+(1 row)</pre><p>Когда складываются два массива одинаковых размерностей, в результате сохраняется нижняя граница внешней размерности левого операнда. Выходной массив включает все элементы левого операнда, после которых добавляются все элементы правого. Например: </p><pre class="programlisting">SELECT array_dims(ARRAY[1,2] || ARRAY[3,4,5]);
+ array_dims
+------------
+ [1:5]
+(1 row)
+
+SELECT array_dims(ARRAY[[1,2],[3,4]] || ARRAY[[5,6],[7,8],[9,0]]);
+ array_dims
+------------
+ [1:5][1:2]
+(1 row)</pre><p>Когда к массиву размерности <em class="replaceable"><code>N+1</code></em> спереди или сзади добавляется <em class="replaceable"><code>N</code></em>-мерный массив, он вставляется аналогично тому, как в массив вставляется элемент (это было описано выше). Любой <em class="replaceable"><code>N</code></em>-мерный массив по сути является элементом во внешней размерности массива, имеющего размерность <em class="replaceable"><code>N+1</code></em>. Например: </p><pre class="programlisting">SELECT array_dims(ARRAY[1,2] || ARRAY[[3,4],[5,6]]);
+ array_dims
+------------
+ [1:3][1:2]
+(1 row)</pre><p>Массив также можно сконструировать с помощью функций <code class="function">array_prepend</code>, <code class="function">array_append</code> и <code class="function">array_cat</code>. Первые две функции поддерживают только одномерные массивы, а <code class="function">array_cat</code> поддерживает и многомерные. Несколько примеров: </p><pre class="programlisting">SELECT array_prepend(1, ARRAY[2,3]);
+ array_prepend
+---------------
+ {1,2,3}
+(1 row)
+
+SELECT array_append(ARRAY[1,2], 3);
+ array_append
+--------------
+ {1,2,3}
+(1 row)
+
+SELECT array_cat(ARRAY[1,2], ARRAY[3,4]);
+ array_cat
+-----------
+ {1,2,3,4}
+(1 row)
+
+SELECT array_cat(ARRAY[[1,2],[3,4]], ARRAY[5,6]);
+      array_cat
+---------------------
+ {{1,2},{3,4},{5,6}}
+(1 row)
+
+SELECT array_cat(ARRAY[5,6], ARRAY[[1,2],[3,4]]);
+      array_cat
+---------------------
+ {{5,6},{1,2},{3,4}}</pre><p>В простых случаях описанный выше оператор конкатенации предпочтительнее непосредственного вызова этих функций. Однако так как оператор конкатенации перегружен для решения всех трёх задач, возможны ситуации, когда лучше применить одну из этих функций во избежание неоднозначности. Например, рассмотрите: </p><pre class="programlisting">SELECT ARRAY[1, 2] || '{3, 4}';  -- нетипизированная строка воспринимается как массив
+ ?column?
+-----------
+ {1,2,3,4}
+
+SELECT ARRAY[1, 2] || '7';                 -- как и эта
+ERROR:  malformed array literal: "7"
+
+SELECT ARRAY[1, 2] || NULL;                -- как и буквальный NULL
+ ?column?
+----------
+ {1,2}
+(1 row)
+
+SELECT array_append(ARRAY[1, 2], NULL);    -- это могло иметься в виду на самом деле
+ array_append
+--------------
+ {1,2,NULL}</pre><p> В показанных примерах анализатор запроса видит целочисленный массив с одной стороны оператора конкатенации и константу неопределённого типа с другой. Согласно своим правилам разрешения типа констант, он полагает, что она имеет тот же тип, что и другой операнд — в данном случае целочисленный массив. Поэтому предполагается, что оператор конкатенации здесь представляет функцию <code class="function">array_cat</code>, а не <code class="function">array_append</code>. Если это решение оказывается неверным, его можно скорректировать, приведя константу к типу элемента массива; однако может быть лучше явно использовать функцию <code class="function">array_append</code>.</p></div><div class="sect2" id="ARRAYS-SEARCHING"><div class="titlepage"><div><div><h3 class="title">8.15.5. Поиск значений в массивах <a href="#ARRAYS-SEARCHING" class="id_link">#</a></h3></div></div></div><a id="id-1.5.7.23.8.2" class="indexterm"></a><p>Чтобы найти значение в массиве, необходимо проверить все его элементы. Это можно сделать вручную, если вы знаете размер массива. Например: </p><pre class="programlisting">SELECT * FROM sal_emp WHERE pay_by_quarter[1] = 10000 OR
+                            pay_by_quarter[2] = 10000 OR
+                            pay_by_quarter[3] = 10000 OR
+                            pay_by_quarter[4] = 10000;</pre><p> Однако с большим массивами этот метод становится утомительным, и к тому же он не работает, когда размер массива неизвестен. Альтернативный подход описан в <a class="xref" href="functions-comparisons.html" title="9.24. Сравнение табличных строк и массивов">Разделе 9.24</a>. Показанный выше запрос можно было переписать так: </p><pre class="programlisting">SELECT * FROM sal_emp WHERE 10000 = ANY (pay_by_quarter);</pre><p> А так можно найти в таблице строки, в которых массивы содержат только значения, равные 10000: </p><pre class="programlisting">SELECT * FROM sal_emp WHERE 10000 = ALL (pay_by_quarter);</pre><p>Кроме того, для обращения к элементам массива можно использовать функцию <code class="function">generate_subscripts</code>. Например так: </p><pre class="programlisting">SELECT * FROM
+   (SELECT pay_by_quarter,
+           generate_subscripts(pay_by_quarter, 1) AS s
+      FROM sal_emp) AS foo
+ WHERE pay_by_quarter[s] = 10000;</pre><p> Эта функция описана в <a class="xref" href="functions-srf.html#FUNCTIONS-SRF-SUBSCRIPTS" title="Таблица 9.66. Функции, генерирующие индексы массивов">Таблице 9.66</a>.</p><p>Также искать в массиве значения можно, используя оператор <code class="literal">&amp;&amp;</code>, который проверяет, перекрывается ли левый операнд с правым. Например: </p><pre class="programlisting">SELECT * FROM sal_emp WHERE pay_by_quarter &amp;&amp; ARRAY[10000];</pre><p> Этот и другие операторы для работы с массивами описаны в <a class="xref" href="functions-array.html" title="9.19. Функции и операторы для работы с массивами">Разделе 9.19</a>. Он может быть ускорен с помощью подходящего индекса, как описано в <a class="xref" href="indexes-types.html" title="11.2. Типы индексов">Разделе 11.2</a>.</p><p>Вы также можете искать определённые значения в массиве, используя функции <code class="function">array_position</code> и <code class="function">array_positions</code>. Первая функция возвращает позицию первого вхождения значения в массив, а вторая — массив позиций всех его вхождений. Например: </p><pre class="programlisting">SELECT array_position(ARRAY['sun','mon','tue','wed','thu','fri','sat'], 'mon');
+ array_position
+----------------
+              2
+(1 row)
+
+SELECT array_positions(ARRAY[1, 4, 3, 1, 3, 4, 2, 1], 1);
+ array_positions
+-----------------
+ {1,4,8}
+(1 row)</pre><div class="tip"><h3 class="title">Подсказка</h3><p>Массивы — это не множества; необходимость поиска определённых элементов в массиве может быть признаком неудачно сконструированной базы данных. Возможно, вместо массива лучше использовать отдельную таблицу, строки которой будут содержать данные элементов массива. Это может быть лучше и для поиска, и для работы с большим количеством элементов.</p></div></div><div class="sect2" id="ARRAYS-IO"><div class="titlepage"><div><div><h3 class="title">8.15.6. Синтаксис вводимых и выводимых значений массива <a href="#ARRAYS-IO" class="id_link">#</a></h3></div></div></div><a id="id-1.5.7.23.9.2" class="indexterm"></a><p>Внешнее текстовое представление значения массива состоит из записи элементов, интерпретируемых по правилам ввода/вывода для типа элемента массива, и оформления структуры массива. Оформление состоит из фигурных скобок (<code class="literal">{</code> и <code class="literal">}</code>), окружающих значение массива, и знаков-разделителей между его элементами. В качестве знака-разделителя обычно используется запятая (<code class="literal">,</code>), но это может быть и другой символ; он определяется параметром <code class="literal">typdelim</code> для типа элемента массива. Для стандартных типов данных, существующих в дистрибутиве <span class="productname">PostgreSQL</span>, разделителем является запятая (<code class="literal">,</code>), за исключением лишь типа <code class="type">box</code>, в котором разделитель — точка с запятой (<code class="literal">;</code>). В многомерном массиве у каждой размерности (ряд, плоскость, куб и т. д.) есть свой уровень фигурных скобок, а соседние значения в фигурных скобках на одном уровне должны отделяться разделителями.</p><p>Функция вывода массива заключает значение элемента в кавычки, если это пустая строка или оно содержит фигурные скобки, знаки-разделители, кавычки, обратную косую черту, пробельный символ или это текст <code class="literal">NULL</code>. Кавычки и обратная косая черта, включённые в такие значения, преобразуются в спецпоследовательность с обратной косой чертой. Для числовых типов данных можно рассчитывать на то, что значения никогда не будут выводиться в кавычках, но для текстовых типов следует быть готовым к тому, что выводимое значение массива может содержать кавычки.</p><p>По умолчанию нижняя граница всех размерностей массива равна одному. Чтобы представить массивы с другими нижними границами, перед содержимым массива можно указать диапазоны индексов. Такое оформление массива будет содержать квадратные скобки (<code class="literal">[]</code>) вокруг нижней и верхней границ каждой размерности с двоеточием (<code class="literal">:</code>) между ними. За таким указанием размерности следует знак равно (<code class="literal">=</code>). Например: </p><pre class="programlisting">SELECT f1[1][-2][3] AS e1, f1[1][-1][5] AS e2
+ FROM (SELECT '[1:1][-2:-1][3:5]={{{1,2,3},{4,5,6}}}'::int[] AS f1) AS ss;
+
+ e1 | e2
+----+----
+  1 |  6
+(1 row)</pre><p> Процедура вывода массива включает в результат явное указание размерностей, только если нижняя граница в одной или нескольких размерностях отличается от 1.</p><p>Если в качестве значения элемента задаётся <code class="literal">NULL</code> (в любом регистре), этот элемент считается равным непосредственно NULL. Если же оно включает кавычки или обратную косую черту, элементу присваивается текстовая строка <span class="quote">«<span class="quote">NULL</span>»</span>. Кроме того, для обратной совместимости с версиями <span class="productname">PostgreSQL</span> до 8.2, параметр конфигурации <a class="xref" href="runtime-config-compatible.html#GUC-ARRAY-NULLS">array_nulls</a> можно выключить (присвоив ему <code class="literal">off</code>), чтобы строки <code class="literal">NULL</code> не воспринимались как значения NULL.</p><p>Как было показано ранее, записывая значение массива, любой его элемент можно заключить в кавычки. Это <span class="emphasis"><em>нужно</em></span> делать, если при разборе значения массива без кавычек возможна неоднозначность. Например, в кавычки необходимо заключать элементы, содержащие фигурные скобки, запятую (или разделитель, определённый для данного типа), кавычки, обратную косую черту, а также пробельные символы в начале или конце строки. Пустые строки и строки, содержащие одно слово <code class="literal">NULL</code>, также нужно заключать в кавычки. Чтобы включить кавычки или обратную косую черту в значение, заключённое в кавычки, добавьте обратную косую черту перед таким символом. С другой стороны, чтобы обойтись без кавычек, таким экранированием можно защитить все символы в данных, которые могут быть восприняты как часть синтаксиса массива.</p><p>Перед открывающей и после закрывающей скобки можно добавлять пробельные символы. Пробелы также могут окружать каждую отдельную строку значения. Во всех случаях такие пробельные символы игнорируются. Однако все пробелы в строках, заключённых в кавычки, или окружённые не пробельными символами, напротив, учитываются.</p><div class="tip"><h3 class="title">Подсказка</h3><p>Записывать значения массивов в командах SQL часто бывает удобнее с помощью конструктора <code class="literal">ARRAY</code> (см. <a class="xref" href="sql-expressions.html#SQL-SYNTAX-ARRAY-CONSTRUCTORS" title="4.2.12. Конструкторы массивов">Подраздел 4.2.12</a>). В <code class="literal">ARRAY</code> отдельные значения элементов записываются так же, как если бы они не были членами массива.</p></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="datatype-json.html" title="8.14. Типы JSON">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="datatype.html" title="Глава 8. Типы данных">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="rowtypes.html" title="8.16. Составные типы">След.</a></td></tr><tr><td width="40%" align="left" valign="top">8.14. Типы <acronym class="acronym">JSON</acronym> </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 8.16. Составные типы</td></tr></table></div></body></html>

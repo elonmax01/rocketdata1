@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>9.2. Функции и операторы сравнения</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="functions-logical.html" title="9.1. Логические операторы" /><link rel="next" href="functions-math.html" title="9.3. Математические функции и операторы" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">9.2. Функции и операторы сравнения</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="functions-logical.html" title="9.1. Логические операторы">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="functions.html" title="Глава 9. Функции и операторы">Наверх</a></td><th width="60%" align="center">Глава 9. Функции и операторы</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="functions-math.html" title="9.3. Математические функции и операторы">След.</a></td></tr></table><hr /></div><div class="sect1" id="FUNCTIONS-COMPARISON"><div class="titlepage"><div><div><h2 class="title" style="clear: both">9.2. Функции и операторы сравнения <a href="#FUNCTIONS-COMPARISON" class="id_link">#</a></h2></div></div></div><a id="id-1.5.8.8.2" class="indexterm"></a><p>Набор операторов сравнения включает обычные операторы, перечисленные в <a class="xref" href="functions-comparison.html#FUNCTIONS-COMPARISON-OP-TABLE" title="Таблица 9.1. Операторы сравнения">Таблице 9.1</a>.</p><div class="table" id="FUNCTIONS-COMPARISON-OP-TABLE"><p class="title"><strong>Таблица 9.1. Операторы сравнения</strong></p><div class="table-contents"><table class="table" summary="Операторы сравнения" border="1"><colgroup><col /><col /></colgroup><thead><tr><th>Оператор</th><th>Описание</th></tr></thead><tbody><tr><td>
+        <em class="replaceable"><code>тип_данных</code></em> <code class="literal">&lt;</code> <em class="replaceable"><code>тип_данных</code></em>
+        → <code class="returnvalue">boolean</code>
+       </td><td>Меньше</td></tr><tr><td>
+        <em class="replaceable"><code>тип_данных</code></em> <code class="literal">&gt;</code> <em class="replaceable"><code>тип_данных</code></em>
+        → <code class="returnvalue">boolean</code>
+       </td><td>Больше</td></tr><tr><td>
+        <em class="replaceable"><code>тип_данных</code></em> <code class="literal">&lt;=</code> <em class="replaceable"><code>тип_данных</code></em>
+        → <code class="returnvalue">boolean</code>
+       </td><td>Меньше или равно</td></tr><tr><td>
+        <em class="replaceable"><code>тип_данных</code></em> <code class="literal">&gt;=</code> <em class="replaceable"><code>тип_данных</code></em>
+        → <code class="returnvalue">boolean</code>
+       </td><td>Больше или равно</td></tr><tr><td>
+        <em class="replaceable"><code>тип_данных</code></em> <code class="literal">=</code> <em class="replaceable"><code>тип_данных</code></em>
+        → <code class="returnvalue">boolean</code>
+       </td><td>Равно</td></tr><tr><td>
+        <em class="replaceable"><code>тип_данных</code></em> <code class="literal">&lt;&gt;</code> <em class="replaceable"><code>тип_данных</code></em>
+        → <code class="returnvalue">boolean</code>
+       </td><td>Не равно</td></tr><tr><td>
+        <em class="replaceable"><code>тип_данных</code></em> <code class="literal">!=</code> <em class="replaceable"><code>тип_данных</code></em>
+        → <code class="returnvalue">boolean</code>
+       </td><td>Не равно</td></tr></tbody></table></div></div><br class="table-break" /><div class="note"><h3 class="title">Примечание</h3><p>В стандарте SQL для условия <span class="quote">«<span class="quote">не равно</span>»</span> принята запись <code class="literal">&lt;&gt;</code>. Синонимичная ей запись <code class="literal">!=</code> преобразуется в <code class="literal">&lt;&gt;</code> на самой ранней стадии разбора запроса. Как следствие, реализовать операторы <code class="literal">!=</code> и <code class="literal">&lt;&gt;</code> так, чтобы они работали по-разному, невозможно.</p></div><p>Эти операторы сравнения имеются для всех встроенных типов данных, значения которых сортируются естественным образом, включая числовые, строковые типы, а также типы даты/времени. Кроме того, сравниваться могут массивы, составные типы и диапазоны, если типы данных их компонентов являются сравниваемыми.</p><p>Обычно можно сравнивать также значения связанных типов данных; например, возможно сравнение <code class="type">integer</code> <code class="literal">&gt;</code> <code class="type">bigint</code>. Некоторые подобные операции реализуются непосредственно <span class="quote">«<span class="quote">межтиповыми</span>»</span> операторами сравнения, но если такого оператора нет, анализатор запроса попытается привести частные типы к более общим и применить подходящий для них оператор сравнения.</p><p>Как показано выше, все операторы сравнения являются бинарными и возвращают значения типа <code class="type">boolean</code>. Таким образом, выражения вида <code class="literal">1 &lt; 2 &lt; 3</code> недопустимы (так как не существует оператора <code class="literal">&lt;</code>, который бы сравнивал булево значение с <code class="literal">3</code>). Для проверки нахождения значения в интервале, воспользуйтесь предикатом <code class="literal">BETWEEN</code>, описанным ниже.</p><p>Существует также несколько предикатов сравнения; они приведены в <a class="xref" href="functions-comparison.html#FUNCTIONS-COMPARISON-PRED-TABLE" title="Таблица 9.2. Предикаты сравнения">Таблице 9.2</a>. Они работают подобно операторам, но имеют особый синтаксис, установленный стандартом SQL.</p><div class="table" id="FUNCTIONS-COMPARISON-PRED-TABLE"><p class="title"><strong>Таблица 9.2. Предикаты сравнения</strong></p><div class="table-contents"><table class="table" summary="Предикаты сравнения" border="1"><colgroup><col /></colgroup><thead><tr><th class="func_table_entry"><p class="func_signature">Предикат</p>
+       <p>Описание</p>
+       <p>Пример(ы)</p></th></tr></thead><tbody><tr><td class="func_table_entry"><p class="func_signature">
+        <em class="replaceable"><code>тип_данных</code></em> <code class="literal">BETWEEN</code> <em class="replaceable"><code>тип_данных</code></em> <code class="literal">AND</code> <em class="replaceable"><code>тип_данных</code></em>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Между (включая границы интервала).</p>
+       <p>
+        <code class="literal">2 BETWEEN 1 AND 3</code>
+        → <code class="returnvalue">t</code>
+       </p>
+       <p>
+        <code class="literal">2 BETWEEN 3 AND 1</code>
+        → <code class="returnvalue">f</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <em class="replaceable"><code>тип_данных</code></em> <code class="literal">NOT BETWEEN</code> <em class="replaceable"><code>тип_данных</code></em> <code class="literal">AND</code> <em class="replaceable"><code>тип_данных</code></em>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Не между (обратное к <code class="literal">BETWEEN</code>).</p>
+       <p>
+        <code class="literal">2 NOT BETWEEN 1 AND 3</code>
+        → <code class="returnvalue">f</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <em class="replaceable"><code>тип_данных</code></em> <code class="literal">BETWEEN SYMMETRIC</code> <em class="replaceable"><code>тип_данных</code></em> <code class="literal">AND</code> <em class="replaceable"><code>тип_данных</code></em>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Между, после сортировки граничных значений.</p>
+       <p>
+        <code class="literal">2 BETWEEN SYMMETRIC 3 AND 1</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <em class="replaceable"><code>тип_данных</code></em> <code class="literal">NOT BETWEEN SYMMETRIC</code> <em class="replaceable"><code>тип_данных</code></em> <code class="literal">AND</code> <em class="replaceable"><code>тип_данных</code></em>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Не между, после сортировки граничных значений.</p>
+       <p>
+        <code class="literal">2 NOT BETWEEN SYMMETRIC 3 AND 1</code>
+        → <code class="returnvalue">f</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <em class="replaceable"><code>тип_данных</code></em> <code class="literal">IS DISTINCT FROM</code> <em class="replaceable"><code>тип_данных</code></em>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Не равно, при этом NULL воспринимается как обычное значение.</p>
+       <p><code class="literal">1 IS DISTINCT FROM NULL</code> → <code class="returnvalue">t</code> (а не <code class="literal">NULL</code>)</p>
+       <p><code class="literal">NULL IS DISTINCT FROM NULL</code> → <code class="returnvalue">f</code> (а не <code class="literal">NULL</code>)</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <em class="replaceable"><code>тип_данных</code></em> <code class="literal">IS NOT DISTINCT FROM</code> <em class="replaceable"><code>тип_данных</code></em>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Равно, при этом NULL воспринимается как обычное значение.</p>
+       <p><code class="literal">1 IS NOT DISTINCT FROM NULL</code> → <code class="returnvalue">f</code> (а не <code class="literal">NULL</code>)</p>
+       <p><code class="literal">NULL IS NOT DISTINCT FROM NULL</code> → <code class="returnvalue">t</code> (а не <code class="literal">NULL</code>)</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <em class="replaceable"><code>тип_данных</code></em> <code class="literal">IS NULL</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Проверяет, является ли значение эквивалентным NULL.</p>
+       <p>
+        <code class="literal">1.5 IS NULL</code>
+        → <code class="returnvalue">f</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <em class="replaceable"><code>тип_данных</code></em> <code class="literal">IS NOT NULL</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Проверяет, отличается ли значение от NULL.</p>
+       <p>
+        <code class="literal">'null' IS NOT NULL</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <em class="replaceable"><code>тип_данных</code></em> <code class="literal">ISNULL</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Проверяет, является ли значение эквивалентным NULL (нестандартный синтаксис).</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <em class="replaceable"><code>тип_данных</code></em> <code class="literal">NOTNULL</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Проверяет, отличается ли значение от NULL (нестандартный синтаксис).</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">boolean</code> <code class="literal">IS TRUE</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Проверяет, является ли результат логического выражения значением true.</p>
+       <p>
+        <code class="literal">true IS TRUE</code>
+        → <code class="returnvalue">t</code>
+       </p>
+       <p><code class="literal">NULL::boolean IS TRUE</code> → <code class="returnvalue">f</code> (а не <code class="literal">NULL</code>)</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">boolean</code> <code class="literal">IS NOT TRUE</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Проверяет, является ли результат логического выражения значением false или неизвестным.</p>
+       <p>
+        <code class="literal">true IS NOT TRUE</code>
+        → <code class="returnvalue">f</code>
+       </p>
+       <p><code class="literal">NULL::boolean IS NOT TRUE</code> → <code class="returnvalue">t</code> (а не <code class="literal">NULL</code>)</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">boolean</code> <code class="literal">IS FALSE</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Проверяет, является ли результат логического выражения значением false.</p>
+       <p>
+        <code class="literal">true IS FALSE</code>
+        → <code class="returnvalue">f</code>
+       </p>
+       <p><code class="literal">NULL::boolean IS FALSE</code> → <code class="returnvalue">f</code> (а не <code class="literal">NULL</code>)</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">boolean</code> <code class="literal">IS NOT FALSE</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Проверяет, является ли результат логического выражения значением true или неизвестным.</p>
+       <p>
+        <code class="literal">true IS NOT FALSE</code>
+        → <code class="returnvalue">t</code>
+       </p>
+       <p><code class="literal">NULL::boolean IS NOT FALSE</code> → <code class="returnvalue">t</code> (а не <code class="literal">NULL</code>)</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">boolean</code> <code class="literal">IS UNKNOWN</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Проверяет, является ли результат логического выражения неизвестным значением.</p>
+       <p>
+        <code class="literal">true IS UNKNOWN</code>
+        → <code class="returnvalue">f</code>
+       </p>
+       <p><code class="literal">NULL::boolean IS UNKNOWN</code> → <code class="returnvalue">t</code> (а не <code class="literal">NULL</code>)</p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">boolean</code> <code class="literal">IS NOT UNKNOWN</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Проверяет, является ли результат логического выражения значением true или false.</p>
+       <p>
+        <code class="literal">true IS NOT UNKNOWN</code>
+        → <code class="returnvalue">t</code>
+       </p>
+       <p><code class="literal">NULL::boolean IS NOT UNKNOWN</code> → <code class="returnvalue">f</code> (а не <code class="literal">NULL</code>)</p></td></tr></tbody></table></div></div><br class="table-break" /><p><a id="id-1.5.8.8.11.1" class="indexterm"></a> <a id="id-1.5.8.8.11.2" class="indexterm"></a> Предикат <code class="token">BETWEEN</code> упрощает проверки интервала: </p><pre class="synopsis">
+<em class="replaceable"><code>a</code></em> BETWEEN <em class="replaceable"><code>x</code></em> AND <em class="replaceable"><code>y</code></em>
+</pre><p> равнозначно </p><pre class="synopsis">
+<em class="replaceable"><code>a</code></em> &gt;= <em class="replaceable"><code>x</code></em> AND <em class="replaceable"><code>a</code></em> &lt;= <em class="replaceable"><code>y</code></em>
+</pre><p> Заметьте, что <code class="token">BETWEEN</code> считает, что границы интервала включаются в интервал. Предикат <code class="literal">BETWEEN SYMMETRIC</code> аналогичен <code class="literal">BETWEEN</code>, за исключением того, что аргумент слева от <code class="literal">AND</code> не обязательно должен быть меньше или равен аргументу справа. Если это не так, аргументы автоматически меняются местами, так что всегда подразумевается непустой интервал.</p><p>Различные варианты <code class="literal">BETWEEN</code> реализуются посредством обычных операторов сравнения, и поэтому они будут работать с любыми типами данных, которые можно сравнивать.</p><div class="note"><h3 class="title">Примечание</h3><p>Использование <code class="literal">AND</code> в конструкции <code class="literal">BETWEEN</code> создаёт неоднозначность с использованием <code class="literal">AND</code> в качестве логического оператора. Для её устранения в качестве второго аргумента предложения <code class="literal">BETWEEN</code> принимается только ограниченный набор типов выражений. Если вам нужно записать более сложное подвыражение в <code class="literal">BETWEEN</code>, заключите это подвыражение в скобки.</p></div><p><a id="id-1.5.8.8.14.1" class="indexterm"></a> <a id="id-1.5.8.8.14.2" class="indexterm"></a> Обычные операторы сравнения выдают NULL (что означает <span class="quote">«<span class="quote">неопределённость</span>»</span>), а не true или false, когда любое из сравниваемых значений NULL. Например, <code class="literal">7 = NULL</code> выдаёт NULL, так же, как и <code class="literal">7 &lt;&gt; NULL</code>. Когда это поведение нежелательно, можно использовать предикаты <code class="literal">IS [<span class="optional"> NOT </span>] DISTINCT FROM</code>: </p><pre class="synopsis">
+<em class="replaceable"><code>a</code></em> IS DISTINCT FROM <em class="replaceable"><code>b</code></em>
+<em class="replaceable"><code>a</code></em> IS NOT DISTINCT FROM <em class="replaceable"><code>b</code></em>
+</pre><p> Для значений не NULL условие <code class="literal">IS DISTINCT FROM</code> работает так же, как оператор <code class="literal">&lt;&gt;</code>. Однако если оба сравниваемых значения NULL, результат будет false, и только если одно из значений NULL, возвращается true. Аналогично, условие <code class="literal">IS NOT DISTINCT FROM</code> равносильно <code class="literal">=</code> для значений не NULL, но возвращает true, если оба сравниваемых значения NULL, и false в противном случае. Таким образом, эти предикаты по сути работают с NULL, как с обычным значением, а не с <span class="quote">«<span class="quote">неопределённостью</span>»</span>.</p><p><a id="id-1.5.8.8.15.1" class="indexterm"></a> <a id="id-1.5.8.8.15.2" class="indexterm"></a> <a id="id-1.5.8.8.15.3" class="indexterm"></a> <a id="id-1.5.8.8.15.4" class="indexterm"></a> Для проверки, содержит ли значение NULL или нет, используются предикаты: </p><pre class="synopsis">
+<em class="replaceable"><code>выражение</code></em> IS NULL
+<em class="replaceable"><code>выражение</code></em> IS NOT NULL
+</pre><p> или равнозначные (но нестандартные) предикаты: </p><pre class="synopsis">
+<em class="replaceable"><code>выражение</code></em> ISNULL
+<em class="replaceable"><code>выражение</code></em> NOTNULL
+</pre><p> <a id="id-1.5.8.8.15.7" class="indexterm"></a></p><p>Заметьте, что проверка <code class="literal"><em class="replaceable"><code>выражение</code></em> = NULL</code> <span class="emphasis"><em>не</em></span> будет работать, так как <code class="literal">NULL</code> считается не <span class="quote">«<span class="quote">равным</span>»</span> <code class="literal">NULL</code>. (Значение NULL представляет неопределённость, и равны ли две неопределённости, тоже не определено.)</p><div class="tip"><h3 class="title">Подсказка</h3><p>Некоторые приложения могут ожидать, что <code class="literal"><em class="replaceable"><code>выражение</code></em> = NULL</code> вернёт true, если результатом <em class="replaceable"><code>выражения</code></em> является NULL. Такие приложения настоятельно рекомендуется исправить и привести в соответствие со стандартом SQL. Однако в случаях, когда это невозможно, это поведение можно изменить с помощью параметра конфигурации <a class="xref" href="runtime-config-compatible.html#GUC-TRANSFORM-NULL-EQUALS">transform_null_equals</a>. Когда этот параметр включён, <span class="productname">PostgreSQL</span> преобразует условие <code class="literal">x = NULL</code> в <code class="literal">x IS NULL</code>.</p></div><p>Если <em class="replaceable"><code>выражение</code></em> возвращает табличную строку, тогда <code class="literal">IS NULL</code> будет истинным, когда само выражение — NULL или все поля строки — NULL, а <code class="literal">IS NOT NULL</code> будет истинным, когда само выражение не NULL, и все поля строки так же не NULL. Вследствие такого определения, <code class="literal">IS NULL</code> и <code class="literal">IS NOT NULL</code> не всегда будут возвращать взаимодополняющие результаты для таких выражений; в частности такие выражения со строками, одни поля которых NULL, а другие не NULL, будут ложными одновременно. В некоторых случаях имеет смысл написать <em class="replaceable"><code>строка</code></em> <code class="literal">IS DISTINCT FROM NULL</code> или <em class="replaceable"><code>строка</code></em> <code class="literal">IS NOT DISTINCT FROM NULL</code>, чтобы просто проверить, равно ли NULL всё значение строки, без каких-либо дополнительных проверок полей строки.</p><p><a id="id-1.5.8.8.19.1" class="indexterm"></a> <a id="id-1.5.8.8.19.2" class="indexterm"></a> <a id="id-1.5.8.8.19.3" class="indexterm"></a> <a id="id-1.5.8.8.19.4" class="indexterm"></a> <a id="id-1.5.8.8.19.5" class="indexterm"></a> <a id="id-1.5.8.8.19.6" class="indexterm"></a> Логические значения можно также проверить с помощью предикатов </p><pre class="synopsis">
+<em class="replaceable"><code>логическое_выражение</code></em> IS TRUE
+<em class="replaceable"><code>логическое_выражение</code></em> IS NOT TRUE
+<em class="replaceable"><code>логическое_выражение</code></em> IS FALSE
+<em class="replaceable"><code>логическое_выражение</code></em> IS NOT FALSE
+<em class="replaceable"><code>логическое_выражение</code></em> IS UNKNOWN
+<em class="replaceable"><code>логическое_выражение</code></em> IS NOT UNKNOWN
+</pre><p> Они всегда возвращают true или false и никогда NULL, даже если какой-любо операнд — NULL. Они интерпретируют значение NULL как <span class="quote">«<span class="quote">неопределённость</span>»</span>. Заметьте, что <code class="literal">IS UNKNOWN</code> и <code class="literal">IS NOT UNKNOWN</code> по сути равнозначны <code class="literal">IS NULL</code> и <code class="literal">IS NOT NULL</code>, соответственно, за исключением того, что выражение может быть только булевого типа.</p><p>Также имеется несколько связанных со сравнениями функций; они перечислены в <a class="xref" href="functions-comparison.html#FUNCTIONS-COMPARISON-FUNC-TABLE" title="Таблица 9.3. Функции сравнения">Таблице 9.3</a>.</p><div class="table" id="FUNCTIONS-COMPARISON-FUNC-TABLE"><p class="title"><strong>Таблица 9.3. Функции сравнения</strong></p><div class="table-contents"><table class="table" summary="Функции сравнения" border="1"><colgroup><col /></colgroup><thead><tr><th class="func_table_entry"><p class="func_signature">Функция</p>
+       <p>Описание</p>
+       <p>Пример(ы)</p></th></tr></thead><tbody><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.8.21.2.2.1.1.1.1" class="indexterm"></a> <code class="function">num_nonnulls</code> ( <code class="literal">VARIADIC</code> <code class="type">"any"</code> ) → <code class="returnvalue">integer</code></p>
+       <p>Возвращает число аргументов, отличных от NULL.</p>
+       <p>
+        <code class="literal">num_nonnulls(1, NULL, 2)</code>
+        → <code class="returnvalue">2</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.8.21.2.2.2.1.1.1" class="indexterm"></a> <code class="function">num_nulls</code> ( <code class="literal">VARIADIC</code> <code class="type">"any"</code> ) → <code class="returnvalue">integer</code></p>
+       <p>Возвращает число аргументов NULL.</p>
+       <p>
+        <code class="literal">num_nulls(1, NULL, 2)</code>
+        → <code class="returnvalue">1</code>
+       </p></td></tr></tbody></table></div></div><br class="table-break" /></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="functions-logical.html" title="9.1. Логические операторы">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="functions.html" title="Глава 9. Функции и операторы">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="functions-math.html" title="9.3. Математические функции и операторы">След.</a></td></tr><tr><td width="40%" align="left" valign="top">9.1. Логические операторы </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 9.3. Математические функции и операторы</td></tr></table></div></body></html>

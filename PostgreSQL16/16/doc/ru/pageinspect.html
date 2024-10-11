@@ -1,0 +1,347 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>F.25. pageinspect — низкоуровневое исследование страниц баз данных</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="oldsnapshot.html" title="F.24. old_snapshot — чтение информации, используемой в реализации old_snapshot_threshold" /><link rel="next" href="passwordcheck.html" title="F.26. passwordcheck — проверка надёжности пароля" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">F.25. pageinspect — низкоуровневое исследование страниц баз данных</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="oldsnapshot.html" title="F.24. old_snapshot — чтение информации, используемой в реализации old_snapshot_threshold">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="contrib.html" title="Приложение F. Дополнительно поставляемые модули и расширения">Наверх</a></td><th width="60%" align="center">Приложение F. Дополнительно поставляемые модули и расширения</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="passwordcheck.html" title="F.26. passwordcheck — проверка надёжности пароля">След.</a></td></tr></table><hr /></div><div class="sect1" id="PAGEINSPECT"><div class="titlepage"><div><div><h2 class="title" style="clear: both">F.25. pageinspect — низкоуровневое исследование страниц баз данных <a href="#PAGEINSPECT" class="id_link">#</a></h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="pageinspect.html#PAGEINSPECT-GENERAL-FUNCS">F.25.1. Функции общего назначения</a></span></dt><dt><span class="sect2"><a href="pageinspect.html#PAGEINSPECT-HEAP-FUNCS">F.25.2. Функции для исследования кучи</a></span></dt><dt><span class="sect2"><a href="pageinspect.html#PAGEINSPECT-B-TREE-FUNCS">F.25.3. Функции для индексов-B-деревьев</a></span></dt><dt><span class="sect2"><a href="pageinspect.html#PAGEINSPECT-BRIN-FUNCS">F.25.4. Функции для индексов BRIN</a></span></dt><dt><span class="sect2"><a href="pageinspect.html#PAGEINSPECT-GIN-FUNCS">F.25.5. Функции для индексов GIN</a></span></dt><dt><span class="sect2"><a href="pageinspect.html#PAGEINSPECT-GIST-FUNCS">F.25.6. Функции для индексов GiST</a></span></dt><dt><span class="sect2"><a href="pageinspect.html#PAGEINSPECT-HASH-FUNCS">F.25.7. Функции для хеш-индексов</a></span></dt></dl></div><a id="id-1.11.7.35.2" class="indexterm"></a><p>Модуль <code class="filename">pageinspect</code> предоставляет функции, позволяющие исследовать страницы баз данных на низком уровне, что бывает полезно для отладки. Все эти функции могут вызывать только суперпользователи.</p><div class="sect2" id="PAGEINSPECT-GENERAL-FUNCS"><div class="titlepage"><div><div><h3 class="title">F.25.1. Функции общего назначения <a href="#PAGEINSPECT-GENERAL-FUNCS" class="id_link">#</a></h3></div></div></div><div class="variablelist"><dl class="variablelist"><dt><span class="term">
+     <code class="function">get_raw_page(relname text, fork text, blkno bigint) returns bytea</code>
+     <a id="id-1.11.7.35.4.2.1.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Функция <code class="function">get_raw_page</code> считывает указанный блок отношения с заданным именем и возвращает копию значения <code class="type">bytea</code>. Это позволяет получить одну согласованную во времени копию блока. В параметре <em class="parameter"><code>fork</code></em> нужно передать <code class="literal">'main'</code>, чтобы обратиться к основному слою данных, <code class="literal">'fsm'</code> — к <a class="link" href="storage-fsm.html" title="73.3. Карта свободного пространства">карте свободного пространства</a>, <code class="literal">'vm'</code> — к <a class="link" href="storage-vm.html" title="73.4. Карта видимости">карте видимости</a>, либо <code class="literal">'init'</code> — к слою инициализации.</p></dd><dt><span class="term">
+     <code class="function">get_raw_page(relname text, blkno bigint) returns bytea</code>
+    </span></dt><dd><p>Упрощённая версия <code class="function">get_raw_page</code> для чтения данных из основного слоя. Синоним <code class="literal">get_raw_page(relname, 'main', blkno)</code></p></dd><dt><span class="term">
+     <code class="function">page_header(page bytea) returns record</code>
+     <a id="id-1.11.7.35.4.2.3.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Функция <code class="function">page_header</code> показывает поля, общие для всех страниц кучи и индекса <span class="productname">PostgreSQL</span>.</p><p>В качестве аргумента ей передаётся образ страницы, полученный в результате вызова <code class="function">get_raw_page</code>. Например: </p><pre class="screen">
+test=# SELECT * FROM page_header(get_raw_page('pg_class', 0));
+    lsn    | checksum | flags  | lower | upper | special | pagesize | version | prune_xid
+-----------+----------+--------+-------+-------+---------+----------+---------+-----------
+ 0/24A1B50 |        0 |      1 |   232 |   368 |    8192 |     8192 |       4 |         0
+</pre><p> Возвращаемые столбцы соответствуют полям в структуре <code class="structname">PageHeaderData</code>. За подробностями обратитесь к <code class="filename">src/include/storage/bufpage.h</code>.</p><p>Поле <code class="structfield">checksum</code> содержит контрольную сумму, сохранённую для страницы. Эта сумма может быть неверной при повреждении страницы. Если в данном экземпляре кластера контрольные суммы отключены, это значение не имеет смысла.</p></dd><dt><span class="term">
+     <code class="function">page_checksum(page bytea, blkno bigint) returns smallint</code>
+     <a id="id-1.11.7.35.4.2.4.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Функция <code class="function">page_checksum</code> вычисляет контрольную сумму страницы, которая должна была бы находиться в заданном блоке.</p><p>В качестве аргумента ей передаётся образ страницы, полученный в результате вызова <code class="function">get_raw_page</code>. Например: </p><pre class="screen">
+test=# SELECT page_checksum(get_raw_page('pg_class', 0), 0);
+ page_checksum
+---------------
+         13443
+</pre><p> Заметьте, что вычисление контрольной суммы зависит от номера блока, поэтому обеим функциям нужно передавать одинаковые номера (за исключением случаев эзотерической отладки).</p><p>Контрольную сумму, вычисленную этой функцией, можно сравнить с полем <code class="structfield">checksum</code> результата функции <code class="function">page_header</code>. Если контрольные суммы для текущего экземпляра БД включены, эти значения должны быть равны.</p></dd><dt><span class="term">
+     <code class="function">fsm_page_contents(page bytea) returns text</code>
+     <a id="id-1.11.7.35.4.2.5.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Функция <code class="function">fsm_page_contents</code> показывает внутреннюю структуру узла на странице <acronym class="acronym">FSM</acronym>. Например: </p><pre class="screen">
+test=# SELECT fsm_page_contents(get_raw_page('pg_class', 'fsm', 0));
+</pre><p> Данный запрос выводит несколько текстовых строк, по одной строке для каждого узла двоичного дерева на заданной странице. Нулевые узлы при этом пропускаются. Также выводится так называемый указатель «вперёд», который указывает на следующий слот, получаемый с этой страницы.</p><p>Подробнее структура страницы <acronym class="acronym">FSM</acronym> описана в <code class="filename">src/backend/storage/freespace/README</code>.</p></dd></dl></div></div><div class="sect2" id="PAGEINSPECT-HEAP-FUNCS"><div class="titlepage"><div><div><h3 class="title">F.25.2. Функции для исследования кучи <a href="#PAGEINSPECT-HEAP-FUNCS" class="id_link">#</a></h3></div></div></div><div class="variablelist"><dl class="variablelist"><dt><span class="term">
+     <code class="function">heap_page_items(page bytea) returns setof record</code>
+     <a id="id-1.11.7.35.5.2.1.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Функция <code class="function">heap_page_items</code> показывает все указатели линейных блоков на странице кучи. Для используемых блоков также выводятся заголовки кортежей. При этом показываются все кортежи, независимо от того, были ли видны они в снимке MVCC в момент копирования исходной страницы.</p><p>В качестве аргумента ей передаётся образ страницы кучи, полученный в результате вызова <code class="function">get_raw_page</code>. Например: </p><pre class="screen">
+test=# SELECT * FROM heap_page_items(get_raw_page('pg_class', 0));
+</pre><p> Описание возвращаемых полей можно найти в <code class="filename">src/include/storage/itemid.h</code> и <code class="filename">src/include/access/htup_details.h</code>.</p><p>Распаковать биты флагов <code class="structfield">t_infomask</code> и <code class="structfield">t_infomask2</code> для кортежей кучи позволяет функция <code class="function">heap_tuple_infomask_flags</code>.</p></dd><dt><span class="term">
+     <code class="function">tuple_data_split(rel_oid oid, t_data bytea, t_infomask integer, t_infomask2 integer, t_bits text [, do_detoast bool]) returns bytea[]</code>
+     <a id="id-1.11.7.35.5.2.2.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Функция <code class="function">tuple_data_split</code> разделяет данные кортежей на атрибуты так, как это происходит внутри сервера. </p><pre class="screen">
+test=# SELECT tuple_data_split('pg_class'::regclass, t_data, t_infomask, t_infomask2, t_bits) FROM heap_page_items(get_raw_page('pg_class', 0));
+</pre><p> В качестве аргументов этой функции должны передаваться атрибуты, возвращаемые функцией <code class="function">heap_page_items</code>.</p><p>Если параметр <em class="parameter"><code>do_detoast</code></em> равен <code class="literal">true</code>, полученные атрибуты будут распакованы по мере необходимости. Если он не задан, подразумевается <code class="literal">false</code>.</p></dd><dt><span class="term">
+     <code class="function">heap_page_item_attrs(page bytea, rel_oid regclass [, do_detoast bool]) returns setof record</code>
+     <a id="id-1.11.7.35.5.2.3.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Функция <code class="function">heap_page_item_attrs</code> похожа на <code class="function">heap_page_items</code>, но возвращает неструктурированное содержимое кортежа в виде массива атрибутов, которые могут быть распакованы, если установлен флаг <em class="parameter"><code>do_detoast</code></em> (по умолчанию они не распаковываются).</p><p>В качестве аргумента ей передаётся образ страницы кучи, полученный в результате вызова <code class="function">get_raw_page</code>. Например: </p><pre class="screen">
+test=# SELECT * FROM heap_page_item_attrs(get_raw_page('pg_class', 0), 'pg_class'::regclass);
+</pre></dd><dt><span class="term">
+     <code class="function">heap_tuple_infomask_flags(t_infomask integer, t_infomask2 integer) returns record</code>
+     <a id="id-1.11.7.35.5.2.4.1.2" class="indexterm"></a>
+    </span></dt><dd><p><code class="function">heap_tuple_infomask_flags</code> декодирует значения <code class="structfield">t_infomask</code> и <code class="structfield">t_infomask2</code>, которые возвращает функция <code class="function">heap_page_items</code>, и выдаёт массивы с именами флагов в понятном человеку виде: один, перечисляющий все флаги по отдельности, а другой — комбинированные. Например: </p><pre class="screen">
+test=# SELECT t_ctid, raw_flags, combined_flags
+         FROM heap_page_items(get_raw_page('pg_class', 0)),
+           LATERAL heap_tuple_infomask_flags(t_infomask, t_infomask2)
+         WHERE t_infomask IS NOT NULL OR t_infomask2 IS NOT NULL;
+</pre><p> Вызывая эту функцию, ей следует передавать в аргументах те атрибуты, которые возвращает <code class="function">heap_page_items</code>.</p><p>Комбинированные флаги выводятся для тех макросов на уровне исходного кода, в которых объединяются значения нескольких битов, например <code class="literal">HEAP_XMIN_FROZEN</code>.</p><p>Описания выдаваемых имён флагов можно найти в <code class="filename">src/include/access/htup_details.h</code>.</p></dd></dl></div></div><div class="sect2" id="PAGEINSPECT-B-TREE-FUNCS"><div class="titlepage"><div><div><h3 class="title">F.25.3. Функции для индексов-B-деревьев <a href="#PAGEINSPECT-B-TREE-FUNCS" class="id_link">#</a></h3></div></div></div><div class="variablelist"><dl class="variablelist"><dt><span class="term">
+     <code class="function">bt_metap(relname text) returns record</code>
+     <a id="id-1.11.7.35.6.2.1.1.2" class="indexterm"></a>
+    </span></dt><dd><p><code class="function">bt_metap</code> выдаёт информацию о метастранице индекса B-дерево. Например: </p><pre class="screen">
+test=# SELECT * FROM bt_metap('pg_cast_oid_index');
+-[ RECORD 1 ]-------------+-------
+magic                     | 340322
+version                   | 4
+root                      | 1
+level                     | 0
+fastroot                  | 1
+fastlevel                 | 0
+last_cleanup_num_delpages | 0
+last_cleanup_num_tuples   | 230
+allequalimage             | f
+</pre></dd><dt><span class="term">
+     <code class="function">bt_page_stats(relname text, blkno bigint) returns record</code>
+     <a id="id-1.11.7.35.6.2.2.1.2" class="indexterm"></a>
+    </span></dt><dd><p><code class="function">bt_page_stats</code> выдаёт сводную информацию по странице данных индекса-B-дерева. Например: </p><pre class="screen">
+test=# SELECT * FROM bt_page_stats('pg_cast_oid_index', 1);
+-[ RECORD 1 ]-+-----
+blkno         | 1
+type          | l
+live_items    | 224
+dead_items    | 0
+avg_item_size | 16
+page_size     | 8192
+free_size     | 3668
+btpo_prev     | 0
+btpo_next     | 0
+btpo_level    | 0
+btpo_flags    | 3
+</pre></dd><dt><span class="term">
+     <code class="function">bt_multi_page_stats(relname text, blkno bigint, blk_count bigint) returns setof record</code>
+     <a id="id-1.11.7.35.6.2.3.1.2" class="indexterm"></a>
+    </span></dt><dd><p><code class="function">bt_multi_page_stats</code> выдаёт ту же информацию, что и <code class="function">bt_page_stats</code>, но для каждой страницы диапазона страниц, начиная с <em class="parameter"><code>blkno</code></em> для <em class="parameter"><code>blk_count</code></em> страниц. При отрицательном значении <em class="parameter"><code>blk_count</code></em> информация выводится для всех страниц, начиная с <em class="parameter"><code>blkno</code></em> до конца индекса. Например: </p><pre class="screen">
+test=# SELECT * FROM bt_multi_page_stats('pg_proc_oid_index', 5, 2);
+-[ RECORD 1 ]-+-----
+blkno         | 5
+type          | l
+live_items    | 367
+dead_items    | 0
+avg_item_size | 16
+page_size     | 8192
+free_size     | 808
+btpo_prev     | 4
+btpo_next     | 6
+btpo_level    | 0
+btpo_flags    | 1
+-[ RECORD 2 ]-+-----
+blkno         | 6
+type          | l
+live_items    | 367
+dead_items    | 0
+avg_item_size | 16
+page_size     | 8192
+free_size     | 808
+btpo_prev     | 5
+btpo_next     | 7
+btpo_level    | 0
+btpo_flags    | 1
+</pre></dd><dt><span class="term">
+     <code class="function">bt_page_items(relname text, blkno bigint) returns setof record</code>
+     <a id="id-1.11.7.35.6.2.4.1.2" class="indexterm"></a>
+    </span></dt><dd><p><code class="function">bt_page_items</code> выдаёт подробную информацию обо всех элементах на странице индекса B-дерево. Например: </p><pre class="screen">
+test=# SELECT itemoffset, ctid, itemlen, nulls, vars, data, dead, htid, tids[0:2] AS some_tids
+        FROM bt_page_items('tenk2_hundred', 5);
+ itemoffset |   ctid    | itemlen | nulls | vars |          data           | dead |  htid  |      some_tids
+------------+-----------+---------+-------+------+-------------------------+------+--------+---------------------
+          1 | (16,1)    |      16 | f     | f    | 30 00 00 00 00 00 00 00 |      |        |
+          2 | (16,8292) |     616 | f     | f    | 24 00 00 00 00 00 00 00 | f    | (1,6)  | {"(1,6)","(10,22)"}
+          3 | (16,8292) |     616 | f     | f    | 25 00 00 00 00 00 00 00 | f    | (1,18) | {"(1,18)","(4,22)"}
+          4 | (16,8292) |     616 | f     | f    | 26 00 00 00 00 00 00 00 | f    | (4,18) | {"(4,18)","(6,17)"}
+          5 | (16,8292) |     616 | f     | f    | 27 00 00 00 00 00 00 00 | f    | (1,2)  | {"(1,2)","(1,19)"}
+          6 | (16,8292) |     616 | f     | f    | 28 00 00 00 00 00 00 00 | f    | (2,24) | {"(2,24)","(4,11)"}
+          7 | (16,8292) |     616 | f     | f    | 29 00 00 00 00 00 00 00 | f    | (2,17) | {"(2,17)","(11,2)"}
+          8 | (16,8292) |     616 | f     | f    | 2a 00 00 00 00 00 00 00 | f    | (0,25) | {"(0,25)","(3,20)"}
+          9 | (16,8292) |     616 | f     | f    | 2b 00 00 00 00 00 00 00 | f    | (0,10) | {"(0,10)","(0,14)"}
+         10 | (16,8292) |     616 | f     | f    | 2c 00 00 00 00 00 00 00 | f    | (1,3)  | {"(1,3)","(3,9)"}
+         11 | (16,8292) |     616 | f     | f    | 2d 00 00 00 00 00 00 00 | f    | (6,28) | {"(6,28)","(11,1)"}
+         12 | (16,8292) |     616 | f     | f    | 2e 00 00 00 00 00 00 00 | f    | (0,27) | {"(0,27)","(1,13)"}
+         13 | (16,8292) |     616 | f     | f    | 2f 00 00 00 00 00 00 00 | f    | (4,17) | {"(4,17)","(4,21)"}
+(13 rows)
+</pre><p> Это листовая страница B-дерева. В ней все кортежи, относящиеся к таблице, оказались кортежами со списками идентификаторов (каждый содержит 100 шестибайтных идентификаторов). Помимо них, по смещению <code class="literal">itemoffset</code> 1 находится кортеж <span class="quote">«<span class="quote">верхний ключ</span>»</span>. В данном примере <code class="structfield">ctid</code> содержит закодированную информацию о каждом кортеже, хотя на уровне листьев записи часто содержат в <code class="structfield">ctid</code> непосредственно TID кучи. В <code class="structfield">tids</code> содержатся идентификаторы (TID) в виде списка идентификаторов.</p><p>На внутренней странице (она здесь не показана), компонент номера блока в <code class="structfield">ctid</code> содержит <span class="quote">«<span class="quote">ссылку вниз</span>»</span>, то есть номер блока другой страницы в самом индексе. Компонент смещения (второе число) в <code class="structfield">ctid</code> содержит закодированную информацию о кортеже, в частности, количество столбцов в нём (при отсечении суффикса ненужные конечные столбцы могут быть отброшены). Когда столбцы отбрасываются, считается, что они содержат значение <span class="quote">«<span class="quote">минус бесконечность</span>»</span>.</p><p>В столбце <code class="structfield">htid</code> показывается TID кортежа в куче, вне зависимости от его нижележащего представления. Это значение должно совпадать с <code class="structfield">ctid</code> или может быть декодировано из альтернативного представления, применяющегося в списках идентификаторов и в кортежах на внутренних страницах. В кортежах на внутренних страницах столбец с TID кучи на уровне реализации обычно отсутствует, что выглядит как значение NULL в столбце <code class="structfield">htid</code>.</p><p>Заметьте, что первый элемент в любой, кроме самой правой, странице (то есть в любой странице с ненулевым значением в поле <code class="structfield">btpo_next</code>) представляет собой <span class="quote">«<span class="quote">верхний ключ</span>»</span>, то есть его поле <code class="structfield">data</code> задаёт верхнюю границу для всех элементов, находящихся на странице, а поле <code class="structfield">ctid</code> не указывает на другой блок. Кроме того, на внутренних страницах в первом действительном элементе данных (в первом элементе после верхнего ключа) обязательно будут отброшены все столбцы, и поэтому поле <code class="structfield">data</code> не будет содержать фактического значения. Однако такой элемент содержит в своём поле <code class="structfield">ctid</code> корректную ссылку вниз.</p><p>За дополнительной информацией о структуре индексов-B-деревьев обратитесь к <a class="xref" href="btree-implementation.html#BTREE-STRUCTURE" title="67.4.1. Структура B-дерева">Подразделу 67.4.1</a>. Об исключении дубликатов и о списках идентификаторов подробнее рассказывается в <a class="xref" href="btree-implementation.html#BTREE-DEDUPLICATION" title="67.4.3. Исключение дубликатов">Подразделе 67.4.3</a>.</p></dd><dt><span class="term">
+     <code class="function">bt_page_items(page bytea) returns setof record</code>
+     <a id="id-1.11.7.35.6.2.5.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Функции <code class="function">bt_page_items</code> также можно передать страницу в виде значения <code class="type">bytea</code>. Для получения образа страницы, который она может принять, следует использовать функцию <code class="function">get_raw_page</code>. Так, последний пример можно переписать следующим образом: </p><pre class="screen">
+test=# SELECT itemoffset, ctid, itemlen, nulls, vars, data, dead, htid, tids[0:2] AS some_tids
+        FROM bt_page_items(get_raw_page('tenk2_hundred', 5));
+ itemoffset |   ctid    | itemlen | nulls | vars |          data           | dead |  htid  |      some_tids
+------------+-----------+---------+-------+------+-------------------------+------+--------+---------------------
+          1 | (16,1)    |      16 | f     | f    | 30 00 00 00 00 00 00 00 |      |        |
+          2 | (16,8292) |     616 | f     | f    | 24 00 00 00 00 00 00 00 | f    | (1,6)  | {"(1,6)","(10,22)"}
+          3 | (16,8292) |     616 | f     | f    | 25 00 00 00 00 00 00 00 | f    | (1,18) | {"(1,18)","(4,22)"}
+          4 | (16,8292) |     616 | f     | f    | 26 00 00 00 00 00 00 00 | f    | (4,18) | {"(4,18)","(6,17)"}
+          5 | (16,8292) |     616 | f     | f    | 27 00 00 00 00 00 00 00 | f    | (1,2)  | {"(1,2)","(1,19)"}
+          6 | (16,8292) |     616 | f     | f    | 28 00 00 00 00 00 00 00 | f    | (2,24) | {"(2,24)","(4,11)"}
+          7 | (16,8292) |     616 | f     | f    | 29 00 00 00 00 00 00 00 | f    | (2,17) | {"(2,17)","(11,2)"}
+          8 | (16,8292) |     616 | f     | f    | 2a 00 00 00 00 00 00 00 | f    | (0,25) | {"(0,25)","(3,20)"}
+          9 | (16,8292) |     616 | f     | f    | 2b 00 00 00 00 00 00 00 | f    | (0,10) | {"(0,10)","(0,14)"}
+         10 | (16,8292) |     616 | f     | f    | 2c 00 00 00 00 00 00 00 | f    | (1,3)  | {"(1,3)","(3,9)"}
+         11 | (16,8292) |     616 | f     | f    | 2d 00 00 00 00 00 00 00 | f    | (6,28) | {"(6,28)","(11,1)"}
+         12 | (16,8292) |     616 | f     | f    | 2e 00 00 00 00 00 00 00 | f    | (0,27) | {"(0,27)","(1,13)"}
+         13 | (16,8292) |     616 | f     | f    | 2f 00 00 00 00 00 00 00 | f    | (4,17) | {"(4,17)","(4,21)"}
+(13 rows)
+</pre><p> В остальном данная функция работает так, как описано выше.</p></dd></dl></div></div><div class="sect2" id="PAGEINSPECT-BRIN-FUNCS"><div class="titlepage"><div><div><h3 class="title">F.25.4. Функции для индексов BRIN <a href="#PAGEINSPECT-BRIN-FUNCS" class="id_link">#</a></h3></div></div></div><div class="variablelist"><dl class="variablelist"><dt><span class="term">
+     <code class="function">brin_page_type(page bytea) returns text</code>
+     <a id="id-1.11.7.35.7.2.1.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Функция <code class="function">brin_page_type</code> возвращает тип страницы для заданной страницы индекса <acronym class="acronym">BRIN</acronym> или выдаёт ошибку, если эта страница не является корректной страницей индекса <acronym class="acronym">BRIN</acronym>. Например: </p><pre class="screen">
+test=# SELECT brin_page_type(get_raw_page('brinidx', 0));
+ brin_page_type
+----------------
+ meta
+</pre></dd><dt><span class="term">
+     <code class="function">brin_metapage_info(page bytea) returns record</code>
+     <a id="id-1.11.7.35.7.2.2.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Функция <code class="function">brin_metapage_info</code> возвращает разнообразные сведения о метастранице индекса <acronym class="acronym">BRIN</acronym>. Например: </p><pre class="screen">
+test=# SELECT * FROM brin_metapage_info(get_raw_page('brinidx', 0));
+   magic    | version | pagesperrange | lastrevmappage
+------------+---------+---------------+----------------
+ 0xA8109CFA |       1 |             4 |              2
+</pre></dd><dt><span class="term">
+     <code class="function">brin_revmap_data(page bytea) returns setof tid</code>
+     <a id="id-1.11.7.35.7.2.3.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Функция <code class="function">brin_revmap_data</code> выдаёт список идентификаторов кортежей со страницы сопоставлений зон индекса <acronym class="acronym">BRIN</acronym>. Например: </p><pre class="screen">
+test=# SELECT * FROM brin_revmap_data(get_raw_page('brinidx', 2)) LIMIT 5;
+  pages
+---------
+ (6,137)
+ (6,138)
+ (6,139)
+ (6,140)
+ (6,141)
+</pre></dd><dt><span class="term">
+     <code class="function">brin_page_items(page bytea, index oid) returns setof record</code>
+     <a id="id-1.11.7.35.7.2.4.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Функция <code class="function">brin_page_items</code> выдаёт содержимое, сохранённое в странице данных <acronym class="acronym">BRIN</acronym>. Например: </p><pre class="screen">
+test=# SELECT * FROM brin_page_items(get_raw_page('brinidx', 5),
+                                     'brinidx')
+       ORDER BY blknum, attnum LIMIT 6;
+ itemoffset | blknum | attnum | allnulls | hasnulls | placeholder | empty |    value
+------------+--------+--------+----------+----------+-------------+-------+--------------
+        137 |      0 |      1 | t        | f        | f           | f     |
+        137 |      0 |      2 | f        | f        | f           | f     | {1 .. 88}
+        138 |      4 |      1 | t        | f        | f           | f     |
+        138 |      4 |      2 | f        | f        | f           | f     | {89 .. 176}
+        139 |      8 |      1 | t        | f        | f           | f     |
+        139 |      8 |      2 | f        | f        | f           | f     | {177 .. 264}
+</pre><p> Возвращаемые столбцы соответствуют полям в структурах <code class="structname">BrinMemTuple</code> и <code class="structname">BrinValues</code>. Подробнее они описаны в <code class="filename">src/include/access/brin_tuple.h</code>.</p></dd></dl></div></div><div class="sect2" id="PAGEINSPECT-GIN-FUNCS"><div class="titlepage"><div><div><h3 class="title">F.25.5. Функции для индексов GIN <a href="#PAGEINSPECT-GIN-FUNCS" class="id_link">#</a></h3></div></div></div><div class="variablelist"><dl class="variablelist"><dt><span class="term">
+     <code class="function">gin_metapage_info(page bytea) returns record</code>
+     <a id="id-1.11.7.35.8.2.1.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Функция <code class="function">gin_metapage_info</code> выдаёт информацию о метастранице индекса <acronym class="acronym">GIN</acronym>. Например: </p><pre class="screen">
+test=# SELECT * FROM gin_metapage_info(get_raw_page('gin_index', 0));
+-[ RECORD 1 ]----+-----------
+pending_head     | 4294967295
+pending_tail     | 4294967295
+tail_free_size   | 0
+n_pending_pages  | 0
+n_pending_tuples | 0
+n_total_pages    | 7
+n_entry_pages    | 6
+n_data_pages     | 0
+n_entries        | 693
+version          | 2
+</pre></dd><dt><span class="term">
+     <code class="function">gin_page_opaque_info(page bytea) returns record</code>
+     <a id="id-1.11.7.35.8.2.2.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Функция <code class="function">gin_page_opaque_info</code> выдаёт информацию из непрозрачной области индекса <acronym class="acronym">GIN</acronym>, например, тип страницы. Например: </p><pre class="screen">
+test=# SELECT * FROM gin_page_opaque_info(get_raw_page('gin_index', 2));
+ rightlink | maxoff |         flags
+-----------+--------+------------------------
+         5 |      0 | {data,leaf,compressed}
+(1 row)
+</pre></dd><dt><span class="term">
+     <code class="function">gin_leafpage_items(page bytea) returns setof record</code>
+     <a id="id-1.11.7.35.8.2.3.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Функция <code class="function">gin_leafpage_items</code> выдаёт информацию о данных, хранящихся в странице индекса <acronym class="acronym">GIN</acronym> на уровне листьев. Например: </p><pre class="screen">
+test=# SELECT first_tid, nbytes, tids[0:5] AS some_tids
+        FROM gin_leafpage_items(get_raw_page('gin_test_idx', 2));
+ first_tid | nbytes |                        some_tids
+-----------+--------+----------------------------------------------------------
+ (8,41)    |    244 | {"(8,41)","(8,43)","(8,44)","(8,45)","(8,46)"}
+ (10,45)   |    248 | {"(10,45)","(10,46)","(10,47)","(10,48)","(10,49)"}
+ (12,52)   |    248 | {"(12,52)","(12,53)","(12,54)","(12,55)","(12,56)"}
+ (14,59)   |    320 | {"(14,59)","(14,60)","(14,61)","(14,62)","(14,63)"}
+ (167,16)  |    376 | {"(167,16)","(167,17)","(167,18)","(167,19)","(167,20)"}
+ (170,30)  |    376 | {"(170,30)","(170,31)","(170,32)","(170,33)","(170,34)"}
+ (173,44)  |    197 | {"(173,44)","(173,45)","(173,46)","(173,47)","(173,48)"}
+(7 rows)
+</pre></dd></dl></div></div><div class="sect2" id="PAGEINSPECT-GIST-FUNCS"><div class="titlepage"><div><div><h3 class="title">F.25.6. Функции для индексов GiST <a href="#PAGEINSPECT-GIST-FUNCS" class="id_link">#</a></h3></div></div></div><div class="variablelist"><dl class="variablelist"><dt><span class="term">
+     <code class="function">gist_page_opaque_info(page bytea) returns record</code>
+     <a id="id-1.11.7.35.9.2.1.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Функция <code class="function">gist_page_opaque_info</code> выдаёт информацию из непрозрачной области страницы индекса <acronym class="acronym">GiST</acronym>, например значения NSN, rightlink и тип страницы. Например: </p><pre class="screen">
+test=# SELECT * FROM gist_page_opaque_info(get_raw_page('test_gist_idx', 2));
+ lsn | nsn | rightlink | flags
+-----+-----+-----------+--------
+ 0/1 | 0/0 |         1 | {leaf}
+(1 row)
+</pre></dd><dt><span class="term">
+     <code class="function">gist_page_items(page bytea, index_oid regclass) returns setof record</code>
+     <a id="id-1.11.7.35.9.2.2.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Функция <code class="function">gist_page_items</code> возвращает информацию о данных, хранящихся на странице индекса <acronym class="acronym">GiST</acronym>. Например: </p><pre class="screen">
+test=# SELECT * FROM gist_page_items(get_raw_page('test_gist_idx', 0), 'test_gist_idx');
+ itemoffset |   ctid    | itemlen | dead |             keys
+------------+-----------+---------+------+-------------------------------
+          1 | (1,65535) |      40 | f    | (p)=("(185,185),(1,1)")
+          2 | (2,65535) |      40 | f    | (p)=("(370,370),(186,186)")
+          3 | (3,65535) |      40 | f    | (p)=("(555,555),(371,371)")
+          4 | (4,65535) |      40 | f    | (p)=("(740,740),(556,556)")
+          5 | (5,65535) |      40 | f    | (p)=("(870,870),(741,741)")
+          6 | (6,65535) |      40 | f    | (p)=("(1000,1000),(871,871)")
+(6 rows)
+</pre></dd><dt><span class="term">
+     <code class="function">gist_page_items_bytea(page bytea) returns setof record</code>
+     <a id="id-1.11.7.35.9.2.3.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Функция работает так же, как <code class="function">gist_page_items</code>, но возвращает данные ключа в виде неразобранных двоичных данных <code class="type">bytea</code>. Поскольку она не пытается декодировать ключ, ей не требуется знать, какой индекс задействован. Например: </p><pre class="screen">
+test=# SELECT * FROM gist_page_items_bytea(get_raw_page('test_gist_idx', 0));
+ itemoffset |   ctid    | itemlen | dead |                                      key_data
+------------+-----------+---------+------+-----------------------------------------​-------------------------------------------
+          1 | (1,65535) |      40 | f    | \x00000100ffff28000000000000c0644000000000​00c06440000000000000f03f000000000000f03f
+          2 | (2,65535) |      40 | f    | \x00000200ffff28000000000000c0744000000000​00c074400000000000e064400000000000e06440
+          3 | (3,65535) |      40 | f    | \x00000300ffff28000000000000207f4000000000​00207f400000000000d074400000000000d07440
+          4 | (4,65535) |      40 | f    | \x00000400ffff28000000000000c0844000000000​00c084400000000000307f400000000000307f40
+          5 | (5,65535) |      40 | f    | \x00000500ffff28000000000000f0894000000000​00f089400000000000c884400000000000c88440
+          6 | (6,65535) |      40 | f    | \x00000600ffff28000000000000208f4000000000​00208f400000000000f889400000000000f88940
+          7 | (7,65535) |      40 | f    | \x00000700ffff28000000000000408f4000000000​00408f400000000000288f400000000000288f40
+(7 rows)
+</pre></dd></dl></div></div><div class="sect2" id="PAGEINSPECT-HASH-FUNCS"><div class="titlepage"><div><div><h3 class="title">F.25.7. Функции для хеш-индексов <a href="#PAGEINSPECT-HASH-FUNCS" class="id_link">#</a></h3></div></div></div><div class="variablelist"><dl class="variablelist"><dt><span class="term">
+     <code class="function">hash_page_type(page bytea) returns text</code>
+     <a id="id-1.11.7.35.10.2.1.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Функция <code class="function">hash_page_type</code> возвращает тип страницы для заданной страницы хеш-индекса. Например: </p><pre class="screen">
+test=# SELECT hash_page_type(get_raw_page('con_hash_index', 0));
+ hash_page_type
+----------------
+ metapage
+</pre></dd><dt><span class="term">
+     <code class="function">hash_page_stats(page bytea) returns setof record</code>
+     <a id="id-1.11.7.35.10.2.2.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Функция <code class="function">hash_page_stats</code> возвращает информацию о странице группы или переполнения хеш-индекса. Например: </p><pre class="screen">
+test=# SELECT * FROM hash_page_stats(get_raw_page('con_hash_index', 1));
+-[ RECORD 1 ]---+-----------
+live_items      | 407
+dead_items      | 0
+page_size       | 8192
+free_size       | 8
+hasho_prevblkno | 4096
+hasho_nextblkno | 8474
+hasho_bucket    | 0
+hasho_flag      | 66
+hasho_page_id   | 65408
+</pre></dd><dt><span class="term">
+     <code class="function">hash_page_items(page bytea) returns setof record</code>
+     <a id="id-1.11.7.35.10.2.3.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Функция <code class="function">hash_page_items</code> возвращает информацию о данных, хранящихся на странице группы или переполнения хеш-индекса. Например: </p><pre class="screen">
+test=# SELECT * FROM hash_page_items(get_raw_page('con_hash_index', 1)) LIMIT 5;
+ itemoffset |   ctid    |    data
+------------+-----------+------------
+          1 | (899,77)  | 1053474816
+          2 | (897,29)  | 1053474816
+          3 | (894,207) | 1053474816
+          4 | (892,159) | 1053474816
+          5 | (890,111) | 1053474816
+</pre></dd><dt><span class="term">
+     <code class="function">hash_bitmap_info(index oid, blkno bigint) returns record</code>
+     <a id="id-1.11.7.35.10.2.4.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Функция <code class="function">hash_bitmap_info</code> показывает состояние бита в странице битовой карты для определённой страницы переполнения хеш-индекса. Например: </p><pre class="screen">
+test=# SELECT * FROM hash_bitmap_info('con_hash_index', 2052);
+ bitmapblkno | bitmapbit | bitstatus
+-------------+-----------+-----------
+          65 |         3 | t
+</pre></dd><dt><span class="term">
+     <code class="function">hash_metapage_info(page bytea) returns record</code>
+     <a id="id-1.11.7.35.10.2.5.1.2" class="indexterm"></a>
+    </span></dt><dd><p><code class="function">hash_metapage_info</code> возвращает информацию, хранящуюся в метастранице хеш-индекса. Например: </p><pre class="screen">
+test=# SELECT magic, version, ntuples, ffactor, bsize, bmsize, bmshift,
+test-#     maxbucket, highmask, lowmask, ovflpoint, firstfree, nmaps, procid,
+test-#     regexp_replace(spares::text, '(,0)*}', '}') as spares,
+test-#     regexp_replace(mapp::text, '(,0)*}', '}') as mapp
+test-# FROM hash_metapage_info(get_raw_page('con_hash_index', 0));
+-[ RECORD 1 ]-------------------------------------------------​------------------------------
+magic     | 105121344
+version   | 4
+ntuples   | 500500
+ffactor   | 40
+bsize     | 8152
+bmsize    | 4096
+bmshift   | 15
+maxbucket | 12512
+highmask  | 16383
+lowmask   | 8191
+ovflpoint | 28
+firstfree | 1204
+nmaps     | 1
+procid    | 450
+spares    | {0,0,0,0,0,0,1,1,1,1,1,1,1,1,3,4,4,4,45,55,58,59,​508,567,628,704,1193,1202,1204}
+mapp      | {65}
+</pre></dd></dl></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="oldsnapshot.html" title="F.24. old_snapshot — чтение информации, используемой в реализации old_snapshot_threshold">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="contrib.html" title="Приложение F. Дополнительно поставляемые модули и расширения">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="passwordcheck.html" title="F.26. passwordcheck — проверка надёжности пароля">След.</a></td></tr><tr><td width="40%" align="left" valign="top">F.24. old_snapshot — чтение информации, используемой в реализации <code class="literal">old_snapshot_threshold</code> </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> F.26. passwordcheck — проверка надёжности пароля</td></tr></table></div></body></html>

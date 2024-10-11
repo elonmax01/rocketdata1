@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>46.2. Значения данных</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="plpython-funcs.html" title="46.1. Функции на PL/Python" /><link rel="next" href="plpython-sharing.html" title="46.3. Совместное использование данных" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">46.2. Значения данных</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="plpython-funcs.html" title="46.1. Функции на PL/Python">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="plpython.html" title="Глава 46. PL/Python — процедурный язык Python">Наверх</a></td><th width="60%" align="center">Глава 46. PL/Python — процедурный язык Python</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="plpython-sharing.html" title="46.3. Совместное использование данных">След.</a></td></tr></table><hr /></div><div class="sect1" id="PLPYTHON-DATA"><div class="titlepage"><div><div><h2 class="title" style="clear: both">46.2. Значения данных <a href="#PLPYTHON-DATA" class="id_link">#</a></h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="plpython-data.html#PLPYTHON-DATA-TYPE-MAPPING">46.2.1. Сопоставление типов данных</a></span></dt><dt><span class="sect2"><a href="plpython-data.html#PLPYTHON-DATA-NULL">46.2.2. Null, None</a></span></dt><dt><span class="sect2"><a href="plpython-data.html#PLPYTHON-ARRAYS">46.2.3. Массивы, списки</a></span></dt><dt><span class="sect2"><a href="plpython-data.html#PLPYTHON-DATA-COMPOSITE-TYPES">46.2.4. Составные типы</a></span></dt><dt><span class="sect2"><a href="plpython-data.html#PLPYTHON-DATA-SET-RETURNING-FUNCS">46.2.5. Функции, возвращающие множества</a></span></dt></dl></div><p>Вообще говоря, цель исполнителя PL/Python — обеспечить <span class="quote">«<span class="quote">естественное</span>»</span> соответствие между мирами PostgreSQL и Python. Этим объясняется выбор правил сопоставления данных, описанных ниже.</p><div class="sect2" id="PLPYTHON-DATA-TYPE-MAPPING"><div class="titlepage"><div><div><h3 class="title">46.2.1. Сопоставление типов данных <a href="#PLPYTHON-DATA-TYPE-MAPPING" class="id_link">#</a></h3></div></div></div><p>Когда вызывается функция PL/Python, её аргументы преобразуются из типа PostgreSQL в соответствующий тип Python по таким правилам: </p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Тип PostgreSQL <code class="type">boolean</code> преобразуется в тип <code class="type">bool</code> языка Python.</p></li><li class="listitem"><p>Типы PostgreSQL <code class="type">smallint</code>, <code class="type">int</code>, <code class="type">bigint</code> и <code class="type">oid</code> преобразуются в тип <code class="type">int</code> языка Python.</p></li><li class="listitem"><p>Типы PostgreSQL <code class="type">real</code> и <code class="type">double</code> преобразуются в тип <code class="type">float</code> языка Python.</p></li><li class="listitem"><p>Тип PostgreSQL <code class="type">numeric</code> преобразуется в тип <code class="type">Decimal</code> среды Python. Этот тип импортируется из пакета <code class="literal">cdecimal</code>, при его наличии. В противном случае используется <code class="literal">decimal.Decimal</code> из стандартной библиотеки. Тип <code class="literal">cdecimal</code> работает значительно быстрее, чем <code class="literal">decimal</code>. Однако в Python версии 3.3 и выше тип <code class="literal">cdecimal</code> включается в стандартную библиотеку под именем <code class="literal">decimal</code>, так что теперь этого различия нет.</p></li><li class="listitem"><p>Тип PostgreSQL <code class="type">bytea</code> преобразуется в тип <code class="type">bytes</code> языка Python.</p></li><li class="listitem"><p>Все другие типы данных, включая типы символьных строк PostgreSQL, преобразуются в тип <code class="type">str</code> языка Python (строка в Unicode, как и все строки Python).</p></li><li class="listitem"><p>Информация о нескалярных типах данных приведена ниже.</p></li></ul></div><p>При завершении функции PL/Python её значение результата преобразуется в тип данных, объявленный как тип результата в PostgreSQL, следующим образом: </p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Когда тип результата функции в PostgreSQL — <code class="type">boolean</code>, возвращаемое значение приводится к логическому типу по правилам, принятым в <span class="emphasis"><em>Python</em></span>. То есть false будет возвращено для 0 и пустой строки, но, обратите внимание, для <code class="literal">'f'</code> будет возвращено true.</p></li><li class="listitem"><p>Когда тип результата функции PostgreSQL — <code class="type">bytea</code>, возвращаемое значение будет преобразовано в набор байт, используя встроенные средства Python, а затем будет приведено к типу <code class="type">bytea</code>.</p></li><li class="listitem"><p>Для всех других типов результата PostgreSQL возвращаемое значение преобразуется в строку с помощью встроенной в Python функции <code class="literal">str</code>, и полученная строка передаётся функции ввода типа данных PostgreSQL. (Если значение в Python имеет тип <code class="type">float</code>, оно преобразуется встроенной функцией <code class="literal">repr</code>, а не <code class="literal">str</code>, для недопущения потери точности.)</p><p>При передаче в PostgreSQL строки автоматически преобразуются в кодировку сервера PostgreSQL.</p></li><li class="listitem"><p>Информация о нескалярных типах данных приведена ниже.</p></li></ul></div><p> Заметьте, что логические несоответствия между объявленным в PostgreSQL типом результата и типом фактически возвращаемого объекта Python игнорируются — значение преобразуется в любом случае.</p></div><div class="sect2" id="PLPYTHON-DATA-NULL"><div class="titlepage"><div><div><h3 class="title">46.2.2. Null, None <a href="#PLPYTHON-DATA-NULL" class="id_link">#</a></h3></div></div></div><p>Если функции передаётся значение SQL NULL<a id="id-1.8.11.10.4.2.1" class="indexterm"></a>, в Python значением этого аргумента будет <code class="symbol">None</code>. Например, функция <code class="function">pymax</code>, определённая как показано в <a class="xref" href="plpython-funcs.html" title="46.1. Функции на PL/Python">Раздел 46.1</a>, возвратит неверный ответ, получив аргументы NULL. Мы могли бы добавить указание <code class="literal">STRICT</code> в определение функции, чтобы <span class="productname">PostgreSQL</span> поступал немного разумнее: при передаче значения NULL функция вовсе не будет вызываться, будет сразу возвращён результат NULL. С другой стороны, мы могли бы проверить аргументы на NULL в теле функции: </p><pre class="programlisting">CREATE FUNCTION pymax (a integer, b integer)
+  RETURNS integer
+AS $$
+  if (a is None) or (b is None):
+    return None
+  if a &gt; b:
+    return a
+  return b
+$$ LANGUAGE plpython3u;</pre><p> Как показано выше, чтобы выдать из функции PL/Python значение SQL NULL, нужно вернуть значение <code class="symbol">None</code>. Это можно сделать и в строгой, и в нестрогой функции.</p></div><div class="sect2" id="PLPYTHON-ARRAYS"><div class="titlepage"><div><div><h3 class="title">46.2.3. Массивы, списки <a href="#PLPYTHON-ARRAYS" class="id_link">#</a></h3></div></div></div><p>Значения массивов SQL передаются в PL/Python в виде списка Python. Чтобы вернуть значение массива SQL из функции PL/Python, возвратите список Python: </p><pre class="programlisting">CREATE FUNCTION return_arr()
+  RETURNS int[]
+AS $$
+return [1, 2, 3, 4, 5]
+$$ LANGUAGE plpython3u;
+
+SELECT return_arr();
+ return_arr
+-------------
+ {1,2,3,4,5}
+(1 row)</pre><p> Многомерные массивы передаются в PL/Python в виде вложенных списков Python. Например, двухмерный массив представляется как список списков. При передаче многомерного массива SQL из функции PL/Python необходимо, чтобы все внутренние списки на каждом уровне имели одинаковый размер. Например: </p><pre class="programlisting">CREATE FUNCTION test_type_conversion_array_int4(x int4[]) RETURNS int4[] AS $$
+plpy.info(x, type(x))
+return x
+$$ LANGUAGE plpython3u;
+
+SELECT * FROM test_type_conversion_array_int4(ARRAY[[1,2,3],[4,5,6]]);
+INFO:  ([[1, 2, 3], [4, 5, 6]], &lt;type 'list'&gt;)
+ test_type_conversion_array_int4
+---------------------------------
+ {{1,2,3},{4,5,6}}
+(1 row)</pre><p> Другие последовательности Python, например кортежи, тоже принимаются для обратной совместимости с PostgreSQL версии 9.6 и ниже (где многомерные массивы не поддерживались). Однако они всегда воспринимаются как одномерные массивы, чтобы не возникало неоднозначности с составными типами. По этой же причине когда в многомерном массиве используется составной тип, он должен представляться как кортеж, а не список.</p><p>Учтите, что в Python и строки являются последовательностями, что может давать неожиданные эффекты, хорошо знакомые тем, кто программирует на Python: </p><pre class="programlisting">CREATE FUNCTION return_str_arr()
+  RETURNS varchar[]
+AS $$
+return "hello"
+$$ LANGUAGE plpython3u;
+
+SELECT return_str_arr();
+ return_str_arr
+----------------
+ {h,e,l,l,o}
+(1 row)</pre></div><div class="sect2" id="PLPYTHON-DATA-COMPOSITE-TYPES"><div class="titlepage"><div><div><h3 class="title">46.2.4. Составные типы <a href="#PLPYTHON-DATA-COMPOSITE-TYPES" class="id_link">#</a></h3></div></div></div><p>Аргументы составного типа передаются функции в виде сопоставлений Python. Именами элементов сопоставления являются атрибуты составного типа. Если атрибут в переданной строке имеет значение NULL, он передаётся в сопоставлении значением <code class="symbol">None</code>. Пример работы с составным типом: </p><pre class="programlisting">CREATE TABLE employee (
+  name text,
+  salary integer,
+  age integer
+);
+
+CREATE FUNCTION overpaid (e employee)
+  RETURNS boolean
+AS $$
+  if e["salary"] &gt; 200000:
+    return True
+  if (e["age"] &lt; 30) and (e["salary"] &gt; 100000):
+    return True
+  return False
+$$ LANGUAGE plpython3u;</pre><p>Возвратить составной тип или строку таблицы из функции Python можно несколькими способами. В следующих примерах предполагается, что у нас объявлен тип: </p><pre class="programlisting">CREATE TYPE named_value AS (
+  name   text,
+  value  integer
+);</pre><p> Результат этого типа можно вернуть как: </p><div class="variablelist"><dl class="variablelist"><dt><span class="term">Последовательность (кортеж или список, но не множество, так как оно не индексируется)</span></dt><dd><p>В возвращаемых объектах последовательностей должно быть столько элементов, сколько полей в составном типе результата. Элемент с индексом 0 присваивается первому полю составного типа, с индексом 1 — второму и т. д. Например: </p><pre class="programlisting">CREATE FUNCTION make_pair (name text, value integer)
+  RETURNS named_value
+AS $$
+  return ( name, value )
+  # или альтернативный вариант в виде списка: return [ name, value ]
+$$ LANGUAGE plpython3u;</pre><p> Чтобы выдать SQL NULL для какого-нибудь столбца, вставьте в соответствующую позицию <code class="symbol">None</code>.</p><p>Когда возвращается массив составных значений, его нельзя представить в виде списка, так как невозможно однозначно определить, представляет ли список Python составной тип или ещё одну размерность массива.</p></dd><dt><span class="term">Сопоставление (словарь)</span></dt><dd><p>Значение столбца результата получается из сопоставления, в котором ключом является имя столбца. Например: </p><pre class="programlisting">CREATE FUNCTION make_pair (name text, value integer)
+  RETURNS named_value
+AS $$
+  return { "name": name, "value": value }
+$$ LANGUAGE plpython3u;</pre><p> Любые дополнительные пары ключ/значение в словаре игнорируются, а отсутствие нужных ключей считается ошибкой. Чтобы выдать SQL NULL для какого-нибудь столбца, вставьте <code class="symbol">None</code> с именем соответствующего столбца в качестве ключа.</p></dd><dt><span class="term">Объект (любой объект с методом <code class="literal">__getattr__</code>)</span></dt><dd><p>Объект передаётся аналогично сопоставлению. Пример: </p><pre class="programlisting">CREATE FUNCTION make_pair (name text, value integer)
+  RETURNS named_value
+AS $$
+  class named_value:
+    def __init__ (self, n, v):
+      self.name = n
+      self.value = v
+  return named_value(name, value)
+
+  # or simply
+  class nv: pass
+  nv.name = name
+  nv.value = value
+  return nv
+$$ LANGUAGE plpython3u;</pre></dd></dl></div><p>Также поддерживаются функции с параметрами <code class="literal">OUT</code> (выходными). Например: </p><pre class="programlisting">CREATE FUNCTION multiout_simple(OUT i integer, OUT j integer) AS $$
+return (1, 2)
+$$ LANGUAGE plpython3u;
+
+SELECT * FROM multiout_simple();</pre><p>Выходные параметры процедуры выдаются таким же образом. Например: </p><pre class="programlisting">CREATE PROCEDURE python_triple(INOUT a integer, INOUT b integer) AS $$
+return (a * 3, b * 3)
+$$ LANGUAGE plpython3u;
+
+CALL python_triple(5, 10);</pre></div><div class="sect2" id="PLPYTHON-DATA-SET-RETURNING-FUNCS"><div class="titlepage"><div><div><h3 class="title">46.2.5. Функции, возвращающие множества <a href="#PLPYTHON-DATA-SET-RETURNING-FUNCS" class="id_link">#</a></h3></div></div></div><p>Функция <span class="application">PL/Python</span> также может возвращать множества, содержащие скалярные и составные типы. Это можно осуществить разными способами, так как возвращаемый объект внутри превращается в итератор. В следующих примерах предполагается, что у нас есть составной тип: </p><pre class="programlisting">CREATE TYPE greeting AS (
+  how text,
+  who text
+);</pre><p> Множество в качестве результата можно возвратить, применив: </p><div class="variablelist"><dl class="variablelist"><dt><span class="term">Последовательность (кортеж, список, множество)</span></dt><dd><p>
+</p><pre class="programlisting">CREATE FUNCTION greet (how text)
+  RETURNS SETOF greeting
+AS $$
+  # возвращает кортеж, содержащий списки в качестве составных типов
+  # также будут работать и остальные комбинации
+  return ( [ how, "World" ], [ how, "PostgreSQL" ], [ how, "PL/Python" ] )
+$$ LANGUAGE plpython3u;</pre><p>
+      </p></dd><dt><span class="term">Итератор (любой объект, реализующий методы <code class="symbol">__iter__</code> и <code class="symbol">next</code>)</span></dt><dd><p>
+</p><pre class="programlisting">CREATE FUNCTION greet (how text)
+  RETURNS SETOF greeting
+AS $$
+  class producer:
+    def __init__ (self, how, who):
+      self.how = how
+      self.who = who
+      self.ndx = -1
+
+    def __iter__ (self):
+      return self
+
+    def next (self):
+      self.ndx += 1
+      if self.ndx == len(self.who):
+        raise StopIteration
+      return ( self.how, self.who[self.ndx] )
+
+  return producer(how, [ "World", "PostgreSQL", "PL/Python" ])
+$$ LANGUAGE plpython3u;</pre><p>
+      </p></dd><dt><span class="term">Генератор (<code class="literal">yield</code>)</span></dt><dd><p>
+</p><pre class="programlisting">CREATE FUNCTION greet (how text)
+  RETURNS SETOF greeting
+AS $$
+  for who in [ "World", "PostgreSQL", "PL/Python" ]:
+    yield ( how, who )
+$$ LANGUAGE plpython3u;</pre><p>
+
+      </p></dd></dl></div><p>Также поддерживаются функции, возвращающие множества, с параметрами <code class="literal">OUT</code> (объявленные с <code class="literal">RETURNS SETOF record</code>). Например: </p><pre class="programlisting">CREATE FUNCTION multiout_simple_setof(n integer, OUT integer, OUT integer) RETURNS SETOF record AS $$
+return [(1, 2)] * n
+$$ LANGUAGE plpython3u;
+
+SELECT * FROM multiout_simple_setof(3);</pre></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="plpython-funcs.html" title="46.1. Функции на PL/Python">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="plpython.html" title="Глава 46. PL/Python — процедурный язык Python">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="plpython-sharing.html" title="46.3. Совместное использование данных">След.</a></td></tr><tr><td width="40%" align="left" valign="top">46.1. Функции на PL/Python </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 46.3. Совместное использование данных</td></tr></table></div></body></html>

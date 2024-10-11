@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>47.6. Примеры</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="spi-visibility.html" title="47.5. Видимость изменений в данных" /><link rel="next" href="bgworker.html" title="Глава 48. Фоновые рабочие процессы" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">47.6. Примеры</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="spi-visibility.html" title="47.5. Видимость изменений в данных">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="spi.html" title="Глава 47. Интерфейс программирования сервера">Наверх</a></td><th width="60%" align="center">Глава 47. Интерфейс программирования сервера</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="bgworker.html" title="Глава 48. Фоновые рабочие процессы">След.</a></td></tr></table><hr /></div><div class="sect1" id="SPI-EXAMPLES"><div class="titlepage"><div><div><h2 class="title" style="clear: both">47.6. Примеры <a href="#SPI-EXAMPLES" class="id_link">#</a></h2></div></div></div><p>Этот раздел содержит очень простой пример использования SPI. Функция <code class="function">execq</code> принимает в качестве первого аргумента команду SQL, а в качестве второго — число строк, выполняет команду, вызывая <code class="function">SPI_exec</code>, и возвращает число строк, обработанных этой командой. Более сложные примеры работы с SPI вы можете найти в <code class="filename">src/test/regress/regress.c</code> в дереве исходного кода, а также в модуле <a class="xref" href="contrib-spi.html" title="F.41. spi — особенности/примеры использования интерфейса программирования сервера">spi</a>.</p><pre class="programlisting">#include "postgres.h"
+
+#include "executor/spi.h"
+#include "utils/builtins.h"
+
+PG_MODULE_MAGIC;
+
+PG_FUNCTION_INFO_V1(execq);
+
+Datum
+execq(PG_FUNCTION_ARGS)
+{
+    char *command;
+    int cnt;
+    int ret;
+    uint64 proc;
+
+    /* Преобразовать данный текстовый объект в строку C */
+    command = text_to_cstring(PG_GETARG_TEXT_PP(0));
+    cnt = PG_GETARG_INT32(1);
+
+    SPI_connect();
+
+    ret = SPI_exec(command, cnt);
+
+    proc = SPI_processed;
+
+    /*
+     * Если были выбраны какие-то строки, вывести их через elog(INFO).
+     */
+    if (ret &gt; 0 &amp;&amp; SPI_tuptable != NULL)
+    {
+        SPITupleTable *tuptable = SPI_tuptable;
+        TupleDesc tupdesc = tuptable-&gt;tupdesc;
+        char buf[8192];
+        uint64 j;
+
+        for (j = 0; j &lt; tuptable-&gt;numvals; j++)
+        {
+            HeapTuple tuple = tuptable-&gt;vals[j];
+            int i;
+
+            for (i = 1, buf[0] = 0; i &lt;= tupdesc-&gt;natts; i++)
+                snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), " %s%s",
+                        SPI_getvalue(tuple, tupdesc, i),
+                        (i == tupdesc-&gt;natts) ? " " : " |");
+            elog(INFO, "EXECQ: %s", buf);
+        }
+    }
+
+    SPI_finish();
+    pfree(command);
+
+    PG_RETURN_INT64(proc);
+}</pre><p>Так эта функция будет объявляться после того, как она будет скомпилирована в разделяемую библиотеку (подробности в <a class="xref" href="xfunc-c.html#DFUNC" title="38.10.5. Компиляция и компоновка динамически загружаемых функций">Подразделе 38.10.5</a>): </p><pre class="programlisting">CREATE FUNCTION execq(text, integer) RETURNS int8
+    AS '<em class="replaceable"><code>имя_файла</code></em>'
+    LANGUAGE C STRICT;</pre><p>Демонстрация использования: </p><pre class="programlisting">=&gt; SELECT execq('CREATE TABLE a (x integer)', 0);
+ execq
+-------
+     0
+(1 row)
+
+=&gt; INSERT INTO a VALUES (execq('INSERT INTO a VALUES (0)', 0));
+INSERT 0 1
+=&gt; SELECT execq('SELECT * FROM a', 0);
+INFO:  EXECQ:  0    <em class="lineannotation"><span class="lineannotation">-- вставлено функцией execq</span></em>
+INFO:  EXECQ:  1    <em class="lineannotation"><span class="lineannotation">-- возвращено функцией execq и вставлено командой INSERT</span></em>
+
+ execq
+-------
+     2
+(1 row)
+
+=&gt; SELECT execq('INSERT INTO a SELECT x + 2 FROM a RETURNING *', 1);
+INFO:  EXECQ:  2    <em class="lineannotation"><span class="lineannotation">-- 0 + 2, затем выполнение было остановлено при достижении числа строк</span></em>
+ execq
+-------
+     1
+(1 row)
+
+=&gt; SELECT execq('SELECT * FROM a', 10);
+INFO:  EXECQ:  0
+INFO:  EXECQ:  1
+INFO:  EXECQ:  2
+
+ execq
+-------
+     3              <em class="lineannotation"><span class="lineannotation">-- 10 — только максимальное значение, 3 — реальное число строк</span></em>
+(1 row)
+
+=&gt; SELECT execq('INSERT INTO a SELECT x + 10 FROM a', 1);
+ execq
+-------
+     3              <em class="lineannotation"><span class="lineannotation">-- обработаны все строки; обработка не прекращается при достижении числа строк, потому что ничего не возвращается</span></em>
+(1 row)
+
+=&gt; SELECT * FROM a;
+ x
+----
+  0
+  1
+  2
+ 10
+ 11
+ 12
+(6 rows)
+
+=&gt; DELETE FROM a;
+DELETE 3
+=&gt; INSERT INTO a VALUES (execq('SELECT * FROM a', 0) + 1);
+INSERT 0 1
+=&gt; SELECT * FROM a;
+ x
+---
+ 1                  <em class="lineannotation"><span class="lineannotation">-- 0 (нет строк в a) + 1</span></em>
+(1 row)
+
+=&gt; INSERT INTO a VALUES (execq('SELECT * FROM a', 0) + 1);
+INFO:  EXECQ:  1
+INSERT 0 1
+=&gt; SELECT * FROM a;
+ x
+---
+ 1
+ 2                  <em class="lineannotation"><span class="lineannotation">-- 1 (была одна строка в a) + 1</span></em>
+(2 rows)
+
+<em class="lineannotation"><span class="lineannotation">-- Этот пример демонстрирует правило видимости изменений в данных.</span></em>
+<em class="lineannotation"><span class="lineannotation">-- execq вызывается дважды и каждый раз видит разное количество строк:</span></em>
+
+=&gt; INSERT INTO a SELECT execq('SELECT * FROM a', 0) * x FROM a;
+INFO:  EXECQ:  1    <em class="lineannotation"><span class="lineannotation">-- результаты первого вызова execq</span></em>
+INFO:  EXECQ:  2
+INFO:  EXECQ:  1    <em class="lineannotation"><span class="lineannotation">-- результаты второго вызова execq</span></em>
+INFO:  EXECQ:  2
+INFO:  EXECQ:  2
+INSERT 0 2
+=&gt; SELECT * FROM a;
+ x
+---
+ 1
+ 2
+ 2                  <em class="lineannotation"><span class="lineannotation">-- 2 строки * 1 (x в первой в строке)</span></em>
+ 6                  <em class="lineannotation"><span class="lineannotation">-- 3 строки (2 + 1 только вставленная) * 2 (x во второй строке)</span></em>
+(4 rows)</pre></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="spi-visibility.html" title="47.5. Видимость изменений в данных">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="spi.html" title="Глава 47. Интерфейс программирования сервера">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="bgworker.html" title="Глава 48. Фоновые рабочие процессы">След.</a></td></tr><tr><td width="40%" align="left" valign="top">47.5. Видимость изменений в данных </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> Глава 48. Фоновые рабочие процессы</td></tr></table></div></body></html>

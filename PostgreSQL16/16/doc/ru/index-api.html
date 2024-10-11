@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>64.1. Базовая структура API для индексов</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="indexam.html" title="Глава 64. Определение интерфейса для индексных методов доступа" /><link rel="next" href="index-functions.html" title="64.2. Функции для индексных методов доступа" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">64.1. Базовая структура API для индексов</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="indexam.html" title="Глава 64. Определение интерфейса для индексных методов доступа">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="indexam.html" title="Глава 64. Определение интерфейса для индексных методов доступа">Наверх</a></td><th width="60%" align="center">Глава 64. Определение интерфейса для индексных методов доступа</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="index-functions.html" title="64.2. Функции для индексных методов доступа">След.</a></td></tr></table><hr /></div><div class="sect1" id="INDEX-API"><div class="titlepage"><div><div><h2 class="title" style="clear: both">64.1. Базовая структура API для индексов <a href="#INDEX-API" class="id_link">#</a></h2></div></div></div><p>Каждый индексный метод доступа описывается строкой в системном каталоге <a class="link" href="catalog-pg-am.html" title="53.3. pg_am"><code class="structname">pg_am</code></a>. В записи <code class="structname">pg_am</code> указывается имя и <em class="firstterm">функция-обработчик</em> для этого метода. Эти записи могут создаваться и удаляться командами SQL <a class="xref" href="sql-create-access-method.html" title="CREATE ACCESS METHOD"><span class="refentrytitle">CREATE ACCESS METHOD</span></a> и <a class="xref" href="sql-drop-access-method.html" title="DROP ACCESS METHOD"><span class="refentrytitle">DROP ACCESS METHOD</span></a>.</p><p>Функция-обработчик индексного метода доступа должна объявляться как принимающая один аргумент типа <code class="type">internal</code> и возвращающая псевдотип <code class="type">index_am_handler</code>. Аргумент в данном случае фиктивный, и нужен только для того, чтобы эту функцию нельзя было вызывать непосредственно из команд SQL. Возвращать эта функция должна структуру типа <code class="structname">IndexAmRoutine</code> (в памяти palloc), содержащую всё, что нужно знать коду ядра, чтобы использовать этот метод доступа. Структура <code class="structname">IndexAmRoutine</code>, также называемая <em class="firstterm">структурой API</em> метода доступа, содержит поля, задающие разнообразные предопределённые свойства метода доступа, например, поддерживает ли он составные индексы. Что более важно, она содержит указатели на опорные функции для метода доступа. Это обычные функции на C и они не видны и не могут быть вызваны на уровне SQL. Опорные функции описаны в <a class="xref" href="index-functions.html" title="64.2. Функции для индексных методов доступа">Разделе 64.2</a>.</p><p>Структура <code class="structname">IndexAmRoutine</code> определяется так: </p><pre class="programlisting">typedef struct IndexAmRoutine
+{
+    NodeTag     type;
+
+    /*
+     * Общее число стратегий (операторов), с которыми возможен поиск/применение
+     * этого метода доступа (МД).  Ноль, если у этого МД нет фиксированного набора
+     * назначенных стратегий.
+     */
+    uint16      amstrategies;
+    /* общее число опорных функций, используемых этим МД */
+    uint16      amsupport;
+    /* номер опорной функции options либо 0 */
+    uint16      amoptsprocnum;
+    /* поддерживает ли МД упорядочивание (ORDER BY) значений индексированного столбца? */
+    bool        amcanorder;
+    /* поддерживает ли МД упорядочивание (ORDER BY) результата оператора с индексированным столбцом? */
+    bool        amcanorderbyop;
+    /* поддерживает ли МД сканирование в обратном направлении? */
+    bool        amcanbackward;
+    /* поддерживает ли МД уникальные индексы (UNIQUE)? */
+    bool        amcanunique;
+    /* поддерживает ли МД индексы с несколькими столбцами? */
+    bool        amcanmulticol;
+    /* требуется ли для сканирования с МД ограничение первого столбца индекса? */
+    bool        amoptionalkey;
+    /* воспринимает ли МД условия ScalarArrayOpExpr? */
+    bool        amsearcharray;
+    /* воспринимает ли МД условия IS NULL/IS NOT NULL? */
+    bool        amsearchnulls;
+    /* может ли тип, хранящийся в индексе, отличаться от типа столбца? */
+    bool        amstorage;
+    /* возможна ли кластеризация по индексу этого типа? */
+    bool        amclusterable;
+    /* обрабатывает ли МД предикатные блокировки? */
+    bool        ampredlocks;
+    /* поддерживает ли МД параллельное сканирование? */
+    bool        amcanparallel;
+    /* поддерживает ли МД неключевые столбцы, добавляемые указанием INCLUDE? */
+    bool        amcaninclude;
+    /* использует ли МД maintenance_work_mem? */
+    bool        amusemaintenanceworkmem;
+    /* обобщает ли МД кортежи, чтобы все кортежи в блоке 
+     * попадали в одно обобщение? */
+    bool        amsummarizing;
+    /* ИЛИ флаги параллельной очистки */
+    uint8       amparallelvacuumoptions;
+    /* тип данных, хранящихся в индексе, либо InvalidOid, если он переменный */
+    Oid         amkeytype;
+
+    /* интерфейсные функции */
+    ambuild_function ambuild;
+    ambuildempty_function ambuildempty;
+    aminsert_function aminsert;
+    ambulkdelete_function ambulkdelete;
+    amvacuumcleanup_function amvacuumcleanup;
+    amcanreturn_function amcanreturn;   /* может быть NULL */
+    amcostestimate_function amcostestimate;
+    amoptions_function amoptions;
+    amproperty_function amproperty;     /* может быть NULL */
+    ambuildphasename_function ambuildphasename;   /* может быть NULL */
+    amvalidate_function amvalidate;
+    amadjustmembers_function amadjustmembers; /* может быть NULL */
+    ambeginscan_function ambeginscan;
+    amrescan_function amrescan;
+    amgettuple_function amgettuple;     /* может быть NULL */
+    amgetbitmap_function amgetbitmap;   /* может быть NULL */
+    amendscan_function amendscan;
+    ammarkpos_function ammarkpos;       /* может быть NULL */
+    amrestrpos_function amrestrpos;     /* может быть NULL */
+
+    /* интерфейсные функции для поддержки параллельного сканирования по индексу */
+    amestimateparallelscan_function amestimateparallelscan;    /* может быть NULL */
+    aminitparallelscan_function aminitparallelscan;            /* может быть NULL */
+    amparallelrescan_function amparallelrescan;                /* может быть NULL */
+} IndexAmRoutine;</pre><p>Чтобы индексный метод доступа применялся, необходимо также определить <em class="firstterm">семейства операторов</em> и <em class="firstterm">классы операторов</em> в <a class="link" href="catalog-pg-opfamily.html" title="53.35. pg_opfamily"><code class="structname">pg_opfamily</code></a>, <a class="link" href="catalog-pg-opclass.html" title="53.33. pg_opclass"><code class="structname">pg_opclass</code></a>, <a class="link" href="catalog-pg-amop.html" title="53.4. pg_amop"><code class="structname">pg_amop</code></a> и <a class="link" href="catalog-pg-amproc.html" title="53.5. pg_amproc"><code class="structname">pg_amproc</code></a>. Эти записи позволяют планировщику понять, для каких видов условий запросов могут применяться индексы с данными методом доступа. Семейства и классы операторов описываются в <a class="xref" href="xindex.html" title="38.16. Интерфейсы расширений для индексов">Разделе 38.16</a>; этот материал необходимо изучить, прежде чем читать данную главу.</p><p>Отдельный индекс определяется записью в <a class="link" href="catalog-pg-class.html" title="53.11. pg_class"><code class="structname">pg_class</code></a>, описывающей его как физическое отношение, и записью в <a class="link" href="catalog-pg-index.html" title="53.26. pg_index"><code class="structname">pg_index</code></a>, представляющей логическое содержание индекса — то есть, набор столбцов индекса и семантическое значение этих столбцов, установленное соответствующими классами операторов. Столбцами индекса (значениями ключа) могут быть либо простые столбцы нижележащей таблицы, либо выражения, вычисляемые по строкам таблицы. Для индексного метода доступа обычно не важно, откуда поступают значения ключа индекса (они всегда поступают в вычисленном виде), но очень важна информация о классе операторов в каталоге <code class="structname">pg_index</code>. Обе эти записи каталогов представлены в составе структуры данных <code class="structname">Relation</code>, которая передаётся всем функциям, реализующим операции с индексом.</p><p>С некоторыми полями флагов в <code class="structname">IndexAmRoutine</code> связаны неочевидные следствия. Требования индексов с <code class="structfield">amcanunique</code> описаны в <a class="xref" href="index-unique-checks.html" title="64.5. Проверки уникальности в индексе">Разделе 64.5</a>. Флаг <code class="structfield">amcanmulticol</code> показывает, что метод доступа поддерживает составные индексы, а <code class="structfield">amoptionalkey</code> обозначает, что метод позволяет выполнить сканирование при отсутствии индексируемого ограничивающего условия для первого столбца индекса. Когда <code class="structfield">amcanmulticol</code> равен false, <code class="structfield">amoptionalkey</code> по сути говорит, поддерживает ли метод доступа полное сканирование по индексу без ограничивающего условия. Методы доступа, поддерживающие индексы с несколькими ключевыми столбцами, <span class="emphasis"><em>должны</em></span> поддерживать сканирования при отсутствии ограничений любых или всех столбцов после первого; однако они могут требовать присутствия какого-либо ограничения для первого столбца индекса, и это требование отмечается значением false флага <code class="structfield">amoptionalkey</code>. В <code class="structfield">amoptionalkey</code> для метода доступа может устанавливаться false, например, когда этот метод доступа не индексирует значения. Так как большинство индексируемых операторов — строгие, и поэтому не могут вернуть true для операндов NULL, на первый взгляд кажется заманчивой идея не хранить записи индекса для значений NULL: они всё равно никак не могут быть прочитаны при сканировании индекса. Однако этот аргумент отпадает, когда при сканировании индекса вовсе отсутствует ограничение данного столбца индекса. На практике это означает, что индексы с установленным флагом <code class="structfield">amoptionalkey</code> должны индексировать значения NULL, так как планировщик может склониться к использованию этого индекса вообще без ключей. С этим связано ещё одно ограничение — индексный метод доступа, поддерживающий составные индексы, <span class="emphasis"><em>должен</em></span> поддерживать индексирование значений NULL в столбцах после первого, так как планировщик будет полагать, что индекс можно применять для запросов, в которых эти столбцы не ограничиваются. Например, рассмотрим индекс по (a,b) и запрос с ограничением <code class="literal">WHERE a = 4</code>. Система будет полагать, что по этому индексу можно просканировать строки с <code class="literal">a = 4</code>, но это будет неверно, если индекс исключит строки, в которых <code class="literal">b</code> — NULL. Однако этот индекс вполне может исключить строки, в которых первый столбец содержит NULL. Метод индекса, который индексирует значения NULL, может также установить флаг <code class="structfield">amsearchnulls</code>, отметив тем самым, что он поддерживает в качестве условий поиска <code class="literal">IS NULL</code> и <code class="literal">IS NOT NULL</code>.</p><p>Флаг <code class="structfield">amcaninclude</code> показывает, поддерживает ли метод доступа <span class="quote">«<span class="quote">неключевые</span>»</span> столбцы, то есть может ли он сохранить (без обработки) дополнительные столбцы помимо ключевых. Требования в предыдущем абзаце распространяются только на ключевые столбцы. В частности, сочетание <code class="structfield">amcanmulticol</code>=<code class="literal">false</code> и <code class="structfield">amcaninclude</code>=<code class="literal">true</code> вполне осмысленно: оно означает, что в индексе может быть только один ключевой столбец и при этом несколько дополнительных неключевых столбцов. Кроме того, неключевые столбцы должны допускать значение null вне зависимости от флага <code class="structfield">amoptionalkey</code>.</p><p>Флаг <code class="structfield">amsummarizing</code> указывает, обобщает ли метод доступа индексированные кортежи на уровне детализации обобщения, по крайней мере, для каждого блока. Методы доступа, которые указывают не на отдельные кортежи, а на зоны блоков (как <acronym class="acronym">BRIN</acronym>), могут позволить продолжать оптимизацию <acronym class="acronym">HOT</acronym>. Это не относится к атрибутам, на которые ссылаются предикаты индекса: изменение такого атрибута всегда отключает <acronym class="acronym">HOT</acronym>.</p></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="indexam.html" title="Глава 64. Определение интерфейса для индексных методов доступа">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="indexam.html" title="Глава 64. Определение интерфейса для индексных методов доступа">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="index-functions.html" title="64.2. Функции для индексных методов доступа">След.</a></td></tr><tr><td width="40%" align="left" valign="top">Глава 64. Определение интерфейса для индексных методов доступа </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 64.2. Функции для индексных методов доступа</td></tr></table></div></body></html>

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>F.37. pg_walinspect — просмотр журнала предзаписи на низком уровне</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="pgvisibility.html" title="F.36. pg_visibility — информация из карты видимости и вспомогательные функции" /><link rel="next" href="postgres-fdw.html" title="F.38. postgres_fdw — обращение к данным, находящимся на внешних серверах PostgreSQL" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">F.37. pg_walinspect — просмотр журнала предзаписи на низком уровне</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="pgvisibility.html" title="F.36. pg_visibility — информация из карты видимости и вспомогательные функции">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="contrib.html" title="Приложение F. Дополнительно поставляемые модули и расширения">Наверх</a></td><th width="60%" align="center">Приложение F. Дополнительно поставляемые модули и расширения</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="postgres-fdw.html" title="F.38. postgres_fdw — обращение к данным, находящимся на внешних серверах PostgreSQL">След.</a></td></tr></table><hr /></div><div class="sect1" id="PGWALINSPECT"><div class="titlepage"><div><div><h2 class="title" style="clear: both">F.37. pg_walinspect — просмотр журнала предзаписи на низком уровне <a href="#PGWALINSPECT" class="id_link">#</a></h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="pgwalinspect.html#PGWALINSPECT-FUNCS">F.37.1. Функции общего назначения</a></span></dt><dt><span class="sect2"><a href="pgwalinspect.html#PGWALINSPECT-AUTHOR">F.37.2. Автор</a></span></dt></dl></div><a id="id-1.11.7.47.2" class="indexterm"></a><p>Модуль <code class="filename">pg_walinspect</code> предоставляет SQL-функции для просмотра журнала предзаписи на низком уровне. Он работает с запущенным кластером баз данных <span class="productname">PostgreSQL</span> и может быть полезен для целей отладки, анализа, отчётности или обучения. Модуль похож на <a class="xref" href="pgwaldump.html" title="pg_waldump"><span class="refentrytitle"><span class="application">pg_waldump</span></span></a>, но работает через SQL, а не как отдельная утилита.</p><p>Все функции этого модуля выдают информацию из WAL, относящуюся к текущей линии времени сервера.</p><div class="note"><h3 class="title">Примечание</h3><p>Функции <code class="filename">pg_walinspect</code> зачастую вызываются с аргументом LSN, который задаёт <span class="emphasis"><em>начало</em></span> интересующей записи WAL. Тем не менее некоторые функции, например <code class="function"><a class="link" href="functions-admin.html#PG-LOGICAL-EMIT-MESSAGE">pg_logical_emit_message</a></code>, возвращают LSN <span class="emphasis"><em>после</em></span> только что добавленной записи.</p></div><div class="tip"><h3 class="title">Подсказка</h3><p>Все функции <code class="filename">pg_walinspect</code>, которые показывают информацию о записях, попадающих в определённый диапазон значений LSN, могут принимать <em class="replaceable"><code>конечные_lsn</code></em> после текущего LSN сервера. При использовании <em class="replaceable"><code>конечного_lsn</code></em> <span class="quote">«<span class="quote">из будущего</span>»</span> ошибки не возникнет.</p><p>Может быть удобным указать значение <code class="literal">FFFFFFFF/FFFFFFFF</code> (максимально допустимое значение <code class="type">pg_lsn</code>) в качестве аргумента <em class="replaceable"><code>конечного_lsn</code></em>. Это аналогично варианту указать <em class="replaceable"><code>конечный_lsn</code></em>, совпадающий с текущим LSN сервера.</p></div><p>По умолчанию использовать эти функции разрешено только суперпользователям и ролям, включённым в роль <code class="literal">pg_read_server_files</code>. Суперпользователь может дать доступ другим, воспользовавшись командой <code class="command">GRANT</code>.</p><div class="sect2" id="PGWALINSPECT-FUNCS"><div class="titlepage"><div><div><h3 class="title">F.37.1. Функции общего назначения <a href="#PGWALINSPECT-FUNCS" class="id_link">#</a></h3></div></div></div><div class="variablelist"><dl class="variablelist"><dt id="PGWALINSPECT-FUNCS-PG-GET-WAL-RECORD-INFO"><span class="term">
+     <code class="function">pg_get_wal_record_info(in_lsn pg_lsn) returns record</code>
+    </span> <a href="#PGWALINSPECT-FUNCS-PG-GET-WAL-RECORD-INFO" class="id_link">#</a></dt><dd><p>Получает информацию о записи WAL, которая расположена по <em class="replaceable"><code>заданному_lsn</code></em> или после него. Например: </p><pre class="screen">
+postgres=# SELECT * FROM pg_get_wal_record_info('0/E419E28');
+-[ RECORD 1 ]----+-------------------------------------------------
+start_lsn        | 0/E419E28
+end_lsn          | 0/E419E68
+prev_lsn         | 0/E419D78
+xid              | 0
+resource_manager | Heap2
+record_type      | VACUUM
+record_length    | 58
+main_data_length | 2
+fpi_length       | 0
+description      | nunused: 5, unused: [1, 2, 3, 4, 5]
+block_ref        | blkref #0: rel 1663/16385/1249 fork main blk 364
+</pre><p>Если <em class="replaceable"><code>заданный_lsn</code></em> не находится в начале записи WAL, будет показана информация о следующей корректной записи WAL. Если такой записи WAL нет, функция выдаст ошибку.</p></dd><dt id="PGWALINSPECT-FUNCS-PG-GET-WAL-RECORDS-INFO"><span class="term">
+     <code class="function">pg_get_wal_records_info(start_lsn pg_lsn, end_lsn pg_lsn) returns setof record</code>
+    </span> <a href="#PGWALINSPECT-FUNCS-PG-GET-WAL-RECORDS-INFO" class="id_link">#</a></dt><dd><p>Получает информацию обо всех корректных записях WAL между <em class="replaceable"><code>начальным_lsn</code></em> и <em class="replaceable"><code>конечным_lsn</code></em>. Возвращает одну строку для каждой записи WAL. Пример использования функции: </p><pre class="screen">
+postgres=# SELECT * FROM pg_get_wal_records_info('0/1E913618', '0/1E913740') LIMIT 1;
+-[ RECORD 1 ]----+--------------------------------------------------------------
+start_lsn        | 0/1E913618
+end_lsn          | 0/1E913650
+prev_lsn         | 0/1E9135A0
+xid              | 0
+resource_manager | Standby
+record_type      | RUNNING_XACTS
+record_length    | 50
+main_data_length | 24
+fpi_length       | 0
+description      | nextXid 33775 latestCompletedXid 33774 oldestRunningXid 33775
+block_ref        |
+</pre><p>Функция выдаёт ошибку, если <em class="replaceable"><code>начальный_lsn</code></em> недоступен.</p></dd><dt id="PGWALINSPECT-FUNCS-PG-GET-WAL-BLOCK-INFO"><span class="term">
+     <code class="function">pg_get_wal_block_info(start_lsn pg_lsn, end_lsn pg_lsn, show_data boolean DEFAULT true) returns setof record</code>
+    </span> <a href="#PGWALINSPECT-FUNCS-PG-GET-WAL-BLOCK-INFO" class="id_link">#</a></dt><dd><p>Получает информацию о каждой ссылке на блок из всех корректных записей WAL между <em class="replaceable"><code>начальным_lsn</code></em> и <em class="replaceable"><code>конечным_lsn</code></em> с одной или более ссылок на блок. Возвращает одну строку для ссылки на блок для каждой записи WAL. Например: </p><pre class="screen">
+postgres=# SELECT * FROM pg_get_wal_block_info('0/1230278', '0/12302B8');
+-[ RECORD 1 ]-----+-----------------------------------
+start_lsn         | 0/1230278
+end_lsn           | 0/12302B8
+prev_lsn          | 0/122FD40
+block_id          | 0
+reltablespace     | 1663
+reldatabase       | 1
+relfilenode       | 2658
+relforknumber     | 0
+relblocknumber    | 11
+xid               | 341
+resource_manager  | Btree
+record_type       | INSERT_LEAF
+record_length     | 64
+main_data_length  | 2
+block_data_length | 16
+block_fpi_length  | 0
+block_fpi_info    |
+description       | off: 46
+block_data        | \x00002a00070010402630000070696400
+block_fpi_data    |
+</pre><p>В этом примере рассмотрена запись WAL, содержащая только одну ссылку на блок, однако во многих записях WAL таких ссылок несколько. Строки, возвращаемые функцией <code class="function">pg_get_wal_block_info</code>, будут гарантированно иметь уникальную комбинацию <em class="replaceable"><code>начального_lsn</code></em> и <em class="replaceable"><code>id_блока</code></em>.</p><p>Большая часть показанной здесь информации совпадает с выводом функции <code class="function">pg_get_wal_records_info</code>, при условии передачи одинаковых аргументов. Однако <code class="function">pg_get_wal_block_info</code> выводит информацию из каждой записи WAL в расширенном виде, добавляя в вывод по одной строке для каждой ссылки на блок, поэтому некоторые детали отслеживаются на уровне ссылки на блок, а не на уровне целой записи. Такая структура полезна при работе с запросами, которые отслеживают изменение отдельных блоков с течением времени. Обратите внимание, что для записей без ссылок на блоки (например, записи WAL для <code class="literal">COMMIT</code>), строки возвращаться не будут, поэтому функция <code class="function">pg_get_wal_block_info</code> действительно может возвращать <span class="emphasis"><em>меньше</em></span> строк, чем функция <code class="function">pg_get_wal_records_info</code>.</p><p>Параметры <code class="structfield">reltablespace</code>, <code class="structfield">reldatabase</code> и <code class="structfield">relfilenode</code> ссылаются на <a class="link" href="catalog-pg-tablespace.html" title="53.56. pg_tablespace"><code class="structname">pg_tablespace</code></a>.<code class="structfield">oid</code>, <a class="link" href="catalog-pg-database.html" title="53.15. pg_database"><code class="structname">pg_database</code></a>.<code class="structfield">oid</code> и <a class="link" href="catalog-pg-class.html" title="53.11. pg_class"><code class="structname">pg_class</code></a>.<code class="structfield">relfilenode</code> соответственно. Поле <code class="structfield">relforknumber</code> обозначает номер слоя в отношении для ссылки на блок (за подробностями обратитесь к <code class="filename">common/relpath.h</code>).</p><div class="tip"><h3 class="title">Подсказка</h3><p>Функция <code class="function">pg_filenode_relation</code> (см. <a class="xref" href="functions-admin.html#FUNCTIONS-ADMIN-DBLOCATION" title="Таблица 9.97. Функции определения расположения объектов">Таблицу 9.97</a>) позволяет определить, какое отношение было изменено первоначально.</p></div><p>Клиенты могут избежать издержек материализации данных блока, что может существенно ускорить выполнение функции. Когда для <em class="replaceable"><code>show_data</code></em> задано значение <code class="literal">false</code>, значения <code class="structfield">block_data</code> и <code class="structfield">block_fpi_data</code> опускаются (то есть выходные аргументы <code class="structfield">block_data</code> и <code class="structfield">block_fpi_data</code> принимают значение <code class="literal">NULL</code> для всех возвращаемых строк). Очевидно, что подобная оптимизация осуществима только для запросов, которым на самом деле не требуются данные блоков.</p><p>Функция выдаёт ошибку, если <em class="replaceable"><code>начальный_lsn</code></em> недоступен.</p></dd><dt id="PGWALINSPECT-FUNCS-PG-GET-WAL-STATS"><span class="term">
+     <code class="function">pg_get_wal_stats(start_lsn pg_lsn, end_lsn pg_lsn, per_record boolean DEFAULT false) returns setof record</code>
+    </span> <a href="#PGWALINSPECT-FUNCS-PG-GET-WAL-STATS" class="id_link">#</a></dt><dd><p>Выдаёт статистику по всем корректным записям WAL между <em class="replaceable"><code>начальным_lsn</code></em> и <em class="replaceable"><code>конечным_lsn</code></em>. По умолчанию возвращает одну строку для каждого типа <em class="replaceable"><code>менеджера_ресурсов</code></em> (resource_manager). Когда <em class="replaceable"><code>по_типу_записи</code></em> имеет значение <code class="literal">true</code>, то возвращает отдельные строки для разных <em class="replaceable"><code>типов_записей</code></em> (record_type). Пример использования функции: </p><pre class="screen">
+postgres=# SELECT * FROM pg_get_wal_stats('0/1E847D00', '0/1E84F500')
+             WHERE count &gt; 0 AND
+                   "resource_manager/record_type" = 'Transaction';
+             LIMIT 1;
+-[ RECORD 1 ]----------------+-------------------
+resource_manager/record_type | Transaction
+count                        | 2
+count_percentage             | 8
+record_size                  | 875
+record_size_percentage       | 41.23468426013195
+fpi_size                     | 0
+fpi_size_percentage          | 0
+combined_size                | 875
+combined_size_percentage     | 2.8634072910530795
+</pre><p>Функция выдаёт ошибку, если <em class="replaceable"><code>начальный_lsn</code></em> недоступен.</p></dd></dl></div></div><div class="sect2" id="PGWALINSPECT-AUTHOR"><div class="titlepage"><div><div><h3 class="title">F.37.2. Автор <a href="#PGWALINSPECT-AUTHOR" class="id_link">#</a></h3></div></div></div><p>Бхарат Рупиредди (Bharath Rupireddy) <code class="email">&lt;<a class="email" href="mailto:bharath.rupireddyforpostgres@gmail.com">bharath.rupireddyforpostgres@gmail.com</a>&gt;</code></p></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="pgvisibility.html" title="F.36. pg_visibility — информация из карты видимости и вспомогательные функции">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="contrib.html" title="Приложение F. Дополнительно поставляемые модули и расширения">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="postgres-fdw.html" title="F.38. postgres_fdw — обращение к данным, находящимся на внешних серверах PostgreSQL">След.</a></td></tr><tr><td width="40%" align="left" valign="top">F.36. pg_visibility — информация из карты видимости и вспомогательные функции </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> F.38. postgres_fdw — обращение к данным, находящимся на внешних серверах <span class="productname">PostgreSQL</span></td></tr></table></div></body></html>

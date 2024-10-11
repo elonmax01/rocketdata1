@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>37.17. columns</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="infoschema-column-udt-usage.html" title="37.16. column_udt_usage" /><link rel="next" href="infoschema-constraint-column-usage.html" title="37.18. constraint_column_usage" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">37.17. <code class="literal">columns</code></th></tr><tr><td width="10%" align="left"><a accesskey="p" href="infoschema-column-udt-usage.html" title="37.16. column_udt_usage">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="information-schema.html" title="Глава 37. Информационная схема">Наверх</a></td><th width="60%" align="center">Глава 37. Информационная схема</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="infoschema-constraint-column-usage.html" title="37.18. constraint_column_usage">След.</a></td></tr></table><hr /></div><div class="sect1" id="INFOSCHEMA-COLUMNS"><div class="titlepage"><div><div><h2 class="title" style="clear: both">37.17. <code class="literal">columns</code> <a href="#INFOSCHEMA-COLUMNS" class="id_link">#</a></h2></div></div></div><p>Представление <code class="literal">columns</code> содержит информацию обо всех столбцах таблиц (или столбцах представлений) в базе данных. Системные столбцы (<code class="literal">ctid</code> и т. д.) в нём не отображаются. В нём показываются только те столбцы, к которым имеет доступ текущий пользователь (являясь владельцем или имея некоторые права).</p><div class="table" id="id-1.7.6.21.3"><p class="title"><strong>Таблица 37.15. Столбцы <code class="structname">columns</code></strong></p><div class="table-contents"><table class="table" summary="Столбцы columns" border="1"><colgroup><col /></colgroup><thead><tr><th class="catalog_table_entry"><p class="column_definition">Тип столбца</p>
+      <p>Описание</p></th></tr></thead><tbody><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">table_catalog</code> <code class="type">sql_identifier</code>
+      </p>
+      <p>Имя базы данных, содержащей таблицу (всегда текущая база)</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">table_schema</code> <code class="type">sql_identifier</code>
+      </p>
+      <p>Имя схемы, содержащей таблицу</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">table_name</code> <code class="type">sql_identifier</code>
+      </p>
+      <p>Имя таблицы</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">column_name</code> <code class="type">sql_identifier</code>
+      </p>
+      <p>Имя столбца</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">ordinal_position</code> <code class="type">cardinal_number</code>
+      </p>
+      <p>Порядковый номер столбца в таблице (нумерация начинается с 1)</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">column_default</code> <code class="type">character_data</code>
+      </p>
+      <p>Выражение по умолчанию для столбца</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">is_nullable</code> <code class="type">yes_or_no</code>
+      </p>
+      <p><code class="literal">YES</code>, если столбец может содержать NULL, или <code class="literal">NO</code>, если он не принимает NULL. Не будет принимать NULL столбец с ограничением NOT NULL, но возможны и другие варианты.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">data_type</code> <code class="type">character_data</code>
+      </p>
+      <p>Тип данных столбца, если это встроенный тип, либо <code class="literal">ARRAY</code>, если это массив (в этом случае обратитесь к представлению <code class="literal">element_types</code>), иначе — <code class="literal">USER-DEFINED</code> (в этом случае тип определяется в <code class="literal">udt_name</code> и связанных столбцах). Если столбец основан на домене, данный столбец показывает нижележащий тип домена (а сам домен показывается в <code class="literal">domain_name</code> и связанных столбцах).</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">character_maximum_length</code> <code class="type">cardinal_number</code>
+      </p>
+      <p>Если в <code class="literal">data_type</code> указан тип текстовой или битовой строки, это поле задаёт её объявленную максимальную длину; NULL для всех других типов данных, либо если максимальная длина не объявлена.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">character_octet_length</code> <code class="type">cardinal_number</code>
+      </p>
+      <p>Если в <code class="literal">data_type</code> указан тип символьной строки, это поле задаёт её максимально возможный размер в октетах (байтах); NULL для всех других типов данных. Максимальный размер в октетах зависит от объявленной максимальной длины в символах (см. выше) и от кодировки сервера.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">numeric_precision</code> <code class="type">cardinal_number</code>
+      </p>
+      <p>Если в <code class="literal">data_type</code> указан числовой тип, этот столбец содержит точность (объявленную или неявную) типа для целевого столбца. Точность определяет число значащих цифр. Она может выражаться в десятичных (по основанию 10) или двоичных (по основанию 2) цифрах, согласно столбцу <code class="literal">numeric_precision_radix</code>. Для всех других типов данных этот столбец содержит NULL.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">numeric_precision_radix</code> <code class="type">cardinal_number</code>
+      </p>
+      <p>Если в <code class="literal">data_type</code> указан числовой тип, в этом столбце определяется, по какому основанию задаются значения в столбцах <code class="literal">numeric_precision</code> и <code class="literal">numeric_scale</code>. Возможные варианты: 2 или 10. Для всех других типов данных этот столбец содержит NULL.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">numeric_scale</code> <code class="type">cardinal_number</code>
+      </p>
+      <p>Если в <code class="literal">data_type</code> указан точный числовой тип, этот столбец содержит масштаб (объявленный или неявный) типа для целевого столбца. Масштаб определяет число значащих цифр справа от десятичной точки. Он может выражаться в десятичных (по основанию 10) или двоичных (по основанию 2) цифрах, согласно столбцу <code class="literal">numeric_precision_radix</code>. Для всех других типов данных этот столбец содержит NULL.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">datetime_precision</code> <code class="type">cardinal_number</code>
+      </p>
+      <p>Если в <code class="literal">data_type</code> указан тип даты, времени, отметки времени или интервала, этот столбец содержит точность (объявленную или неявную) в долях секунды типа для целевого столбца, то есть число десятичных цифр, сохраняемых после десятичной точки в значении секунд. Для всех других типов данных этот столбец содержит NULL.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">interval_type</code> <code class="type">character_data</code>
+      </p>
+      <p>Если в <code class="literal">data_type</code> указан тип интервала, этот столбец определяет, какие поля принимает интервал в целевом столбце, например: <code class="literal">YEAR TO MONTH</code>, <code class="literal">DAY TO SECOND</code> и т. д. Если ограничения для полей не заданы (то есть, интервал принимает все поля), и для любых других типов данных это поле содержит NULL.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">interval_precision</code> <code class="type">cardinal_number</code>
+      </p>
+      <p>Относится к функциональности, отсутствующей в <span class="productname">PostgreSQL</span> (см. поле <code class="literal">datetime_precision</code>, определяющее точность в долях секунды для типов интервалов)</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">character_set_catalog</code> <code class="type">sql_identifier</code>
+      </p>
+      <p>Относится к функциональности, отсутствующей в <span class="productname">PostgreSQL</span></p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">character_set_schema</code> <code class="type">sql_identifier</code>
+      </p>
+      <p>Относится к функциональности, отсутствующей в <span class="productname">PostgreSQL</span></p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">character_set_name</code> <code class="type">sql_identifier</code>
+      </p>
+      <p>Относится к функциональности, отсутствующей в <span class="productname">PostgreSQL</span></p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">collation_catalog</code> <code class="type">sql_identifier</code>
+      </p>
+      <p>Имя базы данных, содержащей правило сортировки столбца (это всегда текущая база), либо NULL, если это правило по умолчанию или тип данных столбца несортируемый</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">collation_schema</code> <code class="type">sql_identifier</code>
+      </p>
+      <p>Имя схемы, содержащей правило сортировки столбца, либо NULL, если это правило по умолчанию или тип данных столбца несортируемый</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">collation_name</code> <code class="type">sql_identifier</code>
+      </p>
+      <p>Имя правила сортировки столбца, либо NULL, если это правило по умолчанию или тип данных столбца несортируемый</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">domain_catalog</code> <code class="type">sql_identifier</code>
+      </p>
+      <p>Если целевой столбец имеет тип домена, этот столбец содержит имя базы данных, в которой определён домен (всегда текущая база), иначе — NULL.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">domain_schema</code> <code class="type">sql_identifier</code>
+      </p>
+      <p>Если целевой столбец имеет тип домена, этот столбец содержит имя схемы, в которой определён домен, иначе — NULL.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">domain_name</code> <code class="type">sql_identifier</code>
+      </p>
+      <p>Если целевой столбец имеет тип домена, этот столбец содержит имя домена, иначе — NULL.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">udt_catalog</code> <code class="type">sql_identifier</code>
+      </p>
+      <p>Имя базы данных, в которой определён тип (если применимо, нижележащий тип домена) столбца (всегда текущая база)</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">udt_schema</code> <code class="type">sql_identifier</code>
+      </p>
+      <p>Имя схемы, в которой определён тип (если применимо, нижележащий тип домена) столбца (всегда текущая база)</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">udt_name</code> <code class="type">sql_identifier</code>
+      </p>
+      <p>Имя типа данных столбца (если применимо, нижележащий тип домена)</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">scope_catalog</code> <code class="type">sql_identifier</code>
+      </p>
+      <p>Относится к функциональности, отсутствующей в <span class="productname">PostgreSQL</span></p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">scope_schema</code> <code class="type">sql_identifier</code>
+      </p>
+      <p>Относится к функциональности, отсутствующей в <span class="productname">PostgreSQL</span></p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">scope_name</code> <code class="type">sql_identifier</code>
+      </p>
+      <p>Относится к функциональности, отсутствующей в <span class="productname">PostgreSQL</span></p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">maximum_cardinality</code> <code class="type">cardinal_number</code>
+      </p>
+      <p>Всегда NULL, так как массивы имеют неограниченную максимальную ёмкость в <span class="productname">PostgreSQL</span></p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">dtd_identifier</code> <code class="type">sql_identifier</code>
+      </p>
+      <p>Идентификатор дескриптора типа данных столбца, уникальный среди всех дескрипторов типов, относящихся к таблице. Он в основном полезен для соединения с другими экземплярами таких идентификаторов. (Конкретный формат идентификатора не определён и не гарантируется, что он останется неизменным в будущих версиях.)</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">is_self_referencing</code> <code class="type">yes_or_no</code>
+      </p>
+      <p>Относится к функциональности, отсутствующей в <span class="productname">PostgreSQL</span></p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">is_identity</code> <code class="type">yes_or_no</code>
+      </p>
+      <p>Если целевой столбец является столбцом идентификации, значение <code class="literal">YES</code>, иначе — <code class="literal">NO</code>.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">identity_generation</code> <code class="type">character_data</code>
+      </p>
+      <p>Если целевой столбец является столбцом идентификации, значение <code class="literal">ALWAYS</code> или <code class="literal">BY DEFAULT</code>, отражающее определение столбца.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">identity_start</code> <code class="type">character_data</code>
+      </p>
+      <p>Если целевой столбец является столбцом идентификации, начальное значение внутренней последовательности, иначе — NULL.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">identity_increment</code> <code class="type">character_data</code>
+      </p>
+      <p>Если целевой столбец является столбцом идентификации, шаг внутренней последовательности, иначе — NULL.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">identity_maximum</code> <code class="type">character_data</code>
+      </p>
+      <p>Если целевой столбец является столбцом идентификации, максимальное значение внутренней последовательности, иначе — NULL.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">identity_minimum</code> <code class="type">character_data</code>
+      </p>
+      <p>Если целевой столбец является столбцом идентификации, минимальное значение внутренней последовательности, иначе — NULL.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">identity_cycle</code> <code class="type">yes_or_no</code>
+      </p>
+      <p>Если целевой столбец является столбцом идентификации, <code class="literal">YES</code> показывает, что внутренняя последовательность зацикливается, <code class="literal">NO</code> — не зацикливается, иначе — NULL.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">is_generated</code> <code class="type">character_data</code>
+      </p>
+      <p><code class="literal">ALWAYS</code>, если целевой столбец является генерируемым, иначе — <code class="literal">NEVER</code>.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">generation_expression</code> <code class="type">character_data</code>
+      </p>
+      <p>Генерирующее выражение, если целевой столбец является генерируемым, иначе — NULL.</p></td></tr><tr><td class="catalog_table_entry"><p class="column_definition">
+       <code class="structfield">is_updatable</code> <code class="type">yes_or_no</code>
+      </p>
+      <p><code class="literal">YES</code>, если столбец допускает изменение, или <code class="literal">NO</code> в противном случае (столбцы в базовых таблицах всегда изменяемые, но в представлениях — не обязательно)</p></td></tr></tbody></table></div></div><br class="table-break" /><p>Так как типы данных могут определяться в SQL множеством способов и <span class="productname">PostgreSQL</span> добавляет дополнительные варианты, представление типов в информационной схеме может быть довольно сложным. Столбец <code class="literal">data_type</code> предназначен для идентификации нижележащего встроенного типа столбца. В <span class="productname">PostgreSQL</span> это означает, что данный тип определён в схеме системного каталога <code class="literal">pg_catalog</code>. Этот столбец может быть полезным, если приложение способно особым образом воспринимать встроенные типы (например, форматировать числовые типы по-другому или задействовать данные в столбцах точности). Столбцы <code class="literal">udt_name</code>, <code class="literal">udt_schema</code> и <code class="literal">udt_catalog</code> всегда указывают на нижележащий тип данных столбца, даже если столбец основан на домене. (Так как в <span class="productname">PostgreSQL</span> встроенные типы не отличаются от определённых пользователем, в этом представлении выводятся и они. Это расширение стандарта SQL.) Эти столбцы должны учитываться, когда приложению нужно обрабатывать данные в зависимости от типа, так как в этом случае не важно, основан ли столбец на домене. Если столбец основан на домене, на него указывают столбцы <code class="literal">domain_name</code>, <code class="literal">domain_schema</code> и <code class="literal">domain_catalog</code>. Если вы хотите связать столбцы с их типами данных и обработать домены как отдельные типы, вы можете записать <code class="literal">coalesce(domain_name, udt_name)</code> и т. п.</p></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="infoschema-column-udt-usage.html" title="37.16. column_udt_usage">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="information-schema.html" title="Глава 37. Информационная схема">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="infoschema-constraint-column-usage.html" title="37.18. constraint_column_usage">След.</a></td></tr><tr><td width="40%" align="left" valign="top">37.16. <code class="literal">column_udt_usage</code> </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 37.18. <code class="literal">constraint_column_usage</code></td></tr></table></div></body></html>

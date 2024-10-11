@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>9.25. Функции, возвращающие множества</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="functions-comparisons.html" title="9.24. Сравнение табличных строк и массивов" /><link rel="next" href="functions-info.html" title="9.26. Системные информационные функции и операторы" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">9.25. Функции, возвращающие множества</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="functions-comparisons.html" title="9.24. Сравнение табличных строк и массивов">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="functions.html" title="Глава 9. Функции и операторы">Наверх</a></td><th width="60%" align="center">Глава 9. Функции и операторы</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="functions-info.html" title="9.26. Системные информационные функции и операторы">След.</a></td></tr></table><hr /></div><div class="sect1" id="FUNCTIONS-SRF"><div class="titlepage"><div><div><h2 class="title" style="clear: both">9.25. Функции, возвращающие множества <a href="#FUNCTIONS-SRF" class="id_link">#</a></h2></div></div></div><a id="id-1.5.8.31.2" class="indexterm"></a><p>В этом разделе описаны функции, которые могут возвращать не одну, а множество строк. Чаще всего из их числа используются функции, генерирующие ряды значений, которые перечислены в <a class="xref" href="functions-srf.html#FUNCTIONS-SRF-SERIES" title="Таблица 9.65. Функции, генерирующие ряды значений">Таблице 9.65</a> и <a class="xref" href="functions-srf.html#FUNCTIONS-SRF-SUBSCRIPTS" title="Таблица 9.66. Функции, генерирующие индексы массивов">Таблице 9.66</a>. Другие, более специализированные функции множеств описаны в других разделах этой документации. Варианты комбинирования нескольких функций, возвращающих множества строк, описаны в <a class="xref" href="queries-table-expressions.html#QUERIES-TABLEFUNCTIONS" title="7.2.1.4. Табличные функции">Подразделе 7.2.1.4</a>.</p><div class="table" id="FUNCTIONS-SRF-SERIES"><p class="title"><strong>Таблица 9.65. Функции, генерирующие ряды значений</strong></p><div class="table-contents"><table class="table" summary="Функции, генерирующие ряды значений" border="1"><colgroup><col /></colgroup><thead><tr><th class="func_table_entry"><p class="func_signature">Функция</p>
+       <p>Описание</p></th></tr></thead><tbody><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.31.4.2.2.1.1.1.1" class="indexterm"></a> <code class="function">generate_series</code> ( <em class="parameter"><code>start</code></em> <code class="type">integer</code>, <em class="parameter"><code>stop</code></em> <code class="type">integer</code> [<span class="optional">, <em class="parameter"><code>step</code></em> <code class="type">integer</code></span>] ) → <code class="returnvalue">setof integer</code></p>
+       <p class="func_signature"><code class="function">generate_series</code> ( <em class="parameter"><code>start</code></em> <code class="type">bigint</code>, <em class="parameter"><code>stop</code></em> <code class="type">bigint</code> [<span class="optional">, <em class="parameter"><code>step</code></em> <code class="type">bigint</code></span>] ) → <code class="returnvalue">setof bigint</code></p>
+       <p class="func_signature"><code class="function">generate_series</code> ( <em class="parameter"><code>start</code></em> <code class="type">numeric</code>, <em class="parameter"><code>stop</code></em> <code class="type">numeric</code> [<span class="optional">, <em class="parameter"><code>step</code></em> <code class="type">numeric</code></span>] ) → <code class="returnvalue">setof numeric</code></p>
+       <p>Выдаёт ряд значений от <em class="parameter"><code>start</code></em> до <em class="parameter"><code>stop</code></em> с заданным шагом (<em class="parameter"><code>step</code></em>), по умолчанию равным 1.</p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">generate_series</code> ( <em class="parameter"><code>start</code></em> <code class="type">timestamp</code>, <em class="parameter"><code>stop</code></em> <code class="type">timestamp</code>, <em class="parameter"><code>step</code></em> <code class="type">interval</code> ) → <code class="returnvalue">setof timestamp</code></p>
+       <p class="func_signature"><code class="function">generate_series</code> ( <em class="parameter"><code>start</code></em> <code class="type">timestamp with time zone</code>, <em class="parameter"><code>stop</code></em> <code class="type">timestamp with time zone</code>, <em class="parameter"><code>step</code></em> <code class="type">interval</code> [<span class="optional">, <em class="parameter"><code>timezone</code></em> <code class="type">text</code></span>] ) → <code class="returnvalue">setof timestamp with time zone</code></p>
+       <p>Выдаёт ряд значений от <em class="parameter"><code>start</code></em> до <em class="parameter"><code>stop</code></em> с заданным шагом (<em class="parameter"><code>step</code></em>). В форме с учётом часового пояса, время суток и поправки на летнее время вычисляются в соответствии с часовым поясом, указанным в аргументе <em class="parameter"><code>timezone</code></em>, или текущим значением <a class="xref" href="runtime-config-client.html#GUC-TIMEZONE">TimeZone</a> при отсутствии аргумента.</p></td></tr></tbody></table></div></div><br class="table-break" /><p>Если заданный шаг (<em class="parameter"><code>step</code></em>) положительный, а <em class="parameter"><code>start</code></em> оказывается больше <em class="parameter"><code>stop</code></em>, эти функции возвращают 0 строк. Тот же результат будет, если <em class="parameter"><code>step</code></em> меньше 0, а <em class="parameter"><code>start</code></em> меньше <em class="parameter"><code>stop</code></em>, или если в каком-либо аргументе передаётся <code class="literal">NULL</code>. Если же <em class="parameter"><code>step</code></em> будет равен 0, произойдёт ошибка. Несколько примеров: </p><pre class="programlisting">SELECT * FROM generate_series(2,4);
+ generate_series
+-----------------
+               2
+               3
+               4
+(3 rows)
+
+SELECT * FROM generate_series(5,1,-2);
+ generate_series
+-----------------
+               5
+               3
+               1
+(3 rows)
+
+SELECT * FROM generate_series(4,3);
+ generate_series
+-----------------
+(0 rows)
+
+SELECT generate_series(1.1, 4, 1.3);
+ generate_series
+-----------------
+             1.1
+             2.4
+             3.7
+(3 rows)
+
+-- в этом примере задействуется оператор прибавления к дате целого числа:
+SELECT current_date + s.a AS dates FROM generate_series(0,14,7) AS s(a);
+   dates
+------------
+ 2004-02-05
+ 2004-02-12
+ 2004-02-19
+(3 rows)
+
+SELECT * FROM generate_series('2008-03-01 00:00'::timestamp,
+                              '2008-03-04 12:00', '10 hours');
+   generate_series
+---------------------
+ 2008-03-01 00:00:00
+ 2008-03-01 10:00:00
+ 2008-03-01 20:00:00
+ 2008-03-02 06:00:00
+ 2008-03-02 16:00:00
+ 2008-03-03 02:00:00
+ 2008-03-03 12:00:00
+ 2008-03-03 22:00:00
+ 2008-03-04 08:00:00
+(9 rows) -- в этом примере предполагается, что для TimeZone установлен часовой пояс UTC; обратите внимание на переход на летнее время:
+SELECT * FROM generate_series('2001-10-22 00:00 -04:00'::timestamptz,
+                              '2001-11-01 00:00 -05:00'::timestamptz,
+                              '1 day'::interval, 'America/New_York');
+    generate_series
+------------------------
+ 2001-10-22 04:00:00+00
+ 2001-10-23 04:00:00+00
+ 2001-10-24 04:00:00+00
+ 2001-10-25 04:00:00+00
+ 2001-10-26 04:00:00+00
+ 2001-10-27 04:00:00+00
+ 2001-10-28 04:00:00+00
+ 2001-10-29 05:00:00+00
+ 2001-10-30 05:00:00+00
+ 2001-10-31 05:00:00+00
+ 2001-11-01 05:00:00+00
+(11 rows)</pre><div class="table" id="FUNCTIONS-SRF-SUBSCRIPTS"><p class="title"><strong>Таблица 9.66. Функции, генерирующие индексы массивов</strong></p><div class="table-contents"><table class="table" summary="Функции, генерирующие индексы массивов" border="1"><colgroup><col /></colgroup><thead><tr><th class="func_table_entry"><p class="func_signature">Функция</p>
+       <p>Описание</p></th></tr></thead><tbody><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.31.6.2.2.1.1.1.1" class="indexterm"></a> <code class="function">generate_subscripts</code> ( <em class="parameter"><code>array</code></em> <code class="type">anyarray</code>, <em class="parameter"><code>dim</code></em> <code class="type">integer</code> ) → <code class="returnvalue">setof integer</code></p>
+       <p>Выдаёт ряд значений, содержащий все допустимые индексы в размерности <em class="parameter"><code>dim</code></em> данного массива.</p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">generate_subscripts</code> ( <em class="parameter"><code>array</code></em> <code class="type">anyarray</code>, <em class="parameter"><code>dim</code></em> <code class="type">integer</code>, <em class="parameter"><code>reverse</code></em> <code class="type">boolean</code> ) → <code class="returnvalue">setof integer</code></p>
+       <p>Выдаёт ряд значений, содержащий все допустимые индексы в размерности <em class="parameter"><code>dim</code></em> данного массива. Если параметр <em class="parameter"><code>reverse</code></em> равен true, значения выдаются от большего к меньшему.</p></td></tr></tbody></table></div></div><br class="table-break" /><p>Функция <code class="function">generate_subscripts</code> упрощает задачу получения всех допустимых индексов для указанной размерности данного массива. Она выдаёт 0 строк, если в массиве нет указанной размерности или любой из аргументов — <code class="literal">NULL</code>. Взгляните на следующие примеры: </p><pre class="programlisting">-- простой пример использования:
+SELECT generate_subscripts('{NULL,1,NULL,2}'::int[], 1) AS s;
+ s
+---
+ 1
+ 2
+ 3
+ 4
+(4 rows)
+
+-- для показанного массива получение индекса и обращение
+-- к элементу по индексу выполняется с помощью подзапроса:
+SELECT * FROM arrays;
+         a
+--------------------
+ {-1,-2}
+ {100,200,300}
+(2 rows)
+
+SELECT a AS array, s AS subscript, a[s] AS value
+FROM (SELECT generate_subscripts(a, 1) AS s, a FROM arrays) foo;
+     array     | subscript | value
+---------------+-----------+-------
+ {-1,-2}       |         1 |    -1
+ {-1,-2}       |         2 |    -2
+ {100,200,300} |         1 |   100
+ {100,200,300} |         2 |   200
+ {100,200,300} |         3 |   300
+(5 rows)
+
+-- разворачивание двумерного массива:
+CREATE OR REPLACE FUNCTION unnest2(anyarray)
+RETURNS SETOF anyelement AS $$
+select $1[i][j]
+   from generate_subscripts($1,1) g1(i),
+        generate_subscripts($1,2) g2(j);
+$$ LANGUAGE sql IMMUTABLE;
+CREATE FUNCTION
+SELECT * FROM unnest2(ARRAY[[1,2],[3,4]]);
+ unnest2
+---------
+       1
+       2
+       3
+       4
+(4 rows)</pre><a id="id-1.5.8.31.8" class="indexterm"></a><p>Когда для функции в предложении <code class="literal">FROM</code> указывается <code class="literal">WITH ORDINALITY</code>, к столбцам результата функции добавляется столбец типа <code class="type">bigint</code>, числа в котором начинаются с 1 и увеличиваются на 1 для каждой строки, выданной функцией. В первую очередь это полезно для функций, возвращающих множества, например, <code class="function">unnest()</code>. </p><pre class="programlisting">-- функция, возвращающая множество, с нумерацией
+SELECT * FROM pg_ls_dir('.') WITH ORDINALITY AS t(ls,n);
+       ls        | n
+-----------------+----
+ pg_serial       |  1
+ pg_twophase     |  2
+ postmaster.opts |  3
+ pg_notify       |  4
+ postgresql.conf |  5
+ pg_tblspc       |  6
+ logfile         |  7
+ base            |  8
+ postmaster.pid  |  9
+ pg_ident.conf   | 10
+ global          | 11
+ pg_xact         | 12
+ pg_snapshots    | 13
+ pg_multixact    | 14
+ PG_VERSION      | 15
+ pg_wal          | 16
+ pg_hba.conf     | 17
+ pg_stat_tmp     | 18
+ pg_subtrans     | 19
+(19 rows)</pre></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="functions-comparisons.html" title="9.24. Сравнение табличных строк и массивов">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="functions.html" title="Глава 9. Функции и операторы">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="functions-info.html" title="9.26. Системные информационные функции и операторы">След.</a></td></tr><tr><td width="40%" align="left" valign="top">9.24. Сравнение табличных строк и массивов </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 9.26. Системные информационные функции и операторы</td></tr></table></div></body></html>

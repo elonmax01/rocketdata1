@@ -1,0 +1,446 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>38.10. Функции на языке C</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="xfunc-internal.html" title="38.9. Внутренние функции" /><link rel="next" href="xfunc-optimization.html" title="38.11. Информация для оптимизации функций" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">38.10. Функции на языке C</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="xfunc-internal.html" title="38.9. Внутренние функции">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="extend.html" title="Глава 38. Расширение SQL">Наверх</a></td><th width="60%" align="center">Глава 38. Расширение <acronym class="acronym">SQL</acronym></th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="xfunc-optimization.html" title="38.11. Информация для оптимизации функций">След.</a></td></tr></table><hr /></div><div class="sect1" id="XFUNC-C"><div class="titlepage"><div><div><h2 class="title" style="clear: both">38.10. Функции на языке C <a href="#XFUNC-C" class="id_link">#</a></h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="xfunc-c.html#XFUNC-C-DYNLOAD">38.10.1. Динамическая загрузка</a></span></dt><dt><span class="sect2"><a href="xfunc-c.html#XFUNC-C-BASETYPE">38.10.2. Базовые типы в функциях на языке C</a></span></dt><dt><span class="sect2"><a href="xfunc-c.html#XFUNC-C-V1-CALL-CONV">38.10.3. Соглашение о вызовах версии 1</a></span></dt><dt><span class="sect2"><a href="xfunc-c.html#XFUNC-C-CODE">38.10.4. Написание кода</a></span></dt><dt><span class="sect2"><a href="xfunc-c.html#DFUNC">38.10.5. Компиляция и компоновка динамически загружаемых функций</a></span></dt><dt><span class="sect2"><a href="xfunc-c.html#XFUNC-C-COMPOSITE-TYPE-ARGS">38.10.6. Аргументы составного типа</a></span></dt><dt><span class="sect2"><a href="xfunc-c.html#XFUNC-C-RETURNING-ROWS">38.10.7. Возврат строк (составных типов)</a></span></dt><dt><span class="sect2"><a href="xfunc-c.html#XFUNC-C-RETURN-SET">38.10.8. Возврат множеств</a></span></dt><dt><span class="sect2"><a href="xfunc-c.html#XFUNC-C-POLYMORPHIC">38.10.9. Полиморфные типы аргументов и результата</a></span></dt><dt><span class="sect2"><a href="xfunc-c.html#XFUNC-SHARED-ADDIN">38.10.10. Разделяемая память и лёгкие блокировки</a></span></dt><dt><span class="sect2"><a href="xfunc-c.html#EXTEND-CPP">38.10.11. Использование C++ для расширяемости</a></span></dt></dl></div><a id="id-1.8.3.13.2" class="indexterm"></a><p>Пользовательские функции могут быть написаны на C (или на языке, который может быть совместим с C, например C++). Такие функции компилируются в динамически загружаемые объекты (также называемые разделяемыми библиотеками) и загружаются сервером по требованию. Именно метод динамической загрузки отличает функции <span class="quote">«<span class="quote">на языке C</span>»</span> от <span class="quote">«<span class="quote">внутренних</span>»</span> функций — правила написания кода по сути одни и те же. (Собственно, поэтому стандартная библиотека внутренних функций может быть богатым источником примеров для написания собственных функций на языке C.)</p><p>В настоящее время для функций на C применяется только одно соглашение о вызовах (<span class="quote">«<span class="quote">версии 1</span>»</span>). Поддержка этого соглашения обозначается объявлением функции с макросом <code class="literal">(PG_FUNCTION_INFO_V1)</code>, как показано ниже.</p><div class="sect2" id="XFUNC-C-DYNLOAD"><div class="titlepage"><div><div><h3 class="title">38.10.1. Динамическая загрузка <a href="#XFUNC-C-DYNLOAD" class="id_link">#</a></h3></div></div></div><a id="id-1.8.3.13.5.2" class="indexterm"></a><p>В первый раз, когда в сеансе вызывается пользовательская функция в определённом внешнем объектном файле, загрузчик динамических модулей загружает этот файл в память, чтобы можно было вызвать эту функцию. Таким образом, в команде <code class="command">CREATE FUNCTION</code>, объявляющей пользовательскую функцию на языке C, необходимо определить две сущности для функции: имя загружаемого объектного файла и имя уровня C (символ для компоновки) заданной функции в этом объектном файле. Если имя уровня C не указано явно, предполагается, что оно совпадает с именем функции в SQL.</p><p>Для нахождения разделяемого объектного файла по имени, заданному в команде <code class="command">CREATE FUNCTION</code>, применяется следующий алгоритм: </p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem"><p>Если имя задаётся абсолютным путём, загружается заданный файл.</p></li><li class="listitem"><p>Если имя начинается со строки <code class="literal">$libdir</code>, эта часть пути заменяется путём к каталогу библиотек <span class="productname">PostgreSQL</span>, который определяется во время сборки.<a id="id-1.8.3.13.5.4.2.2.1.3" class="indexterm"></a></p></li><li class="listitem"><p>Если в имени не указывается каталог, поиск файла производится по пути, заданному конфигурационной переменной <a class="xref" href="runtime-config-client.html#GUC-DYNAMIC-LIBRARY-PATH">dynamic_library_path</a>.<a id="id-1.8.3.13.5.4.2.3.1.2" class="indexterm"></a></p></li><li class="listitem"><p>В противном случае (файл не был найден в пути поиска, или в его имени указывается не абсолютный путь к каталогу), загрузчик попытается принять имя как есть, что, скорее всего, не увенчается успехом. (Полагаться на текущий рабочий каталог ненадёжно.)</p></li></ol></div><p> Если эта последовательность не даёт положительный результат, к данному имени добавляется принятое на данной платформе расширение файлов библиотек (часто <code class="filename">.so</code>) и последовательность повторяется снова. Если и это не приводит к успеху, происходит сбой загрузки.</p><p>Для поиска разделяемых библиотек рекомендуется задавать либо путь относительно <code class="literal">$libdir</code>, либо путь динамических библиотек. Это упрощает обновление версии при перемещении новой инсталляции в другое место. Какой именно каталог подразумевается под <code class="literal">$libdir</code>, можно узнать с помощью команды <code class="literal">pg_config --pkglibdir</code>.</p><p>Пользователь, от имени которого работает сервер <span class="productname">PostgreSQL</span>, должен иметь возможность пройти путь к файлу, который требуется загрузить. Очень распространённая ошибка — когда сам файл или каталог верхнего уровня оказывается недоступным для чтения и/или исполнения для пользователя <span class="systemitem">postgres</span>.</p><p>В любом случае имя файла, заданное в команде <code class="command">CREATE FUNCTION</code>, записывается в системные каталоги буквально, так что если этот файл потребуется загрузить ещё раз, та же процедура будет проделана снова.</p><div class="note"><h3 class="title">Примечание</h3><p><span class="productname">PostgreSQL</span> не будет компилировать функцию на C автоматически, поэтому прежде чем ссылаться на объектный файл в команде <code class="command">CREATE FUNCTION</code>, его нужно скомпилировать. За дополнительными сведениями обратитесь к <a class="xref" href="xfunc-c.html#DFUNC" title="38.10.5. Компиляция и компоновка динамически загружаемых функций">Подразделу 38.10.5</a>.</p></div><a id="id-1.8.3.13.5.9" class="indexterm"></a><p>Чтобы гарантировать, что динамически загружаемый объектный файл не будет загружен несовместимым сервером, <span class="productname">PostgreSQL</span> проверяет, содержит ли этот файл <span class="quote">«<span class="quote">отличительный блок</span>»</span> с требуемым содержимым. Благодаря этому сервер может выявить очевидную несовместимость, например, когда код скомпилирован для другой старшей версии <span class="productname">PostgreSQL</span>. Чтобы включить его в свой модуль, напишите это в одном (и только одном) из исходных файлов модуля, после включения заголовочного файла <code class="filename">fmgr.h</code>: </p><pre class="programlisting">PG_MODULE_MAGIC;</pre><p>После того как он был использован первый раз, динамически загружаемый объектный файл сохраняется в памяти. Следующие обращения в том же сеансе к функциям в этом файле повлекут только небольшие издержки, связанные с поиском в таблице символов. Если вам нужно принудительно перезагрузить объектный файл, например, после перекомпиляции, начните новый сеанс.</p><a id="id-1.8.3.13.5.12" class="indexterm"></a><a id="id-1.8.3.13.5.13" class="indexterm"></a><p>Динамически загружаемый файл может дополнительно содержать функции инициализации и завершения работы библиотеки. Если в файле находится функция с именем <code class="function">_PG_init</code>, эта функция будет вызвана сразу после загрузки файла. Эта функция не принимает параметры и не должна ничего возвращать. В настоящее время возможности выгрузить динамически загруженный файл нет.</p></div><div class="sect2" id="XFUNC-C-BASETYPE"><div class="titlepage"><div><div><h3 class="title">38.10.2. Базовые типы в функциях на языке C <a href="#XFUNC-C-BASETYPE" class="id_link">#</a></h3></div></div></div><a id="id-1.8.3.13.6.2" class="indexterm"></a><p>Чтобы понимать, как написать функцию на языке C, вы должны знать, как внутри <span class="productname">PostgreSQL</span> представляются базовые типы данных и как их могут принимать и передавать функции. <span class="productname">PostgreSQL</span> внутри воспринимает базовые типы как <span class="quote">«<span class="quote">блоки памяти</span>»</span>. Пользовательские функции, устанавливаемые для типов, в свою очередь, определяют, как <span class="productname">PostgreSQL</span> может работать с этими типами. То есть, <span class="productname">PostgreSQL</span> только сохраняет и загружает данные с диска, а для ввода, обработки и вывода данных он использует определяемые вами функции.</p><p>Базовые типы могут иметь один из трёх внутренних форматов: </p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>передаётся по значению, фиксированной длины</p></li><li class="listitem"><p>передаётся по ссылке, фиксированной длины</p></li><li class="listitem"><p>передаётся по ссылке, переменной длины</p></li></ul></div><p>Типы, передаваемые по значению, могут иметь размер только 1, 2 или 4 байта (и 8 байт, если <code class="literal">sizeof(Datum)</code> равен 8 на вашей машине). Определяя собственные типы, следует позаботиться о том, чтобы они имели одинаковый размер (в байтах) во всех архитектурах. Например, тип <code class="literal">long</code> опасен, так как он имеет размер 4 байта на одних машинах, и 8 байт на других, тогда как тип <code class="type">int</code> состоит из 4 байт в большинстве систем Unix. Поэтому разумной реализацией типа <code class="type">int4</code> на платформе Unix может быть такая: </p><pre class="programlisting">/* 4-байтное целое, передаётся по значению */
+typedef int int4;</pre><p> (В коде собственно PostgreSQL этот тип называется <code class="type">int32</code>, так как в C принято соглашение, что <code class="type">int<em class="replaceable"><code>XX</code></em></code> подразумевает <em class="replaceable"><code>XX</code></em> <span class="emphasis"><em>бит</em></span>. Заметьте, что вследствие этого тип <code class="type">int8</code> в C имеет размер 1 байт. Тип <code class="type">int8</code>, принятый в SQL, в C называется <code class="type">int64</code>. См. также <a class="xref" href="xfunc-c.html#XFUNC-C-TYPE-TABLE" title="Таблица 38.2. Типы C, эквивалентные встроенным типам SQL">Таблицу 38.2</a>.)</p><p>С другой стороны, типы фиксированной длины любого размера можно передавать по ссылке. Например, взгляните на пример реализации типа <span class="productname">PostgreSQL</span>: </p><pre class="programlisting">/* 16-байтная структура, передаётся по ссылке */
+typedef struct
+{
+    double  x, y;
+} Point;</pre><p> В функции <span class="productname">PostgreSQL</span> и из них могут передаваться только указатели на такие типы. Чтобы вернуть значение такого типа, выделите для него нужное количество памяти функцией <code class="literal">palloc</code>, заполните выделенную память и верните указатель на неё. (Если вы захотите просто вернуть то же значение, что было получено во входном аргументе этого же типа данных, вы можете пропустить дополнительный вызов <code class="literal">palloc</code> и просто вернуть указатель на это поступившее значение.)</p><p>Наконец, все типы переменной длины также должны передаваться по ссылке. Все типы переменной длины должны начинаться с обязательного поля длины размером ровно 4 байта, которая будет задаваться макросом <code class="symbol">SET_VARSIZE</code>; никогда не устанавливайте это поле вручную! Все данные, которые будут храниться в этом типе, должны размещаться в памяти непосредственно за этим полем длины. Поле длины содержит полную длину структуры, то есть включает размер самого поля длины.</p><p>Ещё один важный момент — старайтесь не оставлять неинициализированных байт в значениях данных; например, обнуляйте все возможные байты выравнивания, которые могут присутствовать в структурах. Если этого не делать, логически равные значения ваших данных могут представляться неравными планировщику, что приведёт к построению неэффективных (хотя и корректных) планов.</p><div class="warning"><h3 class="title">Предупреждение</h3><p><span class="emphasis"><em>Никогда</em></span> не изменяйте содержимое, передаваемое на вход по ссылке. Если вы сделаете это, вы скорее всего испортите данные на диске, так как полученный вами указатель указывает непосредственно на место в дисковом буфере. Единственное исключение из этого правила освещается в <a class="xref" href="xaggr.html" title="38.12. Пользовательские агрегатные функции">Разделе 38.12</a>.</p></div><p>В качестве примера мы можем определить тип <code class="type">text</code> так: </p><pre class="programlisting">typedef struct {
+    int32 length;
+    char data[FLEXIBLE_ARRAY_MEMBER];
+} text;</pre><p> Запись <code class="literal">[FLEXIBLE_ARRAY_MEMBER]</code> означает, что действительная длина массива данных в этом объявлении не указывается.</p><p>Работая с типами переменной длины, мы должны аккуратно выделить нужный объём памяти и записать его размер в поле длины. Например, если нужно сохранить 40 байт в структуре <code class="structname">text</code>, можно применить такой код: </p><pre class="programlisting">
+#include "postgres.h"
+...
+char buffer[40]; /* our source data */
+...
+text *destination = (text *) palloc(VARHDRSZ + 40);
+SET_VARSIZE(destination, VARHDRSZ + 40);
+memcpy(destination-&gt;data, buffer, 40);
+...
+
+</pre><p> <code class="literal">VARHDRSZ</code> совпадает с <code class="literal">sizeof(int32)</code>, но для получения размера заголовка типа переменной длины хорошим стилем считается применять макрос <code class="literal">VARHDRSZ</code>. Кроме того, поле длины <span class="emphasis"><em>должно</em></span> устанавливаться макросом <code class="literal">SET_VARSIZE</code>, а не простым присваиванием.</p><p>В <a class="xref" href="xfunc-c.html#XFUNC-C-TYPE-TABLE" title="Таблица 38.2. Типы C, эквивалентные встроенным типам SQL">Таблице 38.2</a> указано, какие типы языка C соответствуют типам SQL при написании функций на C с использованием встроенных типов <span class="productname">PostgreSQL</span>. В столбце <span class="quote">«<span class="quote">Определён в</span>»</span> указывается, какой заголовочный файл необходимо подключить, чтобы получить определение типа. (Фактическое определение может быть в другом файле, который подключается из указанного, однако рекомендуется придерживаться обозначенного интерфейса.) Заметьте, что в любом исходном файле первым всегда необходимо включать <code class="filename">postgres.h</code>, потому что в нём объявляется ряд вещей, которые нужны в любом случае, и потому что включение первым другого заголовочного файла может сделать код непереносимым.</p><div class="table" id="XFUNC-C-TYPE-TABLE"><p class="title"><strong>Таблица 38.2. Типы C, эквивалентные встроенным типам SQL</strong></p><div class="table-contents"><table class="table" summary="Типы C, эквивалентные встроенным типам SQL" border="1"><colgroup><col class="col1" /><col class="col2" /><col class="col3" /></colgroup><thead><tr><th>Тип SQL</th><th>Тип C</th><th>Определён в</th></tr></thead><tbody><tr><td><code class="type">boolean</code></td><td><code class="type">bool</code></td><td><code class="filename">postgres.h</code> (может быть встроен в компиляторе)</td></tr><tr><td><code class="type">box</code></td><td><code class="type">BOX*</code></td><td><code class="filename">utils/geo_decls.h</code></td></tr><tr><td><code class="type">bytea</code></td><td><code class="type">bytea*</code></td><td><code class="filename">postgres.h</code></td></tr><tr><td><code class="type">"char"</code></td><td><code class="type">char</code></td><td>(встроен в компиляторе)</td></tr><tr><td><code class="type">character</code></td><td><code class="type">BpChar*</code></td><td><code class="filename">postgres.h</code></td></tr><tr><td><code class="type">cid</code></td><td><code class="type">CommandId</code></td><td><code class="filename">postgres.h</code></td></tr><tr><td><code class="type">date</code></td><td><code class="type">DateADT</code></td><td><code class="filename">utils/date.h</code></td></tr><tr><td><code class="type">float4</code> (<code class="type">real</code>)</td><td><code class="type">float4</code></td><td><code class="filename">postgres.h</code></td></tr><tr><td><code class="type">float8</code> (<code class="type">double precision</code>)</td><td><code class="type">float8</code></td><td><code class="filename">postgres.h</code></td></tr><tr><td><code class="type">int2</code> (<code class="type">smallint</code>)</td><td><code class="type">int16</code></td><td><code class="filename">postgres.h</code></td></tr><tr><td><code class="type">int4</code> (<code class="type">integer</code>)</td><td><code class="type">int32</code></td><td><code class="filename">postgres.h</code></td></tr><tr><td><code class="type">int8</code> (<code class="type">bigint</code>)</td><td><code class="type">int64</code></td><td><code class="filename">postgres.h</code></td></tr><tr><td><code class="type">interval</code></td><td><code class="type">Interval*</code></td><td><code class="filename">datatype/timestamp.h</code></td></tr><tr><td><code class="type">lseg</code></td><td><code class="type">LSEG*</code></td><td><code class="filename">utils/geo_decls.h</code></td></tr><tr><td><code class="type">name</code></td><td><code class="type">Name</code></td><td><code class="filename">postgres.h</code></td></tr><tr><td><code class="type">numeric</code></td><td><code class="type">Numeric</code></td><td><code class="filename">utils/numeric.h</code></td></tr><tr><td><code class="type">oid</code></td><td><code class="type">Oid</code></td><td><code class="filename">postgres.h</code></td></tr><tr><td><code class="type">oidvector</code></td><td><code class="type">oidvector*</code></td><td><code class="filename">postgres.h</code></td></tr><tr><td><code class="type">path</code></td><td><code class="type">PATH*</code></td><td><code class="filename">utils/geo_decls.h</code></td></tr><tr><td><code class="type">point</code></td><td><code class="type">POINT*</code></td><td><code class="filename">utils/geo_decls.h</code></td></tr><tr><td><code class="type">regproc</code></td><td><code class="type">RegProcedure</code></td><td><code class="filename">postgres.h</code></td></tr><tr><td><code class="type">text</code></td><td><code class="type">text*</code></td><td><code class="filename">postgres.h</code></td></tr><tr><td><code class="type">tid</code></td><td><code class="type">ItemPointer</code></td><td><code class="filename">storage/itemptr.h</code></td></tr><tr><td><code class="type">time</code></td><td><code class="type">TimeADT</code></td><td><code class="filename">utils/date.h</code></td></tr><tr><td><code class="type">time with time zone</code></td><td><code class="type">TimeTzADT</code></td><td><code class="filename">utils/date.h</code></td></tr><tr><td><code class="type">timestamp</code></td><td><code class="type">Timestamp</code></td><td><code class="filename">datatype/timestamp.h</code></td></tr><tr><td><code class="type">timestamp with time zone</code></td><td><code class="type">TimestampTz</code></td><td><code class="filename">datatype/timestamp.h</code></td></tr><tr><td><code class="type">varchar</code></td><td><code class="type">VarChar*</code></td><td><code class="filename">postgres.h</code></td></tr><tr><td><code class="type">xid</code></td><td><code class="type">TransactionId</code></td><td><code class="filename">postgres.h</code></td></tr></tbody></table></div></div><br class="table-break" /><p>Теперь, когда мы рассмотрели все возможные структуры для базовых типов, мы можем перейти к примерам реальных функций.</p></div><div class="sect2" id="XFUNC-C-V1-CALL-CONV"><div class="titlepage"><div><div><h3 class="title">38.10.3. Соглашение о вызовах версии 1 <a href="#XFUNC-C-V1-CALL-CONV" class="id_link">#</a></h3></div></div></div><p>Соглашение о вызовах версии 1 полагается на макросы, скрывающие основную долю сложностей, связанных с передачей аргументов и результатов. По соглашению версии 1 функция на C должна всегда определяться так: </p><pre class="programlisting">Datum funcname(PG_FUNCTION_ARGS)</pre><p> В дополнение к этому, в том же исходном файле должен присутствовать вызов макроса: </p><pre class="programlisting">PG_FUNCTION_INFO_V1(funcname);</pre><p> (Обычно его принято записывать непосредственно перед функцией.) Этот вызов макроса не нужен для функций <code class="literal">internal</code>, так как <span class="productname">PostgreSQL</span> предполагает, что все внутренние функции используют соглашении версии 1. Однако для функций, загружаемых динамически, этот макрос необходим.</p><p>В функции версии 1 каждый аргумент выбирается макросом <code class="function">PG_GETARG_<em class="replaceable"><code>xxx</code></em>()</code>, который соответствует типу данных аргумента. В нестрогих функциях этому вызову должна предшествовать проверка на NULL в аргументе с использованием <code class="function">PG_ARGISNULL()</code> (см. ниже). Результат возвращается макросом <code class="function">PG_RETURN_<em class="replaceable"><code>xxx</code></em>()</code> для возвращаемого типа. <code class="function">PG_GETARG_<em class="replaceable"><code>xxx</code></em>()</code> принимает в качестве параметра номер выбираемого аргумента функции (нумерация начинается с 0). <code class="function">PG_RETURN_<em class="replaceable"><code>xxx</code></em>()</code> принимает фактическое значение, которое нужно возвратить.</p><p>Несколько примеров использования соглашения о вызовах версии 1:</p><pre class="programlisting">
+#include "postgres.h"
+#include &lt;string.h&gt;
+#include "fmgr.h"
+#include "utils/geo_decls.h"
+#include "varatt.h"
+
+PG_MODULE_MAGIC;
+
+/* by value */
+
+PG_FUNCTION_INFO_V1(add_one);
+
+Datum
+add_one(PG_FUNCTION_ARGS)
+{
+    int32   arg = PG_GETARG_INT32(0);
+
+    PG_RETURN_INT32(arg + 1);
+}
+
+/* by reference, fixed length */
+
+PG_FUNCTION_INFO_V1(add_one_float8);
+
+Datum
+add_one_float8(PG_FUNCTION_ARGS)
+{
+    /* The macros for FLOAT8 hide its pass-by-reference nature. */
+    float8   arg = PG_GETARG_FLOAT8(0);
+
+    PG_RETURN_FLOAT8(arg + 1.0);
+}
+
+PG_FUNCTION_INFO_V1(makepoint);
+
+Datum
+makepoint(PG_FUNCTION_ARGS)
+{
+    /* Here, the pass-by-reference nature of Point is not hidden. */
+    Point     *pointx = PG_GETARG_POINT_P(0);
+    Point     *pointy = PG_GETARG_POINT_P(1);
+    Point     *new_point = (Point *) palloc(sizeof(Point));
+
+    new_point-&gt;x = pointx-&gt;x;
+    new_point-&gt;y = pointy-&gt;y;
+
+    PG_RETURN_POINT_P(new_point);
+}
+
+/* by reference, variable length */
+
+PG_FUNCTION_INFO_V1(copytext);
+
+Datum
+copytext(PG_FUNCTION_ARGS)
+{
+    text     *t = PG_GETARG_TEXT_PP(0);
+
+    /*
+     * VARSIZE_ANY_EXHDR is the size of the struct in bytes, minus the
+     * VARHDRSZ or VARHDRSZ_SHORT of its header.  Construct the copy with a
+     * full-length header.
+     */
+    text     *new_t = (text *) palloc(VARSIZE_ANY_EXHDR(t) + VARHDRSZ);
+    SET_VARSIZE(new_t, VARSIZE_ANY_EXHDR(t) + VARHDRSZ);
+
+    /*
+     * VARDATA is a pointer to the data region of the new struct.  The source
+     * could be a short datum, so retrieve its data through VARDATA_ANY.
+     */
+    memcpy(VARDATA(new_t),          /* destination */
+           VARDATA_ANY(t),          /* source */
+           VARSIZE_ANY_EXHDR(t));   /* how many bytes */
+    PG_RETURN_TEXT_P(new_t);
+}
+
+PG_FUNCTION_INFO_V1(concat_text);
+
+Datum
+concat_text(PG_FUNCTION_ARGS)
+{
+    text  *arg1 = PG_GETARG_TEXT_PP(0);
+    text  *arg2 = PG_GETARG_TEXT_PP(1);
+    int32 arg1_size = VARSIZE_ANY_EXHDR(arg1);
+    int32 arg2_size = VARSIZE_ANY_EXHDR(arg2);
+    int32 new_text_size = arg1_size + arg2_size + VARHDRSZ;
+    text *new_text = (text *) palloc(new_text_size);
+
+    SET_VARSIZE(new_text, new_text_size);
+    memcpy(VARDATA(new_text), VARDATA_ANY(arg1), arg1_size);
+    memcpy(VARDATA(new_text) + arg1_size, VARDATA_ANY(arg2), arg2_size);
+    PG_RETURN_TEXT_P(new_text);
+}
+
+</pre><p>В предположении, что приведённый выше код был подготовлен в файле <code class="filename">funcs.c</code> и скомпилирован в разделяемый объект, мы можем объявить эти функции в <span class="productname">PostgreSQL</span> следующими командами:</p><pre class="programlisting">CREATE FUNCTION add_one(integer) RETURNS integer
+     AS '<em class="replaceable"><code>КАТАЛОГ</code></em>/funcs', 'add_one'
+     LANGUAGE C STRICT;
+
+-- обратите внимание — это перегрузка SQL-функции "add_one"
+CREATE FUNCTION add_one(double precision) RETURNS double precision
+     AS '<em class="replaceable"><code>КАТАЛОГ</code></em>/funcs', 'add_one_float8'
+     LANGUAGE C STRICT;
+
+CREATE FUNCTION makepoint(point, point) RETURNS point
+     AS '<em class="replaceable"><code>КАТАЛОГ</code></em>/funcs', 'makepoint'
+     LANGUAGE C STRICT;
+
+CREATE FUNCTION copytext(text) RETURNS text
+     AS '<em class="replaceable"><code>КАТАЛОГ</code></em>/funcs', 'copytext'
+     LANGUAGE C STRICT;
+
+CREATE FUNCTION concat_text(text, text) RETURNS text
+     AS '<em class="replaceable"><code>КАТАЛОГ</code></em>/funcs', 'concat_text'
+     LANGUAGE C STRICT;</pre><p>Здесь <em class="replaceable"><code>КАТАЛОГ</code></em> — это путь к каталогу, в который помещён разделяемый библиотечный файл (например, каталог учебных материалов (tutorial) в исходном коде <span class="productname">PostgreSQL</span>, содержащий код примеров, использованных в этом разделе). (Лучше было бы просто написать <code class="literal">'funcs'</code> в предложении <code class="literal">AS</code>, предварительно добавив <em class="replaceable"><code>КАТАЛОГ</code></em> в путь поиска. В любом случае мы можем опустить принятое в системе расширение файлов разделяемых библиотек, обычно <code class="literal">.so</code>.)</p><p>Заметьте, что мы объявили эти функции как <span class="quote">«<span class="quote">strict</span>»</span> (строгие) — это означает, что система будет автоматически подразумевать результат NULL, если в одном из входных значений передаётся NULL. Благодаря этому, мы избегаем необходимости проверять входные значения на NULL в коде функции. Без такого объявления нам пришлось бы явно проверять параметры на NULL, используя <code class="function">PG_ARGISNULL()</code>.</p><p>Макрос <code class="function">PG_ARGISNULL(<em class="replaceable"><code>n</code></em>)</code> позволяет функции проверить на NULL каждый из её аргументов. (Разумеется, это нужно делать только в функциях, объявленных без характеристики <span class="quote">«<span class="quote">strict</span>»</span>.) Как и с макросом <code class="function">PG_GETARG_<em class="replaceable"><code>xxx</code></em>()</code>, входные аргументы нумеруются, начиная с нуля. Заметьте, что не следует обращаться к макросу <code class="function">PG_GETARG_<em class="replaceable"><code>xxx</code></em>()</code>, не убедившись, что соответствующий аргумент не NULL. Чтобы возвратить NULL в качестве результата, воспользуйтесь макросом <code class="function">PG_RETURN_NULL()</code>; это работает и со строгими, и с нестрогими функциями.</p><p>На первый взгляд соглашения о вызовах версии 1 могут показаться всего лишь бессмысленным мракобесием, по сравнению с соглашениями простого <code class="literal">C</code>. Однако они позволяют работать с аргументами и возвращаемыми значениями, в которых может передаваться <code class="literal">NULL</code>, а также со значениями в формате TOAST (сжатыми или хранимыми отдельно).</p><p>Кроме того, в интерфейсе версии 1 появились две вариации макроса <code class="function">PG_GETARG_<em class="replaceable"><code>xxx</code></em>()</code>. Первая вариация, <code class="function">PG_GETARG_<em class="replaceable"><code>xxx</code></em>_COPY()</code>, гарантированно возвращает копию указанного аргумента, которую можно безопасно модифицировать. (Обычный макрос иногда возвращает указатель на значение, которое физически хранится в таблице, в которую нельзя писать. С макросом <code class="function">PG_GETARG_<em class="replaceable"><code>xxx</code></em>_COPY()</code> гарантированно получается результат, доступный для записи.) Вторая вариация представлена макросом <code class="function">PG_GETARG_<em class="replaceable"><code>xxx</code></em>_SLICE()</code>, принимающим три параметра. В первом передаётся номер аргумента функции (как и раньше). Во втором и третьем передаётся смещение и длина сегмента, который должен быть возвращён. Смещение отсчитывается с нуля, а отрицательная длина указывает, что запрашивается оставшаяся часть значения. Эти макросы дают более эффективный доступ к частям больших значений, имеющим тип хранения <span class="quote">«<span class="quote">external</span>»</span>. (Тип хранения столбца может задаваться командой <code class="literal">ALTER TABLE <em class="replaceable"><code>имя_таблицы</code></em> ALTER COLUMN <em class="replaceable"><code>имя_столбца</code></em> SET STORAGE <em class="replaceable"><code>тип_хранения</code></em></code>, где <em class="replaceable"><code>тип_хранения</code></em>: <code class="literal">plain</code>, <code class="literal">external</code>, <code class="literal">extended</code> или <code class="literal">main</code>.)</p><p>Наконец, соглашения о вызовах версии 1 позволяют возвращать множества (<a class="xref" href="xfunc-c.html#XFUNC-C-RETURN-SET" title="38.10.8. Возврат множеств">Подраздел 38.10.8</a>) и реализовывать триггерные функции (<a class="xref" href="triggers.html" title="Глава 39. Триггеры">Глава 39</a>) и обработчики вызовов процедурных языков (<a class="xref" href="plhandler.html" title="Глава 58. Написание обработчика процедурного языка">Глава 58</a>). Дополнительные подробности можно найти в <code class="filename">src/backend/utils/fmgr/README</code> в пакете исходного кода.</p></div><div class="sect2" id="XFUNC-C-CODE"><div class="titlepage"><div><div><h3 class="title">38.10.4. Написание кода <a href="#XFUNC-C-CODE" class="id_link">#</a></h3></div></div></div><p>Прежде чем перейти к более сложным темам, мы должны обсудить некоторые правила написания кода функций на языке C для <span class="productname">PostgreSQL</span>. Хотя принципиально можно загружать в <span class="productname">PostgreSQL</span> функции, написанные на языках, отличных от C, обычно это довольно сложно (когда вообще возможно), так как другие языки, например C++, FORTRAN или Pascal часто не следуют соглашениям, принятым в C. То есть другие языки могут передавать аргументы и возвращаемые значения между функциями разными способами. Поэтому далее предполагается, что ваши функции на языке C действительно написаны на C.</p><p>Основные правила написания и компиляции функций на C таковы: </p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Чтобы выяснить, где находятся заголовочные файлы сервера <span class="productname">PostgreSQL</span>, установленные в вашей системе (или в системе, с которой будут работать ваши пользователи), воспользуйтесь командой <code class="literal">pg_config --includedir-server</code><a id="id-1.8.3.13.8.3.1.1.1.3" class="indexterm"></a>.</p></li><li class="listitem"><p>Для компиляции и компоновки кода, который можно будет динамически загрузить в <span class="productname">PostgreSQL</span>, требуется указать специальные флаги. Чтобы конкретнее узнать, как это сделать в вашей конкретной операционной системе, обратитесь к <a class="xref" href="xfunc-c.html#DFUNC" title="38.10.5. Компиляция и компоновка динамически загружаемых функций">Подразделу 38.10.5</a>.</p></li><li class="listitem"><p>Не забудьте определить <span class="quote">«<span class="quote">отличительный блок</span>»</span> для вашей разделяемой библиотеки, как описано в <a class="xref" href="xfunc-c.html#XFUNC-C-DYNLOAD" title="38.10.1. Динамическая загрузка">Подразделе 38.10.1</a>.</p></li><li class="listitem"><p>Для выделения памяти используйте функцию <span class="productname">PostgreSQL</span> <code class="function">palloc</code><a id="id-1.8.3.13.8.3.1.4.1.3" class="indexterm"></a>, а для освобождения <code class="function">pfree</code><a id="id-1.8.3.13.8.3.1.4.1.5" class="indexterm"></a>, вместо соответствующих функций библиотеки C <code class="function">malloc</code> и <code class="function">free</code>. Память, выделяемая функцией <code class="function">palloc</code>, будет автоматически освобождаться в конце каждой транзакции, во избежание утечек памяти.</p></li><li class="listitem"><p>Всегда обнуляйте байты ваших структур, применяя <code class="function">memset</code> (или сразу выделяйте память функцией <code class="function">palloc0</code>). Даже если вы присвоите значение каждому полю структуры, в ней могут оставаться байты выравнивания (пустоты в структуре), содержащие случайные значения. Если исключить это требование, будет сложно поддерживать индексы или соединение по хешу, так как для вычисления хеша придётся выбирать только значащие биты из вашей структуры данных. Планировщик также иногда полагается на побитовое сравнение констант, так что результаты планирования могут оказаться неожиданными, если логически равные значения окажутся неравными на битовом уровне.</p></li><li class="listitem"><p>Большинство внутренних типов <span class="productname">PostgreSQL</span> объявлены в <code class="filename">postgres.h</code>, тогда как интерфейс менеджера функций (<code class="symbol">PG_FUNCTION_ARGS</code> и т. д.) определён в <code class="filename">fmgr.h</code>, так что потребуется подключить как минимум два этих файла. По соображениям портируемости, лучше включить <code class="filename">postgres.h</code> <span class="emphasis"><em>первым</em></span>, до каких-либо других системных или пользовательских файлов заголовков. При подключении <code class="filename">postgres.h</code> автоматически также будут подключены <code class="filename">elog.h</code> и <code class="filename">palloc.h</code>.</p></li><li class="listitem"><p>Имена символов, определённые в объектных файлах, не должны конфликтовать друг с другом или с именами других символов, определённых в исполняемых файлах сервера <span class="productname">PostgreSQL</span>. Если вы столкнётесь с ошибками, вызванными таким конфликтом, вам придётся переименовать ваши функции или переменные.</p></li></ul></div></div><div class="sect2" id="DFUNC"><div class="titlepage"><div><div><h3 class="title">38.10.5. Компиляция и компоновка динамически загружаемых функций <a href="#DFUNC" class="id_link">#</a></h3></div></div></div><p>Прежде чем вы сможете использовать ваши написанные на C функции, расширяющие возможности <span class="productname">PostgreSQL</span>, их необходимо скомпилировать и скомпоновать особым образом, чтобы сервер мог динамически загрузить полученный файл. Точнее говоря, вам необходимо создать <em class="firstterm">разделяемую библиотеку</em>.<a id="id-1.8.3.13.9.2.3" class="indexterm"></a></p><p>За подробной информацией, дополняющей и поясняющей то, что описано в этом разделе, вам следует обратиться к документации вашей операционной системы, в частности, к страницам руководства компилятора C, <code class="command">cc</code>, и компоновщика, <code class="command">ld</code>. Кроме того, ряд рабочих примеров можно найти в каталоге <code class="filename">contrib</code> исходного кода <span class="productname">PostgreSQL</span>. Однако если вы непосредственно воспользуйтесь этими примерами, ваши модули окажутся зависимыми от наличия исходного кода <span class="productname">PostgreSQL</span>.</p><p>Создание разделяемых библиотек в принципе не отличается от сборки исполняемых файлов: сначала исходные файлы компилируются в объектные, а затем объектные связываются вместе. Объектные файлы должны создаваться так, чтобы они содержали <em class="firstterm">позиционно-независимый</em> код (<acronym class="acronym">PIC</acronym>, position-independent code)<a id="id-1.8.3.13.9.4.3" class="indexterm"></a>, что означает, что при загрузке для выполнения этот код может быть помещён в любое место в памяти. (Объектные файлы, предназначенные для сборки непосредственно исполняемых файлов, обычно собираются не так.) Команда для компоновки разделяемой библиотеки принимает специальные флаги, что отличают её от компоновки исполняемого файла (по крайней мере в теории — в некоторых системах реальность не так прекрасна).</p><p>В следующих примерах предполагается, что исходный код находится в файле <code class="filename">foo.c</code> и мы будем создавать разделяемую библиотеку <code class="filename">foo.so</code>. Промежуточный объектный файл будет называться <code class="filename">foo.o</code>, если не отмечено другое. Разделяемая библиотека может включать больше одного объектного файла, но здесь мы ограничимся одним.</p><div class="variablelist"><dl class="variablelist"><dt><span class="term">
+     <span class="systemitem">FreeBSD</span>
+     <a id="id-1.8.3.13.9.6.1.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Для создания кода <acronym class="acronym">PIC</acronym> компилятору передаётся флаг <code class="option">-fPIC</code>. Чтобы создать разделяемую библиотеку, используется флаг компилятора <code class="option">-shared</code>. </p><pre class="programlisting">gcc -fPIC -c foo.c
+gcc -shared -o foo.so foo.o</pre><p> Это применимо как минимум к <span class="systemitem">FreeBSD</span> версии 3.0.</p></dd><dt><span class="term">
+     <span class="systemitem">Linux</span>
+     <a id="id-1.8.3.13.9.6.2.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Для создания кода <acronym class="acronym">PIC</acronym> компилятору передаётся флаг <code class="option">-fPIC</code>. Для создания разделяемой библиотеки компилятору передаётся флаг <code class="option">-shared</code>. Полный пример будет выглядеть так: </p><pre class="programlisting">cc -fPIC -c foo.c
+cc -shared -o foo.so foo.o</pre></dd><dt><span class="term">
+     <span class="systemitem">macOS</span>
+     <a id="id-1.8.3.13.9.6.3.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Следующий пример показывает нужные команды, в предположении, что установлены инструменты разработчика. </p><pre class="programlisting">cc -c foo.c
+cc -bundle -flat_namespace -undefined suppress -o foo.so foo.o</pre></dd><dt><span class="term">
+     <span class="systemitem">NetBSD</span>
+     <a id="id-1.8.3.13.9.6.4.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Для создания кода <acronym class="acronym">PIC</acronym> компилятору передаётся флаг <code class="option">-fPIC</code>. Для компоновки разделяемых библиотек в системах <acronym class="acronym">ELF</acronym> компилятору передаётся флаг <code class="option">-shared</code>, а в старых системах, не поддерживающих ELF, применяется команда <code class="literal">ld -Bshareable</code>. </p><pre class="programlisting">gcc -fPIC -c foo.c
+gcc -shared -o foo.so foo.o</pre></dd><dt><span class="term">
+     <span class="systemitem">OpenBSD</span>
+     <a id="id-1.8.3.13.9.6.5.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Для создания кода <acronym class="acronym">PIC</acronym> компилятору передаётся флаг <code class="option">-fPIC</code>, а для компоновки разделяемых библиотек применяется команда <code class="literal">ld -Bshareable</code>. </p><pre class="programlisting">gcc -fPIC -c foo.c
+ld -Bshareable -o foo.so foo.o</pre></dd><dt><span class="term">
+     <span class="systemitem">Solaris</span>
+     <a id="id-1.8.3.13.9.6.6.1.2" class="indexterm"></a>
+    </span></dt><dd><p>Для создания кода <acronym class="acronym">PIC</acronym> компилятору Sun передаётся флаг <code class="option">-KPIC</code>, а компилятору <span class="application">GCC</span> — флаг <code class="option">-fPIC</code>. Для компоновки разделяемой библиотеки можно передать обоим компиляторам флаг <code class="option">-G</code> либо передать флаг <code class="option">-shared</code> компилятору <span class="application">GCC</span>. </p><pre class="programlisting">cc -KPIC -c foo.c
+cc -G -o foo.so foo.o</pre><p> или </p><pre class="programlisting">gcc -fPIC -c foo.c
+gcc -G -o foo.so foo.o</pre></dd></dl></div><div class="tip"><h3 class="title">Подсказка</h3><p>Если это слишком сложно для вас, попробуйте использовать средство <a class="ulink" href="https://www.gnu.org/software/libtool/" target="_top"><span class="productname">GNU Libtool</span></a>, которое скрывает различия платформ за единым интерфейсом.</p></div><p>Полученную разделяемую библиотеку можно будет затем загрузить в <span class="productname">PostgreSQL</span>. Когда команде <code class="command">CREATE FUNCTION</code> передаётся имя файла, это должно быть имя файла разделяемой библиотеки, а не промежуточного объектного файла. Заметьте, что принятое в системе расширение файлов библиотек (как правило, <code class="literal">.so</code> или <code class="literal">.sl</code>) в команде <code class="command">CREATE FUNCTION</code> можно опустить, и так обычно следует делать для лучшей портируемости.</p><p>Чтобы уточнить, где сервер будет искать файлы разделяемых библиотек, вернитесь к <a class="xref" href="xfunc-c.html#XFUNC-C-DYNLOAD" title="38.10.1. Динамическая загрузка">Подразделу 38.10.1</a>.</p></div><div class="sect2" id="XFUNC-C-COMPOSITE-TYPE-ARGS"><div class="titlepage"><div><div><h3 class="title">38.10.6. Аргументы составного типа <a href="#XFUNC-C-COMPOSITE-TYPE-ARGS" class="id_link">#</a></h3></div></div></div><p>Составные типы не имеют фиксированного макета данных, как структуры C. В частности, экземпляры составного типа могут содержать поля NULL. Кроме того, в контексте наследования составные типы могут иметь разные поля для разных членов в одной иерархии наследования. Поэтому <span class="productname">PostgreSQL</span> предоставляет функциям специальный интерфейс для обращения к полям составных типов из C.</p><p>Предположим, что мы хотим написать функцию, отвечающую на запрос: </p><pre class="programlisting">SELECT name, c_overpaid(emp, 1500) AS overpaid
+    FROM emp
+    WHERE name = 'Bill' OR name = 'Sam';</pre><p> С соглашениями о вызовах версии 1 мы можем определить функцию <code class="function">c_overpaid</code> так: </p><pre class="programlisting">
+#include "postgres.h"
+#include "executor/executor.h"  /* for GetAttributeByName() */
+
+PG_MODULE_MAGIC;
+
+PG_FUNCTION_INFO_V1(c_overpaid);
+
+Datum
+c_overpaid(PG_FUNCTION_ARGS)
+{
+    HeapTupleHeader  t = PG_GETARG_HEAPTUPLEHEADER(0);
+    int32            limit = PG_GETARG_INT32(1);
+    bool isnull;
+    Datum salary;
+
+    salary = GetAttributeByName(t, "salary", &amp;isnull);
+    if (isnull)
+        PG_RETURN_BOOL(false);
+    /* Alternatively, we might prefer to do PG_RETURN_NULL() for null salary. */
+
+    PG_RETURN_BOOL(DatumGetInt32(salary) &gt; limit);
+}
+
+</pre><p><code class="function">GetAttributeByName</code> — это системная функция <span class="productname">PostgreSQL</span>, которая возвращает атрибуты указанной строки. Она принимает три параметра: аргумент типа <code class="type">HeapTupleHeader</code>, имя нужного атрибута и выходной параметр, устанавливаемый, если значение атрибута — NULL. <code class="function">GetAttributeByName</code> возвращает значение <code class="type">Datum</code>, которое вы можете привести к подходящему типу данных, используя соответствующую функцию <code class="function">DatumGet<em class="replaceable"><code>XXX</code></em>()</code>. Заметьте, что возвращаемое значение недействительно, если установлен флаг null; всегда проверяйте этот флаг, прежде чем что-либо делать с результатом.</p><p>Есть также функция <code class="function">GetAttributeByNum</code>, которая выбирает целевой атрибут не по имени, а по номеру столбца.</p><p>Следующая команда объявляет функцию <code class="function">c_overpaid</code> в SQL: </p><pre class="programlisting">CREATE FUNCTION c_overpaid(emp, integer) RETURNS boolean
+    AS '<em class="replaceable"><code>КАТАЛОГ</code></em>/funcs', 'c_overpaid'
+    LANGUAGE C STRICT;</pre><p> Заметьте, что мы использовали <code class="literal">STRICT</code>, чтобы нам не пришлось проверять входные аргументы на равенство NULL.</p></div><div class="sect2" id="XFUNC-C-RETURNING-ROWS"><div class="titlepage"><div><div><h3 class="title">38.10.7. Возврат строк (составных типов) <a href="#XFUNC-C-RETURNING-ROWS" class="id_link">#</a></h3></div></div></div><p>Чтобы вернуть строку или значение составного типа из функции на языке C, можно использовать специальный API, предоставляющий макросы и функции, скрывающие основную сложность формирования составных типов данных. Для использования этого API необходимо включить в исходный файл: </p><pre class="programlisting">#include "funcapi.h"</pre><p>Сформировать значение составного типа (далее <span class="quote">«<span class="quote">кортеж</span>»</span>) можно двумя способами: его можно построить из массива значений Datum, или из массива строк C, которые будут переданы функциям преобразования ввода для типов столбцов кортежа. В любом случае сначала нужно получить или сконструировать дескриптор <code class="structname">TupleDesc</code> для структуры кортежа. Работая со значениями Datum, вы передаёте <code class="structname">TupleDesc</code> функции <code class="function">BlessTupleDesc</code>, а затем вызываете <code class="function">heap_form_tuple</code> для каждой строки. Работая со строками C, вы передаёте <code class="structname">TupleDesc</code> функции <code class="function">TupleDescGetAttInMetadata</code>, а затем для каждой строки вызываете <code class="function">BuildTupleFromCStrings</code>. В случае функции, возвращающей множество кортежей, все подготовительные действия можно выполнить один раз при первом вызове функции.</p><p>Для получения требуемого дескриптора <code class="structname">TupleDesc</code> предлагается несколько дополнительных функций. Рекомендованный способ возврата составных значений заключается в вызове функции: </p><pre class="programlisting">TypeFuncClass get_call_result_type(FunctionCallInfo fcinfo,
+                                   Oid *resultTypeId,
+                                   TupleDesc *resultTupleDesc)</pre><p> При этом в <code class="literal">fcinfo</code> должна передаваться та же структура, что была передана самой вызывающей функции. (Для этого, конечно, необходимо использовать соглашения о вызовах версии 1.) В <code class="varname">resultTypeId</code> можно передать <code class="literal">NULL</code> или адрес локальной переменной, в которую будет записан OID типа результата функции. В <code class="varname">resultTupleDesc</code> должен передаваться адрес локальной переменной <code class="structname">TupleDesc</code>. Убедить, что функция возвратила результат <code class="literal">TYPEFUNC_COMPOSITE</code>; в этом случае в <code class="varname">resultTupleDesc</code> оказывается требуемая структура <code class="structname">TupleDesc</code>. (Если получен другой результат, вы можете выдать ошибку с сообщением <span class="quote">«<span class="quote">функция, возвращающая запись, вызвана в контексте, не допускающем этот тип</span>»</span>.)</p><div class="tip"><h3 class="title">Подсказка</h3><p><code class="function">get_call_result_type</code> позволяет получить фактический тип результата полиморфной функции, так что она полезна и в функциях, возвращающих скалярные полиморфные результаты, не только в функциях, возвращающих составные типы. Выходной параметр <code class="varname">resultTypeId</code> полезен в первую очередь для полиморфных скалярных функций.</p></div><div class="note"><h3 class="title">Примечание</h3><p>В дополнение к <code class="function">get_call_result_type</code> есть схожая функция <code class="function">get_expr_result_type</code>, позволяющая получить ожидаемый тип результата для вызова функции, представленного деревом выражения. Её можно использовать, когда тип результата нужно определить извне самой функции. Есть также функция <code class="function">get_func_result_type</code>, которую можно применять, когда известен только OID функции. Однако эти две функции неспособны выдать тип результата функций, возвращающих <code class="structname">record</code>, а <code class="function">get_func_result_type</code> неспособна разрешать полиморфные типы, так что вместо них лучше использовать <code class="function">get_call_result_type</code>.</p></div><p>Ранее для получения <code class="structname">TupleDesc</code> использовались теперь уже устаревшие функции: </p><pre class="programlisting">TupleDesc RelationNameGetTupleDesc(const char *relname)</pre><p> (возвращает <code class="structname">TupleDesc</code> для типа строк указанного отношения) и: </p><pre class="programlisting">TupleDesc TypeGetTupleDesc(Oid typeoid, List *colaliases)</pre><p> (возвращает <code class="structname">TupleDesc</code> для типа, задаваемого по OID). Применяя её, можно получить <code class="structname">TupleDesc</code> для базового или составного типа. Однако она не подойдёт для функции, возвращающей тип <code class="structname">record</code>, и не сможет разрешить полиморфные типы.</p><p>Получив <code class="structname">TupleDesc</code>, вызовите: </p><pre class="programlisting">TupleDesc BlessTupleDesc(TupleDesc tupdesc)</pre><p> если вы планируете работать со структурами Datum, либо: </p><pre class="programlisting">AttInMetadata *TupleDescGetAttInMetadata(TupleDesc tupdesc)</pre><p> если планируете работать со строками C. Если вы разрабатываете функцию, возвращающую набор данных, вы можете сохранить результаты этих функций в структуре <code class="structname">FuncCallContext</code>, в поле <code class="structfield">tuple_desc</code> или <code class="structfield">attinmeta</code>, соответственно.</p><p>Если вы работаете со структурами Datum, воспользуйтесь функцией: </p><pre class="programlisting">HeapTuple heap_form_tuple(TupleDesc tupdesc, Datum *values, bool *isnull)</pre><p> Она формирует <code class="structname">HeapTuple</code> из переданных ей данных в форме Datum.</p><p>Если вы работаете со строками C, воспользуйтесь функцией: </p><pre class="programlisting">HeapTuple BuildTupleFromCStrings(AttInMetadata *attinmeta, char **values)</pre><p> Она формирует <code class="structname">HeapTuple</code> из переданных ей данных в виде строк C. В параметре <em class="parameter"><code>values</code></em> ей передаётся массив строк C, по одной для каждого атрибута выходной строки. Каждая из этих строк должна иметь формат, принимаемый функцией ввода типа данных атрибута. Чтобы задать значение NULL для одного из этих атрибутов, вместо соответствующего указателя в массиве <em class="parameter"><code>values</code></em> нужно передать <code class="symbol">NULL</code>. Эту функцию нужно вызывать для каждой строки, которую вы будете возвращать.</p><p>Получив кортеж, который вы будете возвращать из вашей функции, вы должны преобразовать его в тип <code class="type">Datum</code>. Чтобы преобразовать <code class="structname">HeapTuple</code> в Datum, воспользуйтесь функцией: </p><pre class="programlisting">HeapTupleGetDatum(HeapTuple tuple)</pre><p> Полученный тип <code class="type">Datum</code> можно вернуть непосредственно, если должна возвращаться только одна строка, либо использовать как текущее выдаваемое значение в функции, возвращающей набор строк.</p><p>Пример приведён в следующем разделе.</p></div><div class="sect2" id="XFUNC-C-RETURN-SET"><div class="titlepage"><div><div><h3 class="title">38.10.8. Возврат множеств <a href="#XFUNC-C-RETURN-SET" class="id_link">#</a></h3></div></div></div><p>Функции на языке C могут возвращать наборы данных (множества строк) двумя способами. Первый способ, который называется <em class="firstterm">ValuePerCall</em> (значение за вызов), заключается в многократном вызове функции (при этом ей каждый раз передаются одни и те же аргументы). Эта функция при очередном вызове должна возвращать следующую строку, пока не выдаст все строки, о чём она сообщает, возвращая NULL. Таким образом, возвращающая множество функция (Set-Returning Function, <acronym class="acronym">SRF</acronym>) должна сохранять между вызовами своё состояние в достаточном объёме, чтобы помнить, какие данные уже были выданы, и возвращать следующие при очередном вызове. Второй вариант, <em class="firstterm">Materialize</em> (Материализация), заключается в формировании в SRF объекта tuplestore, содержащего сразу весь результирующий набор; единственный вызов производится для получения сразу всего результата, и никакое состояние между вызовами сохранять не нужно.</p><p>Реализуя режим ValuePerCall, важно не забывать, что выполнение запроса до полного завершения не гарантируется. Так, например, получив указание <code class="literal">LIMIT</code>, исполнитель запроса может перестать вызывать возвращающую множество функцию до получения всех строк. Это означает, что выполнять действия, связанные с очисткой, в последнем вызове небезопасно, так как он может вовсе не состояться. Поэтому для функций, которым нужно обращаться к внешним ресурсам, например, открывая файловые дескрипторы, рекомендуется использовать режим материализации результатов.</p><p>В продолжении этого раздела описываются несколько вспомогательных макросов, которые часто используются (хотя не являются обязательными) в SRF, реализующих метод ValuePerCall. Подробнее о реализации варианта Materialize можно узнать из описательного файла в коде <code class="filename">src/backend/utils/fmgr/README</code>. Также вы можете найти разнообразные примеры SRF, реализующих как метод ValuePerCall, так и Materialize, в модулях <code class="filename">contrib</code> в комплекте исходного кода <span class="productname">PostgreSQL</span>.</p><p>Для использования описанных здесь макросов поддержки ValuePerCall подключите <code class="filename">funcapi.h</code>. Эти макросы работают со структурой <code class="structname">FuncCallContext</code>, содержащей состояние, которое требуется сохранять между вызовами. Указатель на <code class="structname">FuncCallContext</code> внутри вызываемой SRF сохраняется между вызовами в поле <code class="literal">fcinfo-&gt;flinfo-&gt;fn_extra</code>, которое макросы автоматически заполняют при первом использовании, рассчитывая прочесть из него тот же указатель при последующих вызовах. </p><pre class="programlisting">typedef struct FuncCallContext
+{
+    /*
+     * Счётчик числа ранее выполненных вызовов
+     *
+     * call_cntr сбрасывается в 0 макросом SRF_FIRSTCALL_INIT() и
+     * увеличивается на 1 каждый раз, когда вызывается SRF_RETURN_NEXT().
+     */
+    uint64 call_cntr;
+
+    /*
+     * Максимальное число вызовов (может не использоваться)
+     *
+     * max_calls не является обязательным и присутствует здесь только для удобства.
+     * Если это значение не задано, вы должны предоставить другую возможность определить,
+     * когда функция завершила свою работу.
+     */
+    uint64 max_calls;
+
+    /*
+     * Указатель на разнообразную контекстную информацию,
+     * представленную пользователем; (может не использоваться)
+     *
+     * user_fctx используется как указатель на ваши собственные данные,
+     * позволяющий сохранить контекстную информацию между вызовами функции.
+     */
+    void *user_fctx;
+
+    /*
+     * Указатель на структуру, содержащую метаданные ввода типа атрибута
+     * (может не использоваться)
+     *
+     * attinmeta задействуется, когда возвращаются кортежи (т. е. составные типы данных),
+     * и не применяется для возврата базовых типов. Он нужен, только если
+     * вы планируете использовать BuildTupleFromCStrings() для формирования возвращаемого
+     * кортежа.
+     */
+    AttInMetadata *attinmeta;
+
+    /*
+     * Контекст памяти, нужный для структур, которые должны сохраняться при нескольких вызовах
+     *
+     * Поле multi_call_memory_ctx заполняется в SRF_FIRSTCALL_INIT() и используется
+     * в SRF_RETURN_DONE() для очистки. Это наиболее подходящий контекст
+     * для любых блоков памяти, которые должны многократно использоваться при
+     * повторных вызовах SRF.
+     */
+    MemoryContext multi_call_memory_ctx;
+
+    /*
+     * Указатель на структуру, содержащую описание кортежа (может не использоваться)
+     *
+     * tuple_desc задействуется, когда возвращаются кортежи (т. е. составные типы),
+     * и нужен только, если вы планируете формировать кортежи с помощью функции
+     * heap_form_tuple(), а не BuildTupleFromCStrings().  Заметьте, что сохраняемый
+     * здесь указатель TupleDesc обычно должен сначала пройти через вызов
+     * BlessTupleDesc().
+     */
+    TupleDesc tuple_desc;
+
+} FuncCallContext;</pre><p>Для <acronym class="acronym">SRF</acronym> предоставляется ряд макросов, использующих эту инфраструктуру: </p><pre class="programlisting">SRF_IS_FIRSTCALL()</pre><p> Используйте этот макрос, чтобы определить, вызывается ли ваша функция в первый раз. При первом вызове (но не при последующих) выполните: </p><pre class="programlisting">SRF_FIRSTCALL_INIT()</pre><p> для того, чтобы инициализировать <code class="structname">FuncCallContext</code>. При каждом вызове функции, включая первый, выполняйте: </p><pre class="programlisting">SRF_PERCALL_SETUP()</pre><p> для того, чтобы подготовиться к использованию <code class="structname">FuncCallContext</code>.</p><p>Если у вашей функции есть данные, которые она должна выдать в текущем вызове, выполните: </p><pre class="programlisting">SRF_RETURN_NEXT(funcctx, result)</pre><p> для того, чтобы передать их вызывающему. (Переменная <code class="literal">result</code> должна быть типа <code class="type">Datum</code>, либо одним значением, либо кортежем, подготовленным как описано выше.) Наконец, когда ваша функция закончила выдавать данные, выполните: </p><pre class="programlisting">SRF_RETURN_DONE(funcctx)</pre><p> для того, чтобы провести очистку и завершить <acronym class="acronym">SRF</acronym>.</p><p>Контекст памяти, в котором вызывается <acronym class="acronym">SRF</acronym>, временный, он будет очищаться между вызовами. Это значит, что вам не нужно вызывать <code class="function">pfree</code> для всех блоков памяти, которые вы получили через <code class="function">palloc</code>; они всё равно будут освобождены. Однако если вы хотите выделить структуры данных, сохраняющиеся между вызовами, вам нужно разместить их где-то в другом месте. Для размещения данных, которые не должны уничтожаться, пока <acronym class="acronym">SRF</acronym> не закончит работу, подходит контекст памяти, на который указывает <code class="structfield">multi_call_memory_ctx</code>. В большинстве случаев это означает, что вы должны переключиться в контекст <code class="structfield">multi_call_memory_ctx</code> в коде подготовки при первом вызове. Для сохранения указателя на такие долгоживущие структуры воспользуйтесь полем <code class="literal">funcctx-&gt;user_fctx</code>. (Память, которую вы получаете в контексте <code class="structfield">multi_call_memory_ctx</code>, будет освобождена автоматически при завершении запроса, так что и её освобождать вручную нет необходимости.)</p><div class="warning"><h3 class="title">Предупреждение</h3><p>Тогда как фактические аргументы такой функции не меняются от вызова к вызову, если вы распаковываете значения аргументов (что обычно прозрачно делают макросы <code class="function">PG_GETARG_<em class="replaceable"><code>xxx</code></em></code>) во временном контексте, распакованные копии будут освобождаться при каждом вызове. Соответственно, если вы сохраните ссылки на такие значения в своём контексте <code class="structfield">user_fctx</code>, вы должны либо скопировать эти значения в <code class="structfield">multi_call_memory_ctx</code> после распаковки, либо распаковывать значения только в этом контексте.</p></div><p>Полный пример с псевдокодом будет выглядеть так: </p><pre class="programlisting">Datum
+my_set_returning_function(PG_FUNCTION_ARGS)
+{
+    FuncCallContext  *funcctx;
+    Datum             result;
+    <em class="replaceable"><code>другие необходимые объявления</code></em>
+
+    if (SRF_IS_FIRSTCALL())
+    {
+        MemoryContext oldcontext;
+
+        funcctx = SRF_FIRSTCALL_INIT();
+        oldcontext = MemoryContextSwitchTo(funcctx-&gt;multi_call_memory_ctx);
+        /* Код подготовки при первом вызове: */
+        <em class="replaceable"><code>некоторый код</code></em>
+        <em class="replaceable"><code>если возвращается составной тип</code></em>
+            <em class="replaceable"><code>получить TupleDesc и, возможно, AttInMetadata</code></em>
+        <em class="replaceable"><code>конец ветвления для составного типа</code></em>
+        <em class="replaceable"><code>некоторый код</code></em>
+        MemoryContextSwitchTo(oldcontext);
+    }
+
+    /* Код подготовки для каждого вызова: */
+    <em class="replaceable"><code>некоторый код</code></em>
+    funcctx = SRF_PERCALL_SETUP();
+    <em class="replaceable"><code>некоторый код</code></em>
+
+    /* Только так мы можем определить, не последний ли это вызов: */
+    if (funcctx-&gt;call_cntr &lt; funcctx-&gt;max_calls)
+    {
+        /* Здесь мы возвращаем ещё один результат: */
+        <em class="replaceable"><code>некоторый код</code></em>
+        <em class="replaceable"><code>получение результирующих данных</code></em>
+        SRF_RETURN_NEXT(funcctx, result);
+    }
+    else
+    {
+        /* Мы заканчиваем выдавать результаты, и это надо отразить. */
+        /* (Воздержитесь от соблазна написать здесь код, освобождающий ресурсы.) */
+        SRF_RETURN_DONE(funcctx);
+    }
+}</pre><p>Полный пример простой <acronym class="acronym">SRF</acronym>-функции, возвращающей составной тип, выглядит так: </p><pre class="programlisting">
+PG_FUNCTION_INFO_V1(retcomposite);
+
+Datum
+retcomposite(PG_FUNCTION_ARGS)
+{
+    FuncCallContext     *funcctx;
+    int                  call_cntr;
+    int                  max_calls;
+    TupleDesc            tupdesc;
+    AttInMetadata       *attinmeta;
+
+    /* stuff done only on the first call of the function */
+    if (SRF_IS_FIRSTCALL())
+    {
+        MemoryContext   oldcontext;
+
+        /* create a function context for cross-call persistence */
+        funcctx = SRF_FIRSTCALL_INIT();
+
+        /* switch to memory context appropriate for multiple function calls */
+        oldcontext = MemoryContextSwitchTo(funcctx-&gt;multi_call_memory_ctx);
+
+        /* total number of tuples to be returned */
+        funcctx-&gt;max_calls = PG_GETARG_INT32(0);
+
+        /* Build a tuple descriptor for our result type */
+        if (get_call_result_type(fcinfo, NULL, &amp;tupdesc) != TYPEFUNC_COMPOSITE)
+            ereport(ERROR,
+                    (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                     errmsg("function returning record called in context "
+                            "that cannot accept type record")));
+
+        /*
+         * generate attribute metadata needed later to produce tuples from raw
+         * C strings
+         */
+        attinmeta = TupleDescGetAttInMetadata(tupdesc);
+        funcctx-&gt;attinmeta = attinmeta;
+
+        MemoryContextSwitchTo(oldcontext);
+    }
+
+    /* stuff done on every call of the function */
+    funcctx = SRF_PERCALL_SETUP();
+
+    call_cntr = funcctx-&gt;call_cntr;
+    max_calls = funcctx-&gt;max_calls;
+    attinmeta = funcctx-&gt;attinmeta;
+
+    if (call_cntr &lt; max_calls)    /* do when there is more left to send */
+    {
+        char       **values;
+        HeapTuple    tuple;
+        Datum        result;
+
+        /*
+         * Prepare a values array for building the returned tuple.
+         * This should be an array of C strings which will
+         * be processed later by the type input functions.
+         */
+        values = (char **) palloc(3 * sizeof(char *));
+        values[0] = (char *) palloc(16 * sizeof(char));
+        values[1] = (char *) palloc(16 * sizeof(char));
+        values[2] = (char *) palloc(16 * sizeof(char));
+
+        snprintf(values[0], 16, "%d", 1 * PG_GETARG_INT32(1));
+        snprintf(values[1], 16, "%d", 2 * PG_GETARG_INT32(1));
+        snprintf(values[2], 16, "%d", 3 * PG_GETARG_INT32(1));
+
+        /* build a tuple */
+        tuple = BuildTupleFromCStrings(attinmeta, values);
+
+        /* make the tuple into a datum */
+        result = HeapTupleGetDatum(tuple);
+
+        /* clean up (this is not really necessary) */
+        pfree(values[0]);
+        pfree(values[1]);
+        pfree(values[2]);
+        pfree(values);
+
+        SRF_RETURN_NEXT(funcctx, result);
+    }
+    else    /* do when there is no more left */
+    {
+        SRF_RETURN_DONE(funcctx);
+    }
+}
+
+</pre><p> В SQL её можно объявить следующим образом: </p><pre class="programlisting">CREATE TYPE __retcomposite AS (f1 integer, f2 integer, f3 integer);
+
+CREATE OR REPLACE FUNCTION retcomposite(integer, integer)
+    RETURNS SETOF __retcomposite
+    AS '<em class="replaceable"><code>имя_файла</code></em>', 'retcomposite'
+    LANGUAGE C IMMUTABLE STRICT;</pre><p> Также её можно объявить с параметрами OUT: </p><pre class="programlisting">CREATE OR REPLACE FUNCTION retcomposite(IN integer, IN integer,
+    OUT f1 integer, OUT f2 integer, OUT f3 integer)
+    RETURNS SETOF record
+    AS '<em class="replaceable"><code>имя_файла</code></em>', 'retcomposite'
+    LANGUAGE C IMMUTABLE STRICT;</pre><p> Заметьте, что при таком подходе выходным типом функции формально является анонимный тип <code class="structname">record</code>.</p></div><div class="sect2" id="XFUNC-C-POLYMORPHIC"><div class="titlepage"><div><div><h3 class="title">38.10.9. Полиморфные типы аргументов и результата <a href="#XFUNC-C-POLYMORPHIC" class="id_link">#</a></h3></div></div></div><p>Функции на языке C могут быть объявлены как принимающие и возвращающие полиморфные типы, которые описаны в <a class="xref" href="extend-type-system.html#EXTEND-TYPES-POLYMORPHIC" title="38.2.5. Полиморфные типы">Подразделе 38.2.5</a>. Когда типы аргументов или результата определены как полиморфные, автор функции не может заранее знать, с какими типами данных она будет вызываться и какой возвращать. Чтобы функция на C в стиле версии 1 могла определить фактические типы данных своих аргументов и тип, который она должна вернуть, в <code class="filename">fmgr.h</code> предлагаются две функции. Они называются <code class="literal">get_fn_expr_rettype(FmgrInfo *flinfo)</code> и <code class="literal">get_fn_expr_argtype(FmgrInfo *flinfo, int argnum)</code> и возвращают соответственно OID типа результата и аргумента, либо <code class="symbol">InvalidOid</code>, если информация о типе отсутствует. Структуру <code class="literal">flinfo</code> обычно можно получить по ссылке <code class="literal">fcinfo-&gt;flinfo</code>. Номер аргумента <code class="literal">argnum</code> задаётся, начиная с нуля. В качестве альтернативы <code class="function">get_fn_expr_rettype</code> также можно использовать функции <code class="function">get_call_result_type</code>. Кроме того, есть функция <code class="function">get_fn_expr_variadic</code>, позволяющая определить, были ли переменные аргументы объединены в массив. Это полезно в основном для функций <code class="literal">VARIADIC "any"</code>, так как такое объединение всегда имеет место для функций с переменными аргументами, принимающих обычные типы.</p><p>Например, предположим, что нам нужно написать функцию, принимающую один элемент любого типа и возвращающую одномерный массив этого типа: </p><pre class="programlisting">PG_FUNCTION_INFO_V1(make_array);
+Datum
+make_array(PG_FUNCTION_ARGS)
+{
+    ArrayType  *result;
+    Oid         element_type = get_fn_expr_argtype(fcinfo-&gt;flinfo, 0);
+    Datum       element;
+    bool        isnull;
+    int16       typlen;
+    bool        typbyval;
+    char        typalign;
+    int         ndims;
+    int         dims[MAXDIM];
+    int         lbs[MAXDIM];
+
+    if (!OidIsValid(element_type))
+        elog(ERROR, "could not determine data type of input");
+
+    /* получить переданный элемент, учитывая, что это может быть NULL */
+    isnull = PG_ARGISNULL(0);
+    if (isnull)
+        element = (Datum) 0;
+    else
+        element = PG_GETARG_DATUM(0);
+
+    /* мы имеем дело с одной размерностью */
+    ndims = 1;
+    /* и одним элементом */
+    dims[0] = 1;
+    /* с нижней границей, равной 1 */
+    lbs[0] = 1;
+
+    /* получить требуемую информацию о типе элемента */
+    get_typlenbyvalalign(element_type, &amp;typlen, &amp;typbyval, &amp;typalign);
+
+    /* теперь создать массив */
+    result = construct_md_array(&amp;element, &amp;isnull, ndims, dims, lbs,
+                                element_type, typlen, typbyval, typalign);
+
+    PG_RETURN_ARRAYTYPE_P(result);
+}</pre><p>Следующая команда объявляет функцию <code class="function">make_array</code> в SQL: </p><pre class="programlisting">CREATE FUNCTION make_array(anyelement) RETURNS anyarray
+    AS '<em class="replaceable"><code>КАТАЛОГ</code></em>/funcs', 'make_array'
+    LANGUAGE C IMMUTABLE;</pre><p>Существует один вариант полиморфизма, которым могут пользоваться только функции на языке C: их можно объявить с параметрами типа <code class="literal">"any"</code>. (Заметьте, что имя этого типа нужно заключать в двойные кавычки, так как это также зарезервированное слово в SQL.) Он работает так же, как <code class="type">anyelement</code>, за исключением того, что он не требует, чтобы аргументы <code class="literal">"any"</code> имели одинаковый тип, и не помогает определить тип результата функции. Функцию на языке C можно также объявить с последним параметром <code class="literal">VARIADIC "any"</code>. Ему будут соответствовать один или более фактических аргументов любого типа (не обязательно одинакового). Эти аргументы <span class="emphasis"><em>не</em></span> будут собираться в массив, как это происходит с обычными функциями с переменными аргументами; они просто будут переданы функции по отдельности. Если применяется этот вариант, то чтобы определить число фактических аргументов и их типы, нужно использовать макрос <code class="function">PG_NARGS()</code> и функции, описанные выше. Пользователи такой функции также могут пожелать использовать ключевое слово <code class="literal">VARIADIC</code> в вызове функции, ожидая, что функция обработает элементы массива как отдельные аргументы. При необходимости соответствующее поведение должна реализовывать сама функция, определив с помощью <code class="function">get_fn_expr_variadic</code>, был ли фактический аргумент передан с указанием <code class="literal">VARIADIC</code>.</p></div><div class="sect2" id="XFUNC-SHARED-ADDIN"><div class="titlepage"><div><div><h3 class="title">38.10.10. Разделяемая память и лёгкие блокировки <a href="#XFUNC-SHARED-ADDIN" class="id_link">#</a></h3></div></div></div><p>Модули расширений могут резервировать лёгкие блокировки и область в разделяемой памяти при запуске сервера. Чтобы библиотека модуля предварительно загружалась на этапе запуска сервера, нужно указать её в <a class="xref" href="runtime-config-client.html#GUC-SHARED-PRELOAD-LIBRARIES">shared_preload_libraries</a><a id="id-1.8.3.13.14.2.2" class="indexterm"></a>. Библиотека должна зарегистрировать в своей функции <code class="function">_PG_init</code> обработчик <code class="literal">shmem_request_hook</code>, который сможет запросить нужные ресурсы. Чтобы зарезервировать разделяемую память, вызовите из <code class="literal">shmem_request_hook</code>: </p><pre class="programlisting">void RequestAddinShmemSpace(int size)</pre><p>Чтобы зарезервировать лёгкие блокировки, из <code class="literal">shmem_request_hook</code> нужно вызвать: </p><pre class="programlisting">void RequestNamedLWLockTranche(const char *tranche_name, int num_lwlocks)</pre><p> В результате будет сформирован массив из <code class="literal">num_lwlocks</code> лёгких блокировок под именем <code class="literal">tranche_name</code>. Чтобы получить указатель на этот массив, воспользуйтесь функцией <code class="function">GetNamedLWLockTranche</code>.</p><p>Пример <code class="literal">shmem_request_hook</code> можно найти в файле <code class="filename">contrib/pg_stat_statements/pg_stat_statements.c</code> в дереве исходного кода <span class="productname">PostgreSQL</span>.</p><p>Во избежание возможных условий гонки каждый обслуживающий процесс должен вызывать LWLock <code class="function">AddinShmemInitLock</code> в момент подключения и при инициализации разделяемой памяти, как показано здесь: </p><pre class="programlisting">static mystruct *ptr = NULL;
+
+if (!ptr)
+{
+        bool    found;
+
+        LWLockAcquire(AddinShmemInitLock, LW_EXCLUSIVE);
+        ptr = ShmemInitStruct("my struct name", size, &amp;found);
+        if (!found)
+        {
+                /* инициализировать содержимое области разделяемой памяти; */
+                /* получить все требуемые блокировки LWLocks:
+ */                ptr-&gt;locks = GetNamedLWLockTranche("my tranche name");
+        }
+        LWLockRelease(AddinShmemInitLock);
+}</pre></div><div class="sect2" id="EXTEND-CPP"><div class="titlepage"><div><div><h3 class="title">38.10.11. Использование C++ для расширяемости <a href="#EXTEND-CPP" class="id_link">#</a></h3></div></div></div><a id="id-1.8.3.13.15.2" class="indexterm"></a><p>Хотя код сервера <span class="productname">PostgreSQL</span> написан на C, расширения для него можно писать и на C++, если соблюдать эти правила: </p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Все функции, к которым будет обращаться сервер, должны предоставлять ему интерфейс C; эти функции на C затем могут вызывать функции на языке C++. В частности, для функций, доступных серверу, необходимо указать <code class="literal">extern C</code>. Это также необходимо для всех функций, указатели на которые передаются между кодом сервера и подключаемым кодом на C++.</p></li><li class="listitem"><p>Освобождайте память, применяя для этого подходящий метод. Например, память сервера в основном выделяется функцией <code class="function">palloc()</code>, так что освобождать её нужно, вызывая <code class="function">pfree()</code>. Попытка использовать в таких случаях принятую в C++ операцию <code class="function">delete</code> приведёт к ошибке.</p></li><li class="listitem"><p>Не допускайте распространения исключений в код C (добавляйте блок, перехватывающий все исключения, на верхнем уровне функций <code class="literal">extern C</code>). Это необходимо, даже если код на C++ не генерирует исключения явно, потому что исключения могут возникать, например, и при нехватке памяти. Все исключения должны перехватываться, и в интерфейс C должны передаваться соответствующие ошибки. Если возможно, скомпилируйте код C++ с указанием <code class="option">-fno-exceptions</code>, чтобы полностью отключить исключения; в таких случаях вы должны будете выявлять исключительные ситуации в коде C++, например, проверять на NULL адрес, возвращённый <code class="function">new()</code>.</p></li><li class="listitem"><p>Вызывая серверные функции из кода C++, убедитесь, что в стеке вызова C++ содержатся только простые структуры данных. Это необходимо, потому что в случае ошибки сервера выполняется функция <code class="function">longjmp()</code>, а она не отматывает стек вызовов C++ должным образом для объектов, отличных от простых структур.</p></li></ul></div><p>Резюмируя, лучше всего поместить код C++ за ограду из функций <code class="literal">extern C</code>, которые будут доступны серверу и смогут защитить от исключений, а также потери стека вызовов и утечки памяти.</p></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="xfunc-internal.html" title="38.9. Внутренние функции">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="extend.html" title="Глава 38. Расширение SQL">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="xfunc-optimization.html" title="38.11. Информация для оптимизации функций">След.</a></td></tr><tr><td width="40%" align="left" valign="top">38.9. Внутренние функции </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 38.11. Информация для оптимизации функций</td></tr></table></div></body></html>

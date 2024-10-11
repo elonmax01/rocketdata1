@@ -1,0 +1,291 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>14.1. Использование EXPLAIN</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="performance-tips.html" title="Глава 14. Оптимизация производительности" /><link rel="next" href="planner-stats.html" title="14.2. Статистика, используемая планировщиком" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">14.1. Использование <code class="command">EXPLAIN</code></th></tr><tr><td width="10%" align="left"><a accesskey="p" href="performance-tips.html" title="Глава 14. Оптимизация производительности">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="performance-tips.html" title="Глава 14. Оптимизация производительности">Наверх</a></td><th width="60%" align="center">Глава 14. Оптимизация производительности</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="planner-stats.html" title="14.2. Статистика, используемая планировщиком">След.</a></td></tr></table><hr /></div><div class="sect1" id="USING-EXPLAIN"><div class="titlepage"><div><div><h2 class="title" style="clear: both">14.1. Использование <code class="command">EXPLAIN</code> <a href="#USING-EXPLAIN" class="id_link">#</a></h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="using-explain.html#USING-EXPLAIN-BASICS">14.1.1. Азы <code class="command">EXPLAIN</code></a></span></dt><dt><span class="sect2"><a href="using-explain.html#USING-EXPLAIN-ANALYZE">14.1.2. <code class="command">EXPLAIN ANALYZE</code></a></span></dt><dt><span class="sect2"><a href="using-explain.html#USING-EXPLAIN-CAVEATS">14.1.3. Ограничения</a></span></dt></dl></div><a id="id-1.5.13.4.2" class="indexterm"></a><a id="id-1.5.13.4.3" class="indexterm"></a><p>Выполняя любой полученный запрос, <span class="productname">PostgreSQL</span> разрабатывает для него <em class="firstterm">план запроса</em>. Выбор правильного плана, соответствующего структуре запроса и характеристикам данным, крайне важен для хорошей производительности, поэтому в системе работает сложный <em class="firstterm">планировщик</em>, задача которого — подобрать хороший план. Узнать, какой план был выбран для какого-либо запроса, можно с помощью команды <a class="link" href="sql-explain.html" title="EXPLAIN"><code class="command">EXPLAIN</code></a>. Понимание плана — это искусство, и чтобы овладеть им, нужен определённый опыт, но этот раздел расскажет о самых простых вещах.</p><p>Приведённые ниже примеры показаны на тестовой базе данных, которая создаётся для выявления регрессий в исходных кодах <span class="productname">PostgreSQL</span> текущей версии. Для неё предварительно выполняется <code class="command">VACUUM ANALYZE</code>. Вы должны получить похожие результаты, если возьмёте ту же базу данных и проделаете следующие действия, но примерная стоимость и ожидаемое число строк у вас может немного отличаться из-за того, что статистика команды <code class="command">ANALYZE</code> рассчитывается по случайной выборке, а оценки стоимости зависят от конкретной платформы.</p><p>В этих примерах используется текстовый формат вывода <code class="command">EXPLAIN</code>, принятый по умолчанию, как более компактный и удобный для восприятия человеком. Если вывод <code class="command">EXPLAIN</code> нужно передать какой-либо программе для дальнейшего анализа, лучше использовать один из машинно-ориентированных форматов (XML, JSON или YAML).</p><div class="sect2" id="USING-EXPLAIN-BASICS"><div class="titlepage"><div><div><h3 class="title">14.1.1. Азы <code class="command">EXPLAIN</code> <a href="#USING-EXPLAIN-BASICS" class="id_link">#</a></h3></div></div></div><p>Структура плана запроса представляет собой дерево <em class="firstterm">узлов плана</em>. Узлы на нижнем уровне дерева — это узлы сканирования, которые возвращают необработанные данные таблицы. Разным типам доступа к таблице соответствуют разные узлы: последовательное сканирование, сканирование индекса и сканирование битовой карты. Источниками строк могут быть не только таблицы, но и например, предложения <code class="literal">VALUES</code> и функции, возвращающие множества во <code class="literal">FROM</code>, и они представляются отдельными типами узлов сканирования. Если запрос требует объединения, агрегатных вычислений, сортировки или других операций с исходными строками, над узлами сканирования появляются узлы, обозначающие эти операции. И так как обычно операции могут выполняться разными способами, на этом уровне тоже могут быть узлы разных типов. В выводе команды <code class="command">EXPLAIN</code> для каждого узла в дереве плана отводится одна строка, где показывается базовый тип узла плюс оценка стоимости выполнения данного узла, которую сделал для него планировщик. Если для узла выводятся дополнительные свойства, в вывод могут добавляться дополнительные строки, с отступом от основной информации узла. В самой первой строке (основной строке самого верхнего узла) выводится общая стоимость выполнения для всего плана; именно это значение планировщик старается минимизировать.</p><p>Взгляните на следующий простейший пример, просто иллюстрирующий формат вывода: </p><pre class="screen">
+EXPLAIN SELECT * FROM tenk1;
+
+                         QUERY PLAN
+-------------------------------------------------------------
+ Seq Scan on tenk1  (cost=0.00..458.00 rows=10000 width=244)
+</pre><p>Этот запрос не содержит предложения <code class="literal">WHERE</code>, поэтому он должен просканировать все строки таблицы, так что планировщик выбрал план простого последовательного сканирования. Числа, перечисленные в скобках (слева направо), имеют следующий смысл: </p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Приблизительная стоимость запуска. Это время, которое проходит, прежде чем начнётся этап вывода данных, например для сортирующего узла это время сортировки.</p></li><li class="listitem"><p>Приблизительная общая стоимость. Она вычисляется в предположении, что узел плана выполняется до конца, то есть возвращает все доступные строки. На практике родительский узел может досрочно прекратить чтение строк дочернего (см. приведённый ниже пример с <code class="literal">LIMIT</code>).</p></li><li class="listitem"><p>Ожидаемое число строк, которое должен вывести этот узел плана. При этом так же предполагается, что узел выполняется до конца.</p></li><li class="listitem"><p>Ожидаемый средний размер строк, выводимых этим узлом плана (в байтах).</p></li></ul></div><p>Стоимость может измеряться в произвольных единицах, определяемых параметрами планировщика (см. <a class="xref" href="runtime-config-query.html#RUNTIME-CONFIG-QUERY-CONSTANTS" title="20.7.2. Константы стоимости для планировщика">Подраздел 20.7.2</a>). Традиционно единицей стоимости считается операция чтения страницы с диска; то есть <a class="xref" href="runtime-config-query.html#GUC-SEQ-PAGE-COST">seq_page_cost</a> обычно равен <code class="literal">1.0</code>, а другие параметры задаётся относительно него. Примеры в этом разделе выполняются со стандартными параметрами стоимости.</p><p>Важно понимать, что стоимость узла верхнего уровня включает стоимость всех его потомков. Также важно осознавать, что эта стоимость отражает только те факторы, которые учитывает планировщик. В частности, она не зависит от времени, необходимого для передачи результирующих строк клиенту, хотя оно может составлять значительную часть общего времени выполнения запроса. Тем не менее планировщик игнорирует эту величину, так как он всё равно не сможет изменить её, выбрав другой план. (Мы верим в то, что любой правильный план запроса выдаёт один и тот же набор строк.)</p><p>Значение <code class="literal">rows</code> здесь имеет особенность — оно выражает не число строк, обработанных или просканированных узлом плана, а число строк, выданных этим узлом. Часто оно окажется меньше числа просканированных строк в результате применённой к узлу фильтрации по условиям <code class="literal">WHERE</code>. В идеале, на верхнем уровне это значение будет приблизительно равно числу строк, которое фактически возвращает, изменяет или удаляет запрос.</p><p>Возвращаясь к нашему примеру: </p><pre class="screen">
+EXPLAIN SELECT * FROM tenk1;
+
+                         QUERY PLAN
+-------------------------------------------------------------
+ Seq Scan on tenk1  (cost=0.00..458.00 rows=10000 width=244)
+</pre><p>Эти числа получаются очень просто. Выполните: </p><pre class="programlisting">SELECT relpages, reltuples FROM pg_class WHERE relname = 'tenk1';</pre><p> и вы увидите, что <code class="classname">tenk1</code> содержит 358 страниц диска и 10000 строк. Общая стоимость вычисляется как (число_чтений_диска * <a class="xref" href="runtime-config-query.html#GUC-SEQ-PAGE-COST">seq_page_cost</a>) + (число_просканированных_строк * <a class="xref" href="runtime-config-query.html#GUC-CPU-TUPLE-COST">cpu_tuple_cost</a>). По умолчанию, <code class="varname">seq_page_cost</code> равно 1.0, а <code class="varname">cpu_tuple_cost</code> — 0.01, так что приблизительная стоимость запроса равна (358 * 1.0) + (10000 * 0.01) = 458.</p><p>Теперь давайте изменим запрос, добавив в него предложение <code class="literal">WHERE</code>: </p><pre class="screen">
+EXPLAIN SELECT * FROM tenk1 WHERE unique1 &lt; 7000;
+
+                             QUERY PLAN
+------------------------------------------------------------
+ Seq Scan on tenk1  (cost=0.00..483.00 rows=7001 width=244)
+   Filter: (unique1 &lt; 7000)
+</pre><p> Заметьте, что в выводе <code class="command">EXPLAIN</code> показано, что условие <code class="literal">WHERE</code> применено как <span class="quote">«<span class="quote">фильтр</span>»</span> к узлу плана Seq Scan (Последовательное сканирование). Это означает, что узел плана проверяет это условие для каждого просканированного им узла и выводит только те строки, которые удовлетворяют ему. Предложение <code class="literal">WHERE</code> повлияло на оценку числа выходных строк. Однако при сканировании потребуется прочитать все 10000 строк, поэтому общая стоимость не уменьшилась. На деле она даже немного увеличилась (на 10000 * <a class="xref" href="runtime-config-query.html#GUC-CPU-OPERATOR-COST">cpu_operator_cost</a>, если быть точными), отражая дополнительное время, которое потребуется процессору на проверку условия <code class="literal">WHERE</code>.</p><p>Фактическое число строк результата этого запроса будет равно 7000, но значение <code class="literal">rows</code> даёт только приблизительное значение. Если вы попытаетесь повторить этот эксперимент, вы можете получить немного другую оценку; более того, она может меняться после каждой команды <code class="command">ANALYZE</code>, так как <code class="command">ANALYZE</code> получает статистику по случайной выборке таблицы.</p><p>Теперь давайте сделаем ограничение более избирательным: </p><pre class="screen">
+EXPLAIN SELECT * FROM tenk1 WHERE unique1 &lt; 100;
+
+                                  QUERY PLAN
+-------------------------------------------------------------------​-----------
+ Bitmap Heap Scan on tenk1  (cost=5.07..229.20 rows=101 width=244)
+   Recheck Cond: (unique1 &lt; 100)
+   -&gt;  Bitmap Index Scan on tenk1_unique1  (cost=0.00..5.04 rows=101 width=0)
+</pre><p> В данном случае планировщик решил использовать план из двух этапов: сначала дочерний узел плана просматривает индекс и находит в нём адреса строк, соответствующих условию индекса, а затем верхний узел собственно выбирает эти строки из таблицы. Выбирать строки по отдельности гораздо дороже, чем просто читать их последовательно, но так как читать придётся не все страницы таблицы, это всё равно будет дешевле, чем сканировать всю таблицу. (Использование двух уровней плана объясняется тем, что верхний узел сортирует адреса строк, выбранных из индекса, в физическом порядке, прежде чем читать, чтобы снизить стоимость отдельных чтений. Слово <span class="quote">«<span class="quote">bitmap</span>»</span> (битовая карта) в имени узла обозначает механизм, выполняющий сортировку.)</p><p>Теперь давайте добавим ещё одно условие в предложение <code class="literal">WHERE</code>: </p><pre class="screen">
+EXPLAIN SELECT * FROM tenk1 WHERE unique1 &lt; 100 AND stringu1 = 'xxx';
+
+                                  QUERY PLAN
+-------------------------------------------------------------------​-----------
+ Bitmap Heap Scan on tenk1  (cost=5.04..229.43 rows=1 width=244)
+   Recheck Cond: (unique1 &lt; 100)
+   Filter: (stringu1 = 'xxx'::name)
+   -&gt;  Bitmap Index Scan on tenk1_unique1  (cost=0.00..5.04 rows=101 width=0)
+         Index Cond: (unique1 &lt; 100)
+</pre><p> Добавленное условие <code class="literal">stringu1 = 'xxx'</code> уменьшает оценку числа результирующих строк, но не стоимость запроса, так как просматриваться будет тот же набор строк, что и раньше. Заметьте, что условие на <code class="literal">stringu1</code> не добавляется в качестве условия индекса, так как индекс построен только по столбцу <code class="literal">unique1</code>. Вместо этого оно применяется как фильтр к строкам, полученным по индексу. В результате стоимость даже немного увеличилась, отражая добавление этой проверки.</p><p>В некоторых случаях планировщик предпочтёт <span class="quote">«<span class="quote">простой</span>»</span> план сканирования индекса: </p><pre class="screen">
+EXPLAIN SELECT * FROM tenk1 WHERE unique1 = 42;
+
+                                 QUERY PLAN
+-------------------------------------------------------------------​----------
+ Index Scan using tenk1_unique1 on tenk1  (cost=0.29..8.30 rows=1 width=244)
+   Index Cond: (unique1 = 42)
+</pre><p> В плане такого типа строки таблицы выбираются в порядке индекса, в результате чего чтение их обходится дороже, но так как их немного, дополнительно сортировать положения строк не стоит. Вы часто будете встречать этот тип плана в запросах, которые выбирают всего одну строку. Также он часто задействуется там, где условие <code class="literal">ORDER BY</code> соответствует порядку индекса, так как в этих случаях для выполнения <code class="literal">ORDER BY</code> не требуется дополнительный шаг сортировки. В этом примере добавленная конструкция <code class="literal">ORDER BY unique1</code> будет использовать тот же план, потому что индекс уже неявно обеспечивает нужный порядок.</p><p>Планировщик может обработать конструкцию <code class="literal">ORDER BY</code> несколькими способами. Предыдущий пример показывает, что нужный порядок может быть получен неявным образом. Также планировщик может задействовать явную операцию <code class="literal">Sort</code>: </p><pre class="screen">
+EXPLAIN SELECT * FROM tenk1 ORDER BY unique1;
+                            QUERY PLAN
+-------------------------------------------------------------------
+ Sort  (cost=1109.39..1134.39 rows=10000 width=244)
+   Sort Key: unique1
+   -&gt;  Seq Scan on tenk1  (cost=0.00..445.00 rows=10000 width=244)
+</pre><p> Если подплан гарантирует сортировку по префиксу заданных ключей сортировки, планировщик может применить операцию <code class="literal">Incremental sort</code> (инкрементальную сортировку): </p><pre class="screen">
+EXPLAIN SELECT * FROM tenk1 ORDER BY four, ten LIMIT 100;
+                                              QUERY PLAN
+-------------------------------------------------------------------​-----------------------------------
+ Limit  (cost=521.06..538.05 rows=100 width=244)
+   -&gt;  Incremental Sort  (cost=521.06..2220.95 rows=10000 width=244)
+         Sort Key: four, ten
+         Presorted Key: four
+         -&gt;  Index Scan using index_tenk1_on_four on tenk1  (cost=0.29..1510.08 rows=10000 width=244)
+</pre><p> С инкрементальной сортировкой, в отличие от обычной, кортежи могут выдаваться до завершения сортировки всего результата, это в частности позволяет оптимизировать запросы с <code class="literal">LIMIT</code>. Кроме того, для инкрементальной сортировки может потребоваться меньше памяти, вследствие чего уменьшается вероятность вытеснения сортируемых данных на диск, но с другой стороны, требуется разделять результирующее множество на несколько частей, что влечёт дополнительные накладные расходы.</p><p>Если в таблице есть отдельные индексы по разным столбцам, фигурирующим в <code class="literal">WHERE</code>, планировщик может выбрать сочетание этих индексов (с AND и OR): </p><pre class="screen">
+EXPLAIN SELECT * FROM tenk1 WHERE unique1 &lt; 100 AND unique2 &gt; 9000;
+
+                                     QUERY PLAN
+-------------------------------------------------------------------​------------------
+ Bitmap Heap Scan on tenk1  (cost=25.08..60.21 rows=10 width=244)
+   Recheck Cond: ((unique1 &lt; 100) AND (unique2 &gt; 9000))
+   -&gt;  BitmapAnd  (cost=25.08..25.08 rows=10 width=0)
+         -&gt;  Bitmap Index Scan on tenk1_unique1  (cost=0.00..5.04 rows=101 width=0)
+               Index Cond: (unique1 &lt; 100)
+         -&gt;  Bitmap Index Scan on tenk1_unique2  (cost=0.00..19.78 rows=999 width=0)
+               Index Cond: (unique2 &gt; 9000)
+</pre><p> Но для этого потребуется обойти оба индекса, так что это не обязательно будет выгоднее, чем просто просмотреть один индекс, а второе условие обработать как фильтр. Измените диапазон и вы увидите, как это повлияет на план.</p><p>Следующий пример иллюстрирует эффекты <code class="literal">LIMIT</code>: </p><pre class="screen">
+EXPLAIN SELECT * FROM tenk1 WHERE unique1 &lt; 100 AND unique2 &gt; 9000 LIMIT 2;
+
+                                     QUERY PLAN
+-------------------------------------------------------------------​------------------
+ Limit  (cost=0.29..14.48 rows=2 width=244)
+   -&gt;  Index Scan using tenk1_unique2 on tenk1  (cost=0.29..71.27 rows=10 width=244)
+         Index Cond: (unique2 &gt; 9000)
+         Filter: (unique1 &lt; 100)
+</pre><p>Это тот же запрос, что и раньше, но добавили мы в него <code class="literal">LIMIT</code>, чтобы возвращались не все строки, и планировщик решает выполнять запрос по-другому. Заметьте, что общая стоимость и число строк для узла Index Scan рассчитываются в предположении, что он будет выполняться полностью. Однако узел Limit должен остановиться, получив только пятую часть всех строк, так что его стоимость будет составлять одну пятую от вычисленной ранее, и это и будет итоговой оценкой стоимости запроса. С другой стороны, планировщик мог бы просто добавить в предыдущий план узел Limit, но это не избавило бы от затрат на запуск сканирования битовой карты, а значит, общая стоимость была бы выше 25 единиц.</p><p>Давайте попробуем соединить две таблицы по столбцам, которые мы уже использовали: </p><pre class="screen">
+EXPLAIN SELECT *
+FROM tenk1 t1, tenk2 t2
+WHERE t1.unique1 &lt; 10 AND t1.unique2 = t2.unique2;
+
+                                      QUERY PLAN
+-------------------------------------------------------------------​-------------------
+ Nested Loop  (cost=4.65..118.62 rows=10 width=488)
+   -&gt;  Bitmap Heap Scan on tenk1 t1  (cost=4.36..39.47 rows=10 width=244)
+         Recheck Cond: (unique1 &lt; 10)
+         -&gt;  Bitmap Index Scan on tenk1_unique1  (cost=0.00..4.36 rows=10 width=0)
+               Index Cond: (unique1 &lt; 10)
+   -&gt;  Index Scan using tenk2_unique2 on tenk2 t2  (cost=0.29..7.91 rows=1 width=244)
+         Index Cond: (unique2 = t1.unique2)
+</pre><p>В этом плане появляется узел соединения с вложенным циклом, на вход которому поступают данные от двух его потомков, узлов сканирования. Эту структуру плана отражает отступ основных строк его узлов. Первый, или <span class="quote">«<span class="quote">внешний</span>»</span>, потомок соединения — узел сканирования битовой карты, похожий на те, что мы видели раньше. Его стоимость и число строк те же, что мы получили бы для запроса <code class="literal">SELECT ... WHERE unique1 &lt; 10</code>, так как к этому узлу добавлено предложение <code class="literal">WHERE</code> <code class="literal">unique1 &lt; 10</code>. Условие <code class="literal">t1.unique2 = t2.unique2</code> ещё не учитывается, поэтому оно не влияет на число строк узла внешнего сканирования. Узел соединения с вложенным циклом будет выполнять узел <span class="quote">«<span class="quote">внутреннего</span>»</span> потомка для каждой строки, полученной из внешнего потомка. Значения столбцов из текущей внешней строки могут использоваться во внутреннем сканировании (в данном случае это значение <code class="literal">t1.unique2</code>), поэтому мы получаем план и стоимость примерно такие, как и раньше для простого запроса <code class="literal">SELECT ... WHERE t2.unique2 = <em class="replaceable"><code>константа</code></em></code>. (На самом деле оценочная стоимость немного меньше, в предположении, что при неоднократном сканировании индекса по <code class="literal">t2</code> положительную роль сыграет кеширование.) В результате стоимость узла цикла складывается из стоимости внешнего сканирования, цены внутреннего сканирования, умноженной на число строк (здесь 10 * 7.91), и небольшой наценки за обработку соединения.</p><p>В этом примере число выходных строк соединения равно произведению чисел строк двух узлов сканирования, но это не всегда будет так, потому что в дополнительных условиях <code class="literal">WHERE</code> могут упоминаться обе таблицы, так что применить их можно будет только в точке соединения, а не в одном из узлов сканирования. Например: </p><pre class="screen">
+EXPLAIN SELECT *
+FROM tenk1 t1, tenk2 t2
+WHERE t1.unique1 &lt; 10 AND t2.unique2 &lt; 10 AND t1.hundred &lt; t2.hundred;
+
+                                         QUERY PLAN
+-------------------------------------------------------------------​--------------------------
+ Nested Loop  (cost=4.65..49.46 rows=33 width=488)
+   Join Filter: (t1.hundred &lt; t2.hundred)
+   -&gt;  Bitmap Heap Scan on tenk1 t1  (cost=4.36..39.47 rows=10 width=244)
+         Recheck Cond: (unique1 &lt; 10)
+         -&gt;  Bitmap Index Scan on tenk1_unique1  (cost=0.00..4.36 rows=10 width=0)
+               Index Cond: (unique1 &lt; 10)
+   -&gt;  Materialize  (cost=0.29..8.51 rows=10 width=244)
+         -&gt;  Index Scan using tenk2_unique2 on tenk2 t2  (cost=0.29..8.46 rows=10 width=244)
+               Index Cond: (unique2 &lt; 10)
+</pre><p> Условие <code class="literal">t1.hundred &lt; t2.hundred</code> не может быть проверено в индексе <code class="literal">tenk2_unique2</code>, поэтому оно применяется в узле соединения. Это уменьшает оценку числа выходных строк, тогда как число строк в узлах сканирования не меняется.</p><p>Заметьте, что здесь планировщик решил <span class="quote">«<span class="quote">материализовать</span>»</span> внутреннее отношение соединения, поместив поверх него узел плана Materialize (Материализовать). Это значит, что сканирование индекса <code class="literal">t2</code> будет выполняться только единожды, при том, что узлу вложенного цикла соединения потребуется прочитать данные десять раз, по числу строк во внешнем соединении. Узел Materialize сохраняет считанные данные в памяти, чтобы затем выдать их из памяти на следующих проходах.</p><p>Выполняя внешние соединения, вы можете встретить узлы плана с присоединёнными условиями, как обычными <span class="quote">«<span class="quote">Filter</span>»</span>, так и <span class="quote">«<span class="quote">Join Filter</span>»</span> (Фильтр соединения). Условия Join Filter формируются из предложения <code class="literal">ON</code> для внешнего соединения, так что если строка не удовлетворяет условию Join Filter, она всё же выдаётся как строка, дополненная значениями NULL. Обычное же условие Filter применяется после правил внешнего соединения и поэтому полностью исключает строки. Во внутреннем соединении оба этих фильтра работают одинаково.</p><p>Если немного изменить избирательность запроса, мы можем получить совсем другой план соединения: </p><pre class="screen">
+EXPLAIN SELECT *
+FROM tenk1 t1, tenk2 t2
+WHERE t1.unique1 &lt; 100 AND t1.unique2 = t2.unique2;
+
+                                        QUERY PLAN
+-------------------------------------------------------------------​-----------------------
+ Hash Join  (cost=230.47..713.98 rows=101 width=488)
+   Hash Cond: (t2.unique2 = t1.unique2)
+   -&gt;  Seq Scan on tenk2 t2  (cost=0.00..445.00 rows=10000 width=244)
+   -&gt;  Hash  (cost=229.20..229.20 rows=101 width=244)
+         -&gt;  Bitmap Heap Scan on tenk1 t1  (cost=5.07..229.20 rows=101 width=244)
+               Recheck Cond: (unique1 &lt; 100)
+               -&gt;  Bitmap Index Scan on tenk1_unique1  (cost=0.00..5.04 rows=101 width=0)
+                     Index Cond: (unique1 &lt; 100)
+</pre><p>Здесь планировщик выбирает соединение по хешу, при котором строки одной таблицы записываются в хеш-таблицу в памяти, после чего сканируется другая таблица и для каждой её строки проверяется соответствие по хеш-таблице. Обратите внимание, что и здесь отступы отражают структуру плана: результат сканирования битовой карты по <code class="literal">tenk1</code> подаётся на вход узлу Hash, который конструирует хеш-таблицу. Затем она передаётся узлу Hash Join, который читает строки из узла внешнего потомка и проверяет их по этой хеш-таблице.</p><p>Ещё один возможный тип соединения — соединение слиянием: </p><pre class="screen">
+EXPLAIN SELECT *
+FROM tenk1 t1, onek t2
+WHERE t1.unique1 &lt; 100 AND t1.unique2 = t2.unique2;
+
+                                        QUERY PLAN
+-------------------------------------------------------------------​-----------------------
+ Merge Join  (cost=198.11..268.19 rows=10 width=488)
+   Merge Cond: (t1.unique2 = t2.unique2)
+   -&gt;  Index Scan using tenk1_unique2 on tenk1 t1  (cost=0.29..656.28 rows=101 width=244)
+         Filter: (unique1 &lt; 100)
+   -&gt;  Sort  (cost=197.83..200.33 rows=1000 width=244)
+         Sort Key: t2.unique2
+         -&gt;  Seq Scan on onek t2  (cost=0.00..148.00 rows=1000 width=244)
+</pre><p>Соединение слиянием требует, чтобы входные данные для него были отсортированы по ключам соединения. В этом плане данные <code class="literal">tenk1</code> сортируются после сканирования индекса, при котором все строки просматриваются в правильном порядке, но таблицу <code class="literal">onek</code> выгоднее оказывается последовательно просканировать и отсортировать, так как в этой таблице нужно обработать гораздо больше строк. (Последовательное сканирование и сортировка часто бывает быстрее сканирования индекса, когда нужно отсортировать много строк, так как при сканировании по индексу обращения к диску не упорядочены.)</p><p>Один из способов посмотреть различные планы — принудить планировщик не считать выбранную им стратегию самой выгодной, используя флаги, описанные в <a class="xref" href="runtime-config-query.html#RUNTIME-CONFIG-QUERY-ENABLE" title="20.7.1. Конфигурация методов планировщика">Подразделе 20.7.1</a>. (Это полезный, хотя и грубый инструмент. См. также <a class="xref" href="explicit-joins.html" title="14.3. Управление планировщиком с помощью явных предложений JOIN">Раздел 14.3</a>.) Например, если мы убеждены, что последовательное сканирование и сортировка — не лучший способ обработать таблицу <code class="literal">onek</code> в предыдущем примере, мы можем попробовать </p><pre class="screen">
+SET enable_sort = off;
+
+EXPLAIN SELECT *
+FROM tenk1 t1, onek t2
+WHERE t1.unique1 &lt; 100 AND t1.unique2 = t2.unique2;
+
+                                        QUERY PLAN
+-------------------------------------------------------------------​-----------------------
+ Merge Join  (cost=0.56..292.65 rows=10 width=488)
+   Merge Cond: (t1.unique2 = t2.unique2)
+   -&gt;  Index Scan using tenk1_unique2 on tenk1 t1  (cost=0.29..656.28 rows=101 width=244)
+         Filter: (unique1 &lt; 100)
+   -&gt;  Index Scan using onek_unique2 on onek t2  (cost=0.28..224.79 rows=1000 width=244)
+</pre><p> Видно, что планировщик считает сортировку <code class="literal">onek</code> со сканированием индекса примерно на 12% дороже, чем последовательное сканирование и сортировку. Конечно, может возникнуть вопрос — а правильно ли это? Мы можем ответить на него, используя описанную ниже команду <code class="command">EXPLAIN ANALYZE</code>.</p></div><div class="sect2" id="USING-EXPLAIN-ANALYZE"><div class="titlepage"><div><div><h3 class="title">14.1.2. <code class="command">EXPLAIN ANALYZE</code> <a href="#USING-EXPLAIN-ANALYZE" class="id_link">#</a></h3></div></div></div><p>Точность оценок планировщика можно проверить, используя команду <code class="command">EXPLAIN</code> с параметром <code class="literal">ANALYZE</code>. С этим параметром <code class="command">EXPLAIN</code> на самом деле выполняет запрос, а затем выводит фактическое число строк и время выполнения, накопленное в каждом узле плана, вместе с теми же оценками, что выдаёт обычная команда <code class="command">EXPLAIN</code>. Например, мы можем получить примерно такой результат: </p><pre class="screen">
+EXPLAIN ANALYZE SELECT *
+FROM tenk1 t1, tenk2 t2
+WHERE t1.unique1 &lt; 10 AND t1.unique2 = t2.unique2;
+
+                                                           QUERY PLAN
+-------------------------------------------------------------------​--------------------------------------------------------------
+ Nested Loop  (cost=4.65..118.62 rows=10 width=488) (actual time=0.128..0.377 rows=10 loops=1)
+   -&gt;  Bitmap Heap Scan on tenk1 t1  (cost=4.36..39.47 rows=10 width=244) (actual time=0.057..0.121 rows=10 loops=1)
+         Recheck Cond: (unique1 &lt; 10)
+         -&gt;  Bitmap Index Scan on tenk1_unique1  (cost=0.00..4.36 rows=10 width=0) (actual time=0.024..0.024 rows=10 loops=1)
+               Index Cond: (unique1 &lt; 10)
+   -&gt;  Index Scan using tenk2_unique2 on tenk2 t2  (cost=0.29..7.91 rows=1 width=244) (actual time=0.021..0.022 rows=1 loops=10)
+         Index Cond: (unique2 = t1.unique2)
+ Planning time: 0.181 ms
+ Execution time: 0.501 ms
+</pre><p> Заметьте, что значения <span class="quote">«<span class="quote">actual time</span>»</span> (фактическое время) приводятся в миллисекундах, тогда как оценки <code class="literal">cost</code> (стоимость) выражаются в произвольных единицах, так что они вряд ли совпадут. Обычно важнее определить, насколько приблизительная оценка числа строк близка к действительности. В этом примере они в точности совпали, но на практике так бывает редко.</p><p>В некоторых планах запросов некоторый внутренний узел может выполняться неоднократно. Например, внутреннее сканирование индекса будет выполняться для каждой внешней строки во вложенном цикле верхнего уровня. В таких случаях значение <code class="literal">loops</code> (циклы) показывает, сколько всего раз выполнялся этот узел, а фактическое время и число строк вычисляется как среднее по всем итерациям. Это делается для того, чтобы полученные значения можно было сравнить с выводимыми приблизительными оценками. Чтобы получить общее время, затраченное на выполнение узла, время одной итерации нужно умножить на значение <code class="literal">loops</code>. В показанном выше примере мы потратили в общей сложности 0.220 мс на сканирование индекса в <code class="literal">tenk2</code>.</p><p>В ряде случаев <code class="command">EXPLAIN ANALYZE</code> выводит дополнительную статистику по выполнению, включающую не только время выполнения узлов и число строк. Для узлов Sort и Hash, например выводится следующая информация: </p><pre class="screen">
+EXPLAIN ANALYZE SELECT *
+FROM tenk1 t1, tenk2 t2
+WHERE t1.unique1 &lt; 100 AND t1.unique2 = t2.unique2 ORDER BY t1.fivethous;
+
+                                                                 QUERY PLAN
+-------------------------------------------------------------------​-------------------------------------------------------------------​------
+ Sort  (cost=717.34..717.59 rows=101 width=488) (actual time=7.761..7.774 rows=100 loops=1)
+   Sort Key: t1.fivethous
+   Sort Method: quicksort  Memory: 77kB
+   -&gt;  Hash Join  (cost=230.47..713.98 rows=101 width=488) (actual time=0.711..7.427 rows=100 loops=1)
+         Hash Cond: (t2.unique2 = t1.unique2)
+         -&gt;  Seq Scan on tenk2 t2  (cost=0.00..445.00 rows=10000 width=244) (actual time=0.007..2.583 rows=10000 loops=1)
+         -&gt;  Hash  (cost=229.20..229.20 rows=101 width=244) (actual time=0.659..0.659 rows=100 loops=1)
+               Buckets: 1024  Batches: 1  Memory Usage: 28kB
+               -&gt;  Bitmap Heap Scan on tenk1 t1  (cost=5.07..229.20 rows=101 width=244) (actual time=0.080..0.526 rows=100 loops=1)
+                     Recheck Cond: (unique1 &lt; 100)
+                     -&gt;  Bitmap Index Scan on tenk1_unique1  (cost=0.00..5.04 rows=101 width=0) (actual time=0.049..0.049 rows=100 loops=1)
+                           Index Cond: (unique1 &lt; 100)
+ Planning time: 0.194 ms
+ Execution time: 8.008 ms
+</pre><p> Для узла Sort показывается использованный метод и место сортировки (в памяти или на диске), а также задействованный объём памяти. Для узла Hash выводится число групп и пакетов хеша, а также максимальный объём, который заняла в памяти хеш-таблица. (Если число пакетов больше одного, часть хеш-таблицы будет выгружаться на диск и занимать какое-то пространство, но его объём здесь не показывается.)</p><p>Другая полезная дополнительная информация — число строк, удалённых условием фильтра: </p><pre class="screen">
+EXPLAIN ANALYZE SELECT * FROM tenk1 WHERE ten &lt; 7;
+
+                                               QUERY PLAN
+-------------------------------------------------------------------​--------------------------------------
+ Seq Scan on tenk1  (cost=0.00..483.00 rows=7000 width=244) (actual time=0.016..5.107 rows=7000 loops=1)
+   Filter: (ten &lt; 7)
+   Rows Removed by Filter: 3000
+ Planning time: 0.083 ms
+ Execution time: 5.905 ms
+</pre><p> Эти значения могут быть особенно ценны для условий фильтра, применённых к узлам соединения. Строка <span class="quote">«<span class="quote">Rows Removed</span>»</span> выводится, только когда условие фильтра отбрасывает минимум одну просканированную строку или потенциальную пару соединения, если это узел соединения.</p><p>Похожую ситуацию можно наблюдать при сканировании <span class="quote">«<span class="quote">неточного</span>»</span> индекса. Например, рассмотрим этот план поиска многоугольников, содержащих указанную точку: </p><pre class="screen">
+EXPLAIN ANALYZE SELECT * FROM polygon_tbl WHERE f1 @&gt; polygon '(0.5,2.0)';
+
+                                              QUERY PLAN
+-------------------------------------------------------------------​-----------------------------------
+ Seq Scan on polygon_tbl  (cost=0.00..1.05 rows=1 width=32) (actual time=0.044..0.044 rows=0 loops=1)
+   Filter: (f1 @&gt; '((0.5,2))'::polygon)
+   Rows Removed by Filter: 4
+ Planning time: 0.040 ms
+ Execution time: 0.083 ms
+</pre><p> Планировщик полагает (и вполне справедливо), что таблица слишком мала для сканирования по индексу, поэтому он выбирает последовательное сканирование, при котором все строки отбрасываются условием фильтра. Но если мы принудим его выбрать сканирование по индексу, мы получим: </p><pre class="screen">
+SET enable_seqscan TO off;
+
+EXPLAIN ANALYZE SELECT * FROM polygon_tbl WHERE f1 @&gt; polygon '(0.5,2.0)';
+
+                                                        QUERY PLAN
+--------------------------------------------------------------------------------------------------------------------------
+ Index Scan using gpolygonind on polygon_tbl  (cost=0.13..8.15 rows=1 width=32) (actual time=0.062..0.062 rows=0 loops=1)
+   Index Cond: (f1 @&gt; '((0.5,2))'::polygon)
+   Rows Removed by Index Recheck: 1
+ Planning time: 0.034 ms
+ Execution time: 0.144 ms
+</pre><p> Здесь мы видим, что индекс вернул одну потенциально подходящую строку, но затем она была отброшена при перепроверке условия индекса. Это объясняется тем, что индекс GiST является <span class="quote">«<span class="quote">неточным</span>»</span> для проверок включений многоугольников: фактически он возвращает строки с многоугольниками, перекрывающими точку по координатам, а затем для этих строк нужно выполнять точную проверку.</p><p><code class="command">EXPLAIN</code> принимает параметр <code class="literal">BUFFERS</code> (который также можно применять с <code class="literal">ANALYZE</code>), включающий ещё более подробную статистику выполнения запроса: </p><pre class="screen">
+EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM tenk1 WHERE unique1 &lt; 100 AND unique2 &gt; 9000;
+
+                                                           QUERY PLAN
+-------------------------------------------------------------------​--------------------------------------------------------------
+ Bitmap Heap Scan on tenk1  (cost=25.08..60.21 rows=10 width=244) (actual time=0.323..0.342 rows=10 loops=1)
+   Recheck Cond: ((unique1 &lt; 100) AND (unique2 &gt; 9000))
+   Buffers: shared hit=15
+   -&gt;  BitmapAnd  (cost=25.08..25.08 rows=10 width=0) (actual time=0.309..0.309 rows=0 loops=1)
+         Buffers: shared hit=7
+         -&gt;  Bitmap Index Scan on tenk1_unique1  (cost=0.00..5.04 rows=101 width=0) (actual time=0.043..0.043 rows=100 loops=1)
+               Index Cond: (unique1 &lt; 100)
+               Buffers: shared hit=2
+         -&gt;  Bitmap Index Scan on tenk1_unique2  (cost=0.00..19.78 rows=999 width=0) (actual time=0.227..0.227 rows=999 loops=1)
+               Index Cond: (unique2 &gt; 9000)
+               Buffers: shared hit=5
+ Planning time: 0.088 ms
+ Execution time: 0.423 ms
+</pre><p> Значения, которые выводятся с параметром <code class="literal">BUFFERS</code>, помогают понять, на какие части запроса приходится большинство операций ввода-вывода.</p><p>Не забывайте, что <code class="command">EXPLAIN ANALYZE</code> действительно выполняет запрос, хотя его результаты могут не показываться, а заменяться выводом команды <code class="command">EXPLAIN</code>. Поэтому при таком анализе возможны побочные эффекты. Если вы хотите проанализировать запрос, изменяющий данные, но при этом сохранить прежние данные таблицы, вы можете откатить транзакцию после запроса: </p><pre class="screen">
+BEGIN;
+
+EXPLAIN ANALYZE UPDATE tenk1 SET hundred = hundred + 1 WHERE unique1 &lt; 100;
+
+                                                           QUERY PLAN
+-------------------------------------------------------------------​-------------------------------------------------------------
+ Update on tenk1  (cost=5.08..230.08 rows=0 width=0) (actual time=3.791..3.792 rows=0 loops=1)
+   -&gt;  Bitmap Heap Scan on tenk1  (cost=5.08..230.08 rows=102 width=10) (actual time=0.069..0.513 rows=100 loops=1)
+         Recheck Cond: (unique1 &lt; 100)
+         Heap Blocks: exact=90
+         -&gt;  Bitmap Index Scan on tenk1_unique1  (cost=0.00..5.05 rows=102 width=0) (actual time=0.036..0.037 rows=300 loops=1)
+               Index Cond: (unique1 &lt; 100)
+ Planning Time: 0.113 ms
+ Execution Time: 3.850 ms
+
+ROLLBACK;
+</pre><p>Как показано в этом примере, когда выполняется команда <code class="command">INSERT</code>, <code class="command">UPDATE</code>, <code class="command">DELETE</code> или <code class="command">MERGE</code>, собственно изменение данных в таблице происходит в узле верхнего уровня Insert, Update, Delete или Merge. Узлы плана более низких уровней выполняют работу по нахождению старых строк и/или вычислению новых данных. Поэтому вверху мы видим тот же тип сканирования битовой карты, что и раньше, только теперь его вывод подаётся узлу Update, который сохраняет изменённые строки. Стоит отметить, что узел, изменяющий данные, может выполняться значительное время (в данном случае это составляет львиную часть всего времени), но планировщик не учитывает эту работу в оценке общей стоимости. Это связано с тем, что эта работа будет одинаковой при любом правильном плане запроса, и поэтому на выбор плана она не влияет.</p><p>Когда команда <code class="command">UPDATE</code>, <code class="command">DELETE</code> или <code class="command">MERGE</code> имеет дело с иерархией наследования, вывод может быть таким: </p><pre class="screen">
+EXPLAIN UPDATE parent SET f2 = f2 + 1 WHERE f1 = 101;
+                                              QUERY PLAN
+-------------------------------------------------------------------​-----------------------------------
+ Update on parent  (cost=0.00..24.59 rows=0 width=0)
+   Update on parent parent_1
+   Update on child1 parent_2
+   Update on child2 parent_3
+   Update on child3 parent_4
+   -&gt;  Result  (cost=0.00..24.59 rows=4 width=14)
+         -&gt;  Append  (cost=0.00..24.54 rows=4 width=14)
+               -&gt;  Seq Scan on parent parent_1  (cost=0.00..0.00 rows=1 width=14)
+                     Filter: (f1 = 101)
+               -&gt;  Index Scan using child1_pkey on child1 parent_2  (cost=0.15..8.17 rows=1 width=14)
+                     Index Cond: (f1 = 101)
+               -&gt;  Index Scan using child2_pkey on child2 parent_3  (cost=0.15..8.17 rows=1 width=14)
+                     Index Cond: (f1 = 101)
+               -&gt;  Index Scan using child3_pkey on child3 parent_4  (cost=0.15..8.17 rows=1 width=14)
+                     Index Cond: (f1 = 101)
+</pre><p> В этом примере узлу Update помимо изначально упомянутой в запросе родительской таблицы нужно обработать ещё три дочерние таблицы. Поэтому формируются четыре плана сканирования, по одному для каждой таблицы. Ясности ради для узла Update добавляется примечание, показывающее, какие именно таблицы будут изменяться, в том же порядке, в каком они идут в соответствующих внутренних планах.</p><p>Под заголовком <code class="literal">Planning time</code> (Время планирования) команда <code class="command">EXPLAIN ANALYZE</code> выводит время, затраченное на построение плана запроса из разобранного запроса и его оптимизацию. Время собственно разбора или перезаписи запроса в него не включается.</p><p>Значение <code class="literal">Execution time</code> (Время выполнения), выводимое командой <code class="command">EXPLAIN ANALYZE</code>, включает продолжительность запуска и остановки исполнителя запроса, а также время выполнения всех сработавших триггеров, но не включает время разбора, перезаписи и планирования запроса. Время, потраченное на выполнение триггеров <code class="literal">BEFORE</code> (если такие имеются) включается во время соответствующих узлов Insert, Update или Delete node; но время выполнения триггеров <code class="literal">AFTER</code> не учитывается, так как триггеры <code class="literal">AFTER</code> срабатывают после выполнения всего плана. Общее время, проведённое в каждом триггере (<code class="literal">BEFORE</code> или <code class="literal">AFTER</code>), также выводится отдельно. Заметьте, что триггеры отложенных ограничений выполняются только в конце транзакции, так что время их выполнения <code class="command">EXPLAIN ANALYZE</code> не учитывает.</p></div><div class="sect2" id="USING-EXPLAIN-CAVEATS"><div class="titlepage"><div><div><h3 class="title">14.1.3. Ограничения <a href="#USING-EXPLAIN-CAVEATS" class="id_link">#</a></h3></div></div></div><p>Время выполнения, измеренное командой <code class="command">EXPLAIN ANALYZE</code>, может значительно отличаться от времени выполнения того же запроса в обычном режиме. Тому есть две основных причины. Во-первых, так как при анализе никакие строки результата не передаются клиенту, время ввода/вывода и передачи по сети не учитывается. Во-вторых, может быть существенной дополнительная нагрузка, связанная с функциями измерений <code class="command">EXPLAIN ANALYZE</code>, особенно в системах, где вызов <code class="function">gettimeofday()</code> выполняется медленно. Для измерения этой нагрузки вы можете воспользоваться утилитой <a class="xref" href="pgtesttiming.html" title="pg_test_timing"><span class="refentrytitle"><span class="application">pg_test_timing</span></span></a>.</p><p>Результаты <code class="command">EXPLAIN</code> не следует распространять на ситуации, значительно отличающиеся от тех, в которых вы проводите тестирование. В частности, не следует полагать, что выводы, полученные для игрушечной таблицы, будут применимы и для настоящих больших таблиц. Оценки стоимости нелинейны и планировщик может выбирать разные планы в зависимости от размера таблицы. Например, в крайнем случае вся таблица может уместиться в одну страницу диска, и тогда вы почти наверняка получите план последовательного сканирования, независимо от того, есть у неё и индексы или нет. Планировщик понимает, что для обработки таблицы ему в любом случае потребуется прочитать одну страницу, так что нет никакого смысла обращаться к ещё одной странице за индексом. (Мы наблюдали это в показанном выше примере с <code class="literal">polygon_tbl</code>.)</p><p>Бывает, что фактическое и приближённо оценённое значения не совпадают, но в этом нет ничего плохого. Например, это возможно, когда выполнение плана узла прекращается преждевременно из-за указания <code class="literal">LIMIT</code> или подобного эффекта. Например, для запроса с <code class="literal">LIMIT</code>, который мы пробовали раньше: </p><pre class="screen">
+EXPLAIN ANALYZE SELECT * FROM tenk1 WHERE unique1 &lt; 100 AND unique2 &gt; 9000 LIMIT 2;
+
+                                                          QUERY PLAN
+-------------------------------------------------------------------​------------------------------------------------------------
+ Limit  (cost=0.29..14.71 rows=2 width=244) (actual time=0.177..0.249 rows=2 loops=1)
+   -&gt;  Index Scan using tenk1_unique2 on tenk1  (cost=0.29..72.42 rows=10 width=244) (actual time=0.174..0.244 rows=2 loops=1)
+         Index Cond: (unique2 &gt; 9000)
+         Filter: (unique1 &lt; 100)
+         Rows Removed by Filter: 287
+ Planning time: 0.096 ms
+ Execution time: 0.336 ms
+</pre><p> Оценки стоимости и числа строк для узла Index Scan показываются в предположении, что этот узел будет выполняться до конца. Но в действительности узел Limit прекратил запрашивать строки, как только получил первые две, так что фактическое число строк равно 2 и время выполнения запроса будет меньше, чем рассчитал планировщик. Но это не ошибка, а просто следствие того, что оценённые и фактические значения выводятся по-разному.</p><p>Соединения слиянием также имеют свои особенности, которые могут ввести в заблуждение. Соединение слиянием прекратит читать один источник данных, если второй будет прочитан до конца, а следующее значение ключа в первом больше последнего значения во втором. В этом случае пар строк больше не будет, так что сканировать первый источник дальше нет смысла. В результате будут прочитаны не все строки одного потомка и вы получите тот же эффект, что и с <code class="literal">LIMIT</code>. Кроме того, если внешний (первый) потомок содержит строки с повторяющимися значениями ключа, внутренний (второй) потомок сдвинется назад и повторно выдаст строки для этого значения ключа. <code class="command">EXPLAIN ANALYZE</code> считает эти повторяющиеся строки, как если бы это действительно были дополнительные строки внутреннего источника. Когда во внешнем узле много таких повторений ключей, фактическое число строк, подсчитанное для внутреннего узла, может значительно превышать число строк в соответствующей таблице.</p><p>Для узлов BitmapAnd (Логическое произведение битовых карт) и BitmapOr (Логическое сложение битовых карт) фактическое число строк всегда равно 0 из-за ограничений реализации.</p><p>Обычно <code class="command">EXPLAIN</code> выводит подробности для каждого узла плана, сгенерированного планировщиком. Однако бывают ситуации, когда исполнитель может определить, что некоторые узлы не нужно выполнять, так как они не могут выдать никакие строки, с учётом значений параметров, ставших известными уже после планирования. (В настоящее время это может произойти только с дочерними узлами <code class="literal">Append</code> или <code class="literal">MergeAppend</code>, сканирующими секционированную таблицу.) В таких ситуациях эти узлы плана не попадают в вывод <code class="command">EXPLAIN</code>, а в плане появляется запись <code class="literal">Subplans Removed: <em class="replaceable"><code>N</code></em></code> (Подпланов удалено: N).</p></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="performance-tips.html" title="Глава 14. Оптимизация производительности">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="performance-tips.html" title="Глава 14. Оптимизация производительности">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="planner-stats.html" title="14.2. Статистика, используемая планировщиком">След.</a></td></tr><tr><td width="40%" align="left" valign="top">Глава 14. Оптимизация производительности </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 14.2. Статистика, используемая планировщиком</td></tr></table></div></body></html>

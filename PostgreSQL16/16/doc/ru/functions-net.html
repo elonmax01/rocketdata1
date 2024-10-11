@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>9.12. Функции и операторы для работы с сетевыми адресами</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@lists.postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets Vsnapshot" /><link rel="prev" href="functions-geometry.html" title="9.11. Геометрические функции и операторы" /><link rel="next" href="functions-textsearch.html" title="9.13. Функции и операторы текстового поиска" /></head><body id="docContent" class="container-fluid col-10"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">9.12. Функции и операторы для работы с сетевыми адресами</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="functions-geometry.html" title="9.11. Геометрические функции и операторы">Пред.</a> </td><td width="10%" align="left"><a accesskey="u" href="functions.html" title="Глава 9. Функции и операторы">Наверх</a></td><th width="60%" align="center">Глава 9. Функции и операторы</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="10%" align="right"> <a accesskey="n" href="functions-textsearch.html" title="9.13. Функции и операторы текстового поиска">След.</a></td></tr></table><hr /></div><div class="sect1" id="FUNCTIONS-NET"><div class="titlepage"><div><div><h2 class="title" style="clear: both">9.12. Функции и операторы для работы с сетевыми адресами <a href="#FUNCTIONS-NET" class="id_link">#</a></h2></div></div></div><p>Типы <code class="type">cidr</code> и <code class="type">inet</code>, предназначенные для сетевых IP-адресов, поддерживают обычные операторы сравнения, показанные в <a class="xref" href="functions-comparison.html#FUNCTIONS-COMPARISON-OP-TABLE" title="Таблица 9.1. Операторы сравнения">Таблице 9.1</a>, а также специализированные операторы и функции, показанные в <a class="xref" href="functions-net.html#CIDR-INET-OPERATORS-TABLE" title="Таблица 9.39. Операторы для работы с IP-адресами">Таблице 9.39</a> и <a class="xref" href="functions-net.html#CIDR-INET-FUNCTIONS-TABLE" title="Таблица 9.40. Функции для работы с IP-адресами">Таблице 9.40</a>.</p><p>Любое значение <code class="type">cidr</code> можно привести к типу <code class="type">inet</code> неявно, поэтому все функции, показанные выше с типом <code class="type">inet</code>, также будут работать со значениями <code class="type">cidr</code>. (То, что некоторые из функций описаны для типов <code class="type">inet</code> и <code class="type">cidr</code> в отдельности, объясняется тем, что их поведение с разными типами различается.) Кроме того, значение <code class="type">inet</code> тоже можно привести к типу <code class="type">cidr</code>. При этом все биты справа от сетевой маски просто обнуляются, чтобы значение стало допустимым для типа <code class="type">cidr</code>.</p><div class="table" id="CIDR-INET-OPERATORS-TABLE"><p class="title"><strong>Таблица 9.39. Операторы для работы с IP-адресами</strong></p><div class="table-contents"><table class="table" summary="Операторы для работы с IP-адресами" border="1"><colgroup><col /></colgroup><thead><tr><th class="func_table_entry"><p class="func_signature">Оператор</p>
+       <p>Описание</p>
+       <p>Пример(ы)</p></th></tr></thead><tbody><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">inet</code> <code class="literal">&lt;&lt;</code> <code class="type">inet</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Первая подсеть содержится во второй и не равна ей? Этот оператор и следующие четыре проверяют вхождение одной сети в другую или их равенство, при этом рассматривая в адресах только компонент сети (биты справа от сетевой маски игнорируются).</p>
+       <p>
+        <code class="literal">inet '192.168.1.5' &lt;&lt; inet '192.168.1/24'</code>
+        → <code class="returnvalue">t</code>
+       </p>
+       <p>
+        <code class="literal">inet '192.168.0.5' &lt;&lt; inet '192.168.1/24'</code>
+        → <code class="returnvalue">f</code>
+       </p>
+       <p>
+        <code class="literal">inet '192.168.1/24' &lt;&lt; inet '192.168.1/24'</code>
+        → <code class="returnvalue">f</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">inet</code> <code class="literal">&lt;&lt;=</code> <code class="type">inet</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Первая подсеть содержится во второй или равна ей?</p>
+       <p>
+        <code class="literal">inet '192.168.1/24' &lt;&lt;= inet '192.168.1/24'</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">inet</code> <code class="literal">&gt;&gt;</code> <code class="type">inet</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Первая подсеть содержит вторую подсеть и не равна ей?</p>
+       <p>
+        <code class="literal">inet '192.168.1/24' &gt;&gt; inet '192.168.1.5'</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">inet</code> <code class="literal">&gt;&gt;=</code> <code class="type">inet</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Первая подсеть содержит вторую подсеть или равна ей?</p>
+       <p>
+        <code class="literal">inet '192.168.1/24' &gt;&gt;= inet '192.168.1/24'</code>
+        → <code class="returnvalue">t</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">inet</code> <code class="literal">&amp;&amp;</code> <code class="type">inet</code>
+        → <code class="returnvalue">boolean</code>
+       </p>
+       <p>Одна из двух подсетей содержит другую или равна ей?</p>
+       <p>
+        <code class="literal">inet '192.168.1/24' &amp;&amp; inet '192.168.1.80/28'</code>
+        → <code class="returnvalue">t</code>
+       </p>
+       <p>
+        <code class="literal">inet '192.168.1/24' &amp;&amp; inet '192.168.2.0/28'</code>
+        → <code class="returnvalue">f</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="literal">~</code> <code class="type">inet</code>
+        → <code class="returnvalue">inet</code>
+       </p>
+       <p>Вычисляет результат побитового НЕ.</p>
+       <p>
+        <code class="literal">~ inet '192.168.1.6'</code>
+        → <code class="returnvalue">63.87.254.249</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">inet</code> <code class="literal">&amp;</code> <code class="type">inet</code>
+        → <code class="returnvalue">inet</code>
+       </p>
+       <p>Вычисляет результат побитового И.</p>
+       <p>
+        <code class="literal">inet '192.168.1.6' &amp; inet '0.0.0.255'</code>
+        → <code class="returnvalue">0.0.0.6</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">inet</code> <code class="literal">|</code> <code class="type">inet</code>
+        → <code class="returnvalue">inet</code>
+       </p>
+       <p>Вычисляет результат побитового ИЛИ.</p>
+       <p>
+        <code class="literal">inet '192.168.1.6' | inet '0.0.0.255'</code>
+        → <code class="returnvalue">192.168.1.255</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">inet</code> <code class="literal">+</code> <code class="type">bigint</code>
+        → <code class="returnvalue">inet</code>
+       </p>
+       <p>Добавляет смещение к адресу.</p>
+       <p>
+        <code class="literal">inet '192.168.1.6' + 25</code>
+        → <code class="returnvalue">192.168.1.31</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">bigint</code> <code class="literal">+</code> <code class="type">inet</code>
+        → <code class="returnvalue">inet</code>
+       </p>
+       <p>Добавляет смещение к адресу.</p>
+       <p>
+        <code class="literal">200 + inet '::ffff:fff0:1'</code>
+        → <code class="returnvalue">::ffff:255.240.0.201</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">inet</code> <code class="literal">-</code> <code class="type">bigint</code>
+        → <code class="returnvalue">inet</code>
+       </p>
+       <p>Вычитает смещение из адреса.</p>
+       <p>
+        <code class="literal">inet '192.168.1.43' - 36</code>
+        → <code class="returnvalue">192.168.1.7</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature">
+        <code class="type">inet</code> <code class="literal">-</code> <code class="type">inet</code>
+        → <code class="returnvalue">bigint</code>
+       </p>
+       <p>Вычисляет разность двух адресов.</p>
+       <p>
+        <code class="literal">inet '192.168.1.43' - inet '192.168.1.19'</code>
+        → <code class="returnvalue">24</code>
+       </p>
+       <p>
+        <code class="literal">inet '::1' - inet '::ffff:1'</code>
+        → <code class="returnvalue">-4294901760</code>
+       </p></td></tr></tbody></table></div></div><br class="table-break" /><div class="table" id="CIDR-INET-FUNCTIONS-TABLE"><p class="title"><strong>Таблица 9.40. Функции для работы с IP-адресами</strong></p><div class="table-contents"><table class="table" summary="Функции для работы с IP-адресами" border="1"><colgroup><col /></colgroup><thead><tr><th class="func_table_entry"><p class="func_signature">Функция</p>
+       <p>Описание</p>
+       <p>Пример(ы)</p></th></tr></thead><tbody><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.18.5.2.2.1.1.1.1" class="indexterm"></a> <code class="function">abbrev</code> ( <code class="type">inet</code> ) → <code class="returnvalue">text</code></p>
+       <p>Выводит адрес в сокращённом текстовом виде. (Результат не отличается от того, что даёт функция вывода <code class="type">inet</code>; <span class="quote">«<span class="quote">сокращённым</span>»</span> он является только в сравнении с явным приведением к типу <code class="type">text</code>, которое по историческим причинам не убирает компонент маски сети).</p>
+       <p>
+        <code class="literal">abbrev(inet '10.1.0.0/32')</code>
+        → <code class="returnvalue">10.1.0.0</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">abbrev</code> ( <code class="type">cidr</code> ) → <code class="returnvalue">text</code></p>
+       <p>Выводит адрес в сокращённом текстовом виде. (Сокращение заключается в отбрасывании полностью нулевых октетов в конце сетевой маски; другие примеры приведены в <a class="xref" href="datatype-net-types.html#DATATYPE-NET-CIDR-TABLE" title="Таблица 8.22. Примеры допустимых значений типа cidr">Таблице 8.22</a>.)</p>
+       <p>
+        <code class="literal">abbrev(cidr '10.1.0.0/16')</code>
+        → <code class="returnvalue">10.1/16</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.18.5.2.2.3.1.1.1" class="indexterm"></a> <code class="function">broadcast</code> ( <code class="type">inet</code> ) → <code class="returnvalue">inet</code></p>
+       <p>Вычисляет широковещательный адрес для сети.</p>
+       <p>
+        <code class="literal">broadcast(inet '192.168.1.5/24')</code>
+        → <code class="returnvalue">192.168.1.255/​24</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.18.5.2.2.4.1.1.1" class="indexterm"></a> <code class="function">family</code> ( <code class="type">inet</code> ) → <code class="returnvalue">integer</code></p>
+       <p>Выдаёт семейство адреса: <code class="literal">4</code> для адресов IPv4, <code class="literal">6</code> для адресов IPv6.</p>
+       <p>
+        <code class="literal">family(inet '::1')</code>
+        → <code class="returnvalue">6</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.18.5.2.2.5.1.1.1" class="indexterm"></a> <code class="function">host</code> ( <code class="type">inet</code> ) → <code class="returnvalue">text</code></p>
+       <p>Выдаёт IP-адрес в текстовом виде, опуская маску сети.</p>
+       <p>
+        <code class="literal">host(inet '192.168.1.0/24')</code>
+        → <code class="returnvalue">192.168.1.0</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.18.5.2.2.6.1.1.1" class="indexterm"></a> <code class="function">hostmask</code> ( <code class="type">inet</code> ) → <code class="returnvalue">inet</code></p>
+       <p>Вычисляет маску узла для сети в заданном адресе.</p>
+       <p>
+        <code class="literal">hostmask(inet '192.168.23.20/30')</code>
+        → <code class="returnvalue">0.0.0.3</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.18.5.2.2.7.1.1.1" class="indexterm"></a> <code class="function">inet_merge</code> ( <code class="type">inet</code>, <code class="type">inet</code> ) → <code class="returnvalue">cidr</code></p>
+       <p>Вычисляет наименьшую сеть, содержащую обе заданные сети.</p>
+       <p>
+        <code class="literal">inet_merge(inet '192.168.1.5/24', inet '192.168.2.5/24')</code>
+        → <code class="returnvalue">192.168.0.0/22</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.18.5.2.2.8.1.1.1" class="indexterm"></a> <code class="function">inet_same_family</code> ( <code class="type">inet</code>, <code class="type">inet</code> ) → <code class="returnvalue">boolean</code></p>
+       <p>Проверяет, относятся ли адреса к одному семейству IP?</p>
+       <p>
+        <code class="literal">inet_same_family(inet '192.168.1.5/24', inet '::1')</code>
+        → <code class="returnvalue">f</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.18.5.2.2.9.1.1.1" class="indexterm"></a> <code class="function">masklen</code> ( <code class="type">inet</code> ) → <code class="returnvalue">integer</code></p>
+       <p>Выдаёт длину маски сети в битах.</p>
+       <p>
+        <code class="literal">masklen(inet '192.168.1.5/24')</code>
+        → <code class="returnvalue">24</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.18.5.2.2.10.1.1.1" class="indexterm"></a> <code class="function">netmask</code> ( <code class="type">inet</code> ) → <code class="returnvalue">inet</code></p>
+       <p>Вычисляет маску сети для заданного адреса.</p>
+       <p>
+        <code class="literal">netmask(inet '192.168.1.5/24')</code>
+        → <code class="returnvalue">255.255.255.0</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.18.5.2.2.11.1.1.1" class="indexterm"></a> <code class="function">network</code> ( <code class="type">inet</code> ) → <code class="returnvalue">cidr</code></p>
+       <p>Выдаёт компонент сети для заданного адреса, обнуляя все биты справа от маски сети. (Это равнозначно приведению значения к типу <code class="type">cidr</code>.)</p>
+       <p>
+        <code class="literal">network(inet '192.168.1.5/24')</code>
+        → <code class="returnvalue">192.168.1.0/24</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.18.5.2.2.12.1.1.1" class="indexterm"></a> <code class="function">set_masklen</code> ( <code class="type">inet</code>, <code class="type">integer</code> ) → <code class="returnvalue">inet</code></p>
+       <p>Задаёт размер маски сети для значения <code class="type">inet</code>. Компонент адреса при этом не меняется.</p>
+       <p>
+        <code class="literal">set_masklen(inet '192.168.1.5/24', 16)</code>
+        → <code class="returnvalue">192.168.1.5/16</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">set_masklen</code> ( <code class="type">cidr</code>, <code class="type">integer</code> ) → <code class="returnvalue">cidr</code></p>
+       <p>Задаёт размер маски сети для значения <code class="type">cidr</code>. Биты адреса справа от новой маски при этом обнуляются.</p>
+       <p>
+        <code class="literal">set_masklen(cidr '192.168.1.0/24', 16)</code>
+        → <code class="returnvalue">192.168.0.0/16</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.18.5.2.2.14.1.1.1" class="indexterm"></a> <code class="function">text</code> ( <code class="type">inet</code> ) → <code class="returnvalue">text</code></p>
+       <p>Выдаёт несокращённый IP-адрес и размер маски в виде текста. (Такой же результат получается при явном приведении к типу <code class="type">text</code>.)</p>
+       <p>
+        <code class="literal">text(inet '192.168.1.5')</code>
+        → <code class="returnvalue">192.168.1.5/32</code>
+       </p></td></tr></tbody></table></div></div><br class="table-break" /><div class="tip"><h3 class="title">Подсказка</h3><p>Функции <code class="function">abbrev</code>, <code class="function">host</code> и <code class="function">text</code> предназначены в основном для вывода IP-адресов в альтернативных текстовых форматах.</p></div><p>Типы MAC-адресов <code class="type">macaddr</code> и <code class="type">macaddr8</code> поддерживают обычные операторы сравнения, показанные в <a class="xref" href="functions-comparison.html#FUNCTIONS-COMPARISON-OP-TABLE" title="Таблица 9.1. Операторы сравнения">Таблице 9.1</a>, a также специализированные функции, показанные в <a class="xref" href="functions-net.html#MACADDR-FUNCTIONS-TABLE" title="Таблица 9.41. Функции для работы с MAC-адресами">Таблице 9.41</a>. Кроме того, они поддерживают битовые логические операторы: <code class="literal">~</code>, <code class="literal">&amp;</code> и <code class="literal">|</code> (НЕ, И, ИЛИ), показанные выше для IP-адресов.</p><div class="table" id="MACADDR-FUNCTIONS-TABLE"><p class="title"><strong>Таблица 9.41. Функции для работы с MAC-адресами</strong></p><div class="table-contents"><table class="table" summary="Функции для работы с MAC-адресами" border="1"><colgroup><col /></colgroup><thead><tr><th class="func_table_entry"><p class="func_signature">Функция</p>
+       <p>Описание</p>
+       <p>Пример(ы)</p></th></tr></thead><tbody><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.18.8.2.2.1.1.1.1" class="indexterm"></a> <code class="function">trunc</code> ( <code class="type">macaddr</code> ) → <code class="returnvalue">macaddr</code></p>
+       <p>Обнуляет три последних байта адреса. Оставшийся префикс можно сопоставить с конкретным производителем сетевой карты (в <span class="productname">PostgreSQL</span> необходимой для этого информации нет).</p>
+       <p>
+        <code class="literal">trunc(macaddr '12:34:56:​78:90:ab')</code>
+        → <code class="returnvalue">12:34:56:​00:00:00</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><code class="function">trunc</code> ( <code class="type">macaddr8</code> ) → <code class="returnvalue">macaddr8</code></p>
+       <p>Обнуляет 5 последних байт адреса. Оставшийся префикс можно сопоставить с конкретным производителем сетевой карты (в <span class="productname">PostgreSQL</span> необходимой для этого информации нет).</p>
+       <p>
+        <code class="literal">trunc(macaddr8 '12:34:56:78:90:ab:cd:ef')</code>
+        → <code class="returnvalue">12:34:56:00:00:00:00:00</code>
+       </p></td></tr><tr><td class="func_table_entry"><p class="func_signature"><a id="id-1.5.8.18.8.2.2.3.1.1.1" class="indexterm"></a> <code class="function">macaddr8_set7bit</code> ( <code class="type">macaddr8</code> ) → <code class="returnvalue">macaddr8</code></p>
+       <p>Устанавливает в 7 бите адреса единицу, получая тем самым так называемый модифицированный адрес EUI-64 для включения в адрес IPv6.</p>
+       <p>
+        <code class="literal">macaddr8_set7bit(macaddr8 '00:34:56:ab:cd:ef')</code>
+        → <code class="returnvalue">02:34:56:ff:fe:ab:cd:ef</code>
+       </p></td></tr></tbody></table></div></div><br class="table-break" /></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="functions-geometry.html" title="9.11. Геометрические функции и операторы">Пред.</a> </td><td width="20%" align="center"><a accesskey="u" href="functions.html" title="Глава 9. Функции и операторы">Наверх</a></td><td width="40%" align="right"> <a accesskey="n" href="functions-textsearch.html" title="9.13. Функции и операторы текстового поиска">След.</a></td></tr><tr><td width="40%" align="left" valign="top">9.11. Геометрические функции и операторы </td><td width="20%" align="center"><a accesskey="h" href="index.html" title="Документация к PostgreSQL 16.3">Начало</a></td><td width="40%" align="right" valign="top"> 9.13. Функции и операторы текстового поиска</td></tr></table></div></body></html>
