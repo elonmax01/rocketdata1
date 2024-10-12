@@ -12,7 +12,7 @@ class Address(models.Model):
         return self.country + ", " + self.city + ", " + self.street + ", " + self.house
     
 class Factory(models.Model):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=50)
     address = models.ForeignKey(Address, on_delete=models.CASCADE, null=True, blank=True)
     email = models.CharField(max_length=100)
     debt = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
@@ -24,7 +24,7 @@ class Factory(models.Model):
 
 class Distributor(models.Model):
     factory = models.ForeignKey(Factory, on_delete=models.CASCADE, null=True, blank=True)
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=50)
     address = models.ForeignKey(Address, on_delete=models.CASCADE, null=True, blank=True)
     phone = models.CharField(max_length=100)
     email = models.CharField(max_length=100)
@@ -39,7 +39,7 @@ class Distributor(models.Model):
 class Dealer(models.Model):
     distributor = models.ForeignKey(Distributor, on_delete=models.CASCADE, null=True, blank=True)
     factory = models.ForeignKey(Factory, on_delete=models.CASCADE, null=True, blank=True)
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=50)
     address = models.ForeignKey(Address, on_delete=models.CASCADE, null=True, blank=True)
     phone = models.CharField(max_length=100)
     email = models.CharField(max_length=100)
@@ -61,7 +61,7 @@ class Retailer(models.Model):
     dealer = models.ForeignKey(Dealer, on_delete=models.CASCADE, null=True, blank=True)
     distributor = models.ForeignKey(Distributor, on_delete=models.CASCADE, null=True, blank=True)
     factory = models.ForeignKey(Factory, on_delete=models.CASCADE, null=True, blank=True)
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=50)
     address = models.ForeignKey(Address, on_delete=models.CASCADE, null=True, blank=True)
     email = models.CharField(max_length=100)
     debt = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
@@ -86,7 +86,7 @@ class IE(models.Model):
     dealer = models.ForeignKey(Dealer, on_delete=models.CASCADE, null=True, blank=True)
     distributor = models.ForeignKey(Distributor, on_delete=models.CASCADE, null=True, blank=True)
     factory = models.ForeignKey(Factory, on_delete=models.CASCADE, null=True, blank=True)
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=50)
     address = models.ForeignKey(Address, on_delete=models.CASCADE, null=True, blank=True)
     email = models.CharField(max_length=100)
     debt = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
@@ -114,7 +114,7 @@ class Product(models.Model):
     distributors = models.ManyToManyField(Distributor, blank=True)
     retailers = models.ManyToManyField(Retailer, blank=True)
     ies= models.ManyToManyField(IE, blank=True)
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=25)
     model = models.CharField(max_length=100)
     date_of_birth = models.DateField(null=True, blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)

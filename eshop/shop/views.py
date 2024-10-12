@@ -8,13 +8,15 @@ from django.db.models import Avg
 
 class FactoryViewSet(viewsets.ModelViewSet):
     queryset = Factory.objects.all()
+    key = 'admin'
     permission_classes = [permissions.IsAuthenticated]
 # URL для поиска по стране: http://127.0.0.1:8000/factory/?country=USA
     def get_queryset(self):
-        if self.request.query_params.get('country', None):
-            return super().get_queryset().filter(address__country=self.request.query_params.get('country', None))
-        else:
-            return super().get_queryset()
+            if self.request.query_params.get('country', None):
+                return super().get_queryset().filter(address__country=self.request.query_params.get('country', None))
+            else:
+                return super().get_queryset() 
+        
         
     def create(self, request, *args, **kwargs):
         return super().create(request, *args, **kwargs)
@@ -23,6 +25,7 @@ class FactoryViewSet(viewsets.ModelViewSet):
         return super().delete(request, *args, **kwargs)
 
     def update(self, request, *args, **kwargs):
+        self.serializer.is_valid(raise_exception=True)
         return super().update(request, *args, **kwargs)
     
     serializer_class = FactorySerializer
